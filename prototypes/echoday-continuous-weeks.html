@@ -1,0 +1,929 @@
+<div id="echoday-weeks-prototype">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=LXGW+WenKai:wght@500&display=swap');
+
+    #echoday-weeks-prototype {
+      color-scheme: light dark;
+      width: 100%;
+      color: light-dark(#30342f, #e8ece7);
+      font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+    }
+    #echoday-weeks-prototype * { box-sizing: border-box; }
+    #echoday-weeks-prototype button,
+    #echoday-weeks-prototype input,
+    #echoday-weeks-prototype select { font: inherit; color: inherit; }
+    #echoday-weeks-prototype .ew-shell {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid light-dark(#ddd9d1, #363b36);
+      border-radius: 16px;
+      background: light-dark(#f7f4ef, #181b19);
+      box-shadow: 0 18px 50px light-dark(rgba(57, 62, 55, .11), rgba(0, 0, 0, .28));
+    }
+    #echoday-weeks-prototype .ew-toolbar {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid light-dark(#e2ded7, #303530);
+      background: light-dark(#fffefa, #202420);
+    }
+    #echoday-weeks-prototype .ew-brand {
+      min-width: 118px;
+      font-weight: 500;
+      letter-spacing: .04em;
+    }
+    #echoday-weeks-prototype .ew-brand small {
+      margin-left: 6px;
+      color: light-dark(#7a8077, #aab0a9);
+      font-size: 11px;
+      font-weight: 400;
+    }
+    #echoday-weeks-prototype .ew-nav,
+    #echoday-weeks-prototype .ew-actions,
+    #echoday-weeks-prototype .ew-week-zoom {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #echoday-weeks-prototype .ew-actions { margin-left: auto; }
+    #echoday-weeks-prototype .ew-icon,
+    #echoday-weeks-prototype .ew-text-button,
+    #echoday-weeks-prototype .ew-zoom-button,
+    #echoday-weeks-prototype .ew-expand,
+    #echoday-weeks-prototype .ew-back {
+      min-height: 34px;
+      border: 1px solid light-dark(#dedbd3, #3a403a);
+      border-radius: 9px;
+      background: light-dark(#fffefa, #282d28);
+      cursor: pointer;
+    }
+    #echoday-weeks-prototype .ew-icon,
+    #echoday-weeks-prototype .ew-zoom-button {
+      width: 34px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+    }
+    #echoday-weeks-prototype .ew-text-button,
+    #echoday-weeks-prototype .ew-expand,
+    #echoday-weeks-prototype .ew-back { padding: 6px 10px; }
+    #echoday-weeks-prototype .ew-range-label {
+      min-width: 120px;
+      text-align: center;
+      font-weight: 500;
+    }
+    #echoday-weeks-prototype .ew-workspace {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 8px 238px;
+      min-height: 0;
+    }
+    #echoday-weeks-prototype .ew-divider {
+      position: relative;
+      z-index: 4;
+      width: 8px;
+      min-width: 8px;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: col-resize;
+      touch-action: none;
+    }
+    #echoday-weeks-prototype .ew-divider::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 3px;
+      width: 2px;
+      background: light-dark(#dedbd3, #343934);
+      transition: background .14s ease, width .14s ease, left .14s ease;
+    }
+    #echoday-weeks-prototype .ew-divider:hover::before,
+    #echoday-weeks-prototype .ew-divider:focus-visible::before,
+    #echoday-weeks-prototype .ew-shell.is-resizing .ew-divider::before {
+      left: 2px;
+      width: 4px;
+      background: light-dark(#788c77, #9fb19e);
+    }
+    #echoday-weeks-prototype .ew-shell.is-resizing,
+    #echoday-weeks-prototype .ew-shell.is-resizing * {
+      cursor: col-resize !important;
+      user-select: none;
+    }
+    #echoday-weeks-prototype .ew-calendar-pane {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+    #echoday-weeks-prototype .ew-calendar-status {
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: light-dark(#747a72, #a6ada5);
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-week-count {
+      min-width: 42px;
+      text-align: center;
+      color: light-dark(#4f5f4e, #bfcebd);
+      font-weight: 500;
+    }
+    #echoday-weeks-prototype .ew-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      min-height: 31px;
+      align-items: center;
+      border: 1px solid light-dark(#dfdcd5, #343934);
+      border-bottom: 0;
+      border-radius: 11px 11px 0 0;
+      background: light-dark(#fffefa, #222622);
+      color: light-dark(#7c8279, #a0a79f);
+      text-align: center;
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-grid {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      overflow: hidden;
+      border-top: 1px solid light-dark(#dfdcd5, #343934);
+      border-left: 1px solid light-dark(#dfdcd5, #343934);
+      border-radius: 0 0 11px 11px;
+      background: light-dark(#fffefa, #222622);
+      touch-action: none;
+    }
+    #echoday-weeks-prototype .ew-day {
+      position: relative;
+      container-type: size;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      padding: 5px 5px 3px;
+      border: 0;
+      border-right: 1px solid light-dark(#dfdcd5, #343934);
+      border-bottom: 1px solid light-dark(#dfdcd5, #343934);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    #echoday-weeks-prototype .ew-day:hover { background: light-dark(#f4f7f1, #2a302a); }
+    #echoday-weeks-prototype .ew-day.is-selected { background: light-dark(#e9efe7, #303b31); }
+    #echoday-weeks-prototype .ew-day.is-weekend { background-color: light-dark(rgba(120, 140, 119, .025), rgba(159, 177, 158, .025)); }
+    #echoday-weeks-prototype .ew-day-top {
+      position: relative;
+      z-index: 1;
+      height: 22px;
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    #echoday-weeks-prototype .ew-date {
+      display: inline-grid;
+      min-width: 20px;
+      min-height: 20px;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+    #echoday-weeks-prototype .ew-day.is-today .ew-date {
+      border-radius: 50%;
+      color: light-dark(#fffefa, #172018);
+      background: light-dark(#788c77, #9fb19e);
+    }
+    #echoday-weeks-prototype .ew-month-watermark {
+      position: absolute;
+      z-index: 0;
+      inset: 15% 4% 3%;
+      display: grid;
+      place-items: center;
+      color: light-dark(rgba(47, 52, 47, .09), rgba(232, 236, 231, .07));
+      font-family: "LXGW WenKai", "KaiTi", "STKaiti", serif;
+      font-size: min(68cqh, 75cqw);
+      font-weight: 500;
+      line-height: .85;
+      letter-spacing: -.08em;
+      pointer-events: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+    #echoday-weeks-prototype .ew-month-watermark.is-long {
+      font-size: min(62cqh, 40cqw);
+    }
+    #echoday-weeks-prototype .ew-calendar-label {
+      min-width: 0;
+      margin-left: auto;
+      overflow: hidden;
+      color: light-dark(#a25e56, #d5938b);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #echoday-weeks-prototype .ew-preview-list {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 1px;
+    }
+    #echoday-weeks-prototype .ew-preview-task {
+      min-width: 0;
+      height: 14px;
+      overflow: hidden;
+      color: light-dark(#525850, #d1d7d0);
+      font-size: 11px;
+      line-height: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #echoday-weeks-prototype .ew-preview-task::before {
+      content: "";
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      margin-right: 4px;
+      border-radius: 50%;
+      background: light-dark(#879a85, #a4b8a3);
+      vertical-align: 1px;
+    }
+    #echoday-weeks-prototype .ew-preview-task.is-high::before { background: light-dark(#b35f58, #df8d87); }
+    #echoday-weeks-prototype .ew-more {
+      height: 14px;
+      color: light-dark(#697968, #a2b4a0);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 14px;
+    }
+    #echoday-weeks-prototype .ew-sidebar {
+      min-height: 0;
+      overflow: hidden;
+      padding: 15px;
+      background: light-dark(#fffefa, #202420);
+    }
+    #echoday-weeks-prototype .ew-side-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    #echoday-weeks-prototype .ew-side-heading h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    #echoday-weeks-prototype .ew-side-meta {
+      margin: 4px 0 13px;
+      color: light-dark(#7a8077, #aab0a9);
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-quick-add,
+    #echoday-weeks-prototype .ew-focus-add {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid light-dark(#d8ddd4, #3c443d);
+      border-radius: 10px;
+      background: light-dark(#f9fbf7, #292f29);
+    }
+    #echoday-weeks-prototype .ew-section-title {
+      display: flex;
+      justify-content: space-between;
+      margin: 13px 0 6px;
+      color: light-dark(#777d74, #a6ada5);
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-side-task,
+    #echoday-weeks-prototype .ew-focus-task {
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 2px;
+      border: 0;
+      border-bottom: 1px solid light-dark(#ece8e1, #303530);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    #echoday-weeks-prototype .ew-checkbox {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+      border: 1px solid light-dark(#aeb6aa, #6c766d);
+      border-radius: 5px;
+    }
+    #echoday-weeks-prototype .is-done .ew-checkbox {
+      background: light-dark(#829680, #9fb19e);
+      box-shadow: inset 0 0 0 3px light-dark(#fffefa, #202420);
+    }
+    #echoday-weeks-prototype .ew-task-copy { min-width: 0; }
+    #echoday-weeks-prototype .ew-task-name {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #echoday-weeks-prototype .is-done .ew-task-name {
+      color: light-dark(#969b94, #808780);
+      text-decoration: line-through;
+    }
+    #echoday-weeks-prototype .ew-task-meta {
+      display: block;
+      margin-top: 3px;
+      color: light-dark(#8a9087, #969d96);
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-task-meta.is-overdue { color: light-dark(#ad544e, #e28c86); }
+    #echoday-weeks-prototype .ew-fab {
+      position: absolute;
+      right: 254px;
+      bottom: 17px;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      color: light-dark(#fffefa, #172018);
+      background: light-dark(#788c77, #9fb19e);
+      box-shadow: 0 8px 24px light-dark(rgba(70, 86, 68, .22), rgba(0, 0, 0, .35));
+      cursor: pointer;
+    }
+    #echoday-weeks-prototype .ew-focus {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      overflow: hidden;
+      background: light-dark(#f7f4ef, #181b19);
+    }
+    #echoday-weeks-prototype .ew-focus.is-visible { display: block; }
+    #echoday-weeks-prototype .ew-focus-toolbar {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid light-dark(#e2ded7, #303530);
+      background: light-dark(#fffefa, #202420);
+    }
+    #echoday-weeks-prototype .ew-focus-title {
+      font-size: 17px;
+      font-weight: 500;
+    }
+    #echoday-weeks-prototype .ew-focus-toolbar small,
+    #echoday-weeks-prototype .ew-focus-sort {
+      color: light-dark(#7a8077, #aab0a9);
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-focus-sort { margin-left: auto; }
+    #echoday-weeks-prototype .ew-focus-body {
+      width: min(880px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 26px 0 44px;
+    }
+    #echoday-weeks-prototype .ew-focus-summary {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    #echoday-weeks-prototype .ew-focus-summary h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+    }
+    #echoday-weeks-prototype .ew-focus-summary span {
+      color: light-dark(#7a8077, #aab0a9);
+      font-size: 11px;
+    }
+    #echoday-weeks-prototype .ew-focus-add { margin-bottom: 18px; }
+    #echoday-weeks-prototype .ew-focus-task { min-height: 52px; padding: 11px 4px; }
+    #echoday-weeks-prototype .ew-focus-task .ew-task-name { font-size: 14px; }
+    #echoday-weeks-prototype .ew-toast {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      z-index: 30;
+      max-width: 310px;
+      padding: 9px 12px;
+      border-radius: 9px;
+      color: #f7f4ef;
+      background: #3e453d;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 8px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    #echoday-weeks-prototype .ew-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 620px) {
+      #echoday-weeks-prototype .ew-shell { border-radius: 12px; }
+      #echoday-weeks-prototype .ew-toolbar { flex-wrap: wrap; }
+      #echoday-weeks-prototype .ew-brand { min-width: auto; }
+      #echoday-weeks-prototype .ew-actions { margin-left: 0; }
+      #echoday-weeks-prototype .ew-workspace { grid-template-columns: 1fr !important; }
+      #echoday-weeks-prototype .ew-divider,
+      #echoday-weeks-prototype .ew-sidebar { display: none; }
+      #echoday-weeks-prototype .ew-fab { right: 18px !important; }
+      #echoday-weeks-prototype .ew-calendar-pane { padding: 7px; }
+      #echoday-weeks-prototype .ew-day { padding: 4px 2px; }
+      #echoday-weeks-prototype .ew-calendar-label { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #echoday-weeks-prototype .ew-toast { transition: none; }
+    }
+  </style>
+
+  <section class="ew-shell" id="ew-shell" aria-label="丸成 EchoDay 连续周视图原型">
+    <header class="ew-toolbar">
+      <div class="ew-brand">丸成 <small>EchoDay</small></div>
+      <div class="ew-nav" aria-label="日期导航">
+        <button class="ew-icon" type="button" aria-label="上个月" data-action="previous-month"><i data-lucide="chevron-left" aria-hidden="true"></i></button>
+        <strong class="ew-range-label" id="ew-range-label">2026 年 9 月</strong>
+        <button class="ew-icon" type="button" aria-label="下个月" data-action="next-month"><i data-lucide="chevron-right" aria-hidden="true"></i></button>
+      </div>
+      <div class="ew-actions">
+        <button class="ew-text-button" type="button" data-action="today">今天</button>
+        <button class="ew-icon" type="button" aria-label="全局搜索"><i data-lucide="search" aria-hidden="true"></i></button>
+        <button class="ew-icon" type="button" aria-label="设置"><i data-lucide="settings-2" aria-hidden="true"></i></button>
+      </div>
+    </header>
+
+    <div class="ew-workspace">
+      <main class="ew-calendar-pane">
+        <div class="ew-calendar-status">
+          <span id="ew-visible-range" aria-live="polite">8 月 31 日—10 月 4 日 · 每格最多 6 条</span>
+          <div class="ew-week-zoom">
+            <span>Ctrl + 滚轮缩放</span>
+            <button class="ew-zoom-button" type="button" aria-label="显示更少星期，增大日期格" data-action="fewer-weeks"><i data-lucide="plus" aria-hidden="true"></i></button>
+            <span class="ew-week-count" id="ew-week-count">5 周</span>
+            <button class="ew-zoom-button" type="button" aria-label="显示更多星期，缩小日期格" data-action="more-weeks"><i data-lucide="minus" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div class="ew-weekdays" aria-hidden="true">
+          <span>周一</span><span>周二</span><span>周三</span><span>周四</span><span>周五</span><span>周六</span><span>周日</span>
+        </div>
+        <div class="ew-grid" id="ew-grid" aria-label="连续星期日历"></div>
+      </main>
+
+      <button class="ew-divider" id="ew-divider" type="button" role="separator" aria-label="调整日历与 TODO 栏宽度" aria-orientation="vertical" aria-valuemin="12.5" aria-valuemax="50" aria-valuenow="12.5"></button>
+
+      <aside class="ew-sidebar" aria-label="所选日期待办">
+        <div class="ew-side-heading">
+          <div>
+            <h2 id="ew-side-date">9 月 3 日，周四</h2>
+            <p class="ew-side-meta" id="ew-side-meta">5 项未完成 · 1 项已完成</p>
+          </div>
+          <button class="ew-expand" type="button" aria-label="全屏打开当日 TODO" data-action="expand"><i data-lucide="maximize-2" aria-hidden="true"></i></button>
+        </div>
+        <input class="ew-quick-add" id="ew-quick-add" placeholder="添加待办，按 Enter 创建" aria-label="快速添加待办">
+        <div class="ew-section-title"><span>未完成</span><span>综合排序</span></div>
+        <div id="ew-active-tasks"></div>
+        <div class="ew-section-title"><span>已完成</span><span id="ew-done-count">1</span></div>
+        <div id="ew-done-tasks"></div>
+      </aside>
+    </div>
+
+    <button class="ew-fab" type="button" aria-label="回到今天" data-action="today"><i data-lucide="calendar-days" aria-hidden="true"></i></button>
+
+    <section class="ew-focus" id="ew-focus" aria-hidden="true" aria-label="全屏当日 TODO">
+      <header class="ew-focus-toolbar">
+        <button class="ew-back" type="button" data-action="collapse"><i data-lucide="arrow-left" aria-hidden="true"></i> 返回日历</button>
+        <strong class="ew-focus-title" id="ew-focus-title">9 月 3 日，周四</strong>
+        <small>全屏 TODO</small>
+        <span class="ew-focus-sort">优先级 → 执行/DDL → 创建时间</span>
+      </header>
+      <div class="ew-focus-body">
+        <div class="ew-focus-summary">
+          <h2>当日待办</h2>
+          <span id="ew-focus-count">5 项未完成</span>
+        </div>
+        <input class="ew-focus-add" id="ew-focus-add" placeholder="添加待办，按 Enter 创建" aria-label="全屏模式快速添加待办">
+        <div class="ew-section-title"><span>未完成</span><span>综合排序</span></div>
+        <div id="ew-focus-active"></div>
+        <div class="ew-section-title"><span>已完成</span><span id="ew-focus-done-count">1</span></div>
+        <div id="ew-focus-done"></div>
+      </div>
+    </section>
+
+    <div class="ew-toast" id="ew-toast" role="status" aria-live="polite"></div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('echoday-weeks-prototype');
+      const shell = root.querySelector('#ew-shell');
+      const workspace = root.querySelector('.ew-workspace');
+      const grid = root.querySelector('#ew-grid');
+      const divider = root.querySelector('#ew-divider');
+      const floatingToday = root.querySelector('.ew-fab');
+      const weekCountLabel = root.querySelector('#ew-week-count');
+      const visibleRange = root.querySelector('#ew-visible-range');
+      const rangeLabel = root.querySelector('#ew-range-label');
+      const sideDate = root.querySelector('#ew-side-date');
+      const sideMeta = root.querySelector('#ew-side-meta');
+      const activeHost = root.querySelector('#ew-active-tasks');
+      const doneHost = root.querySelector('#ew-done-tasks');
+      const doneCount = root.querySelector('#ew-done-count');
+      const focus = root.querySelector('#ew-focus');
+      const focusTitle = root.querySelector('#ew-focus-title');
+      const focusCount = root.querySelector('#ew-focus-count');
+      const focusActive = root.querySelector('#ew-focus-active');
+      const focusDone = root.querySelector('#ew-focus-done');
+      const focusDoneCount = root.querySelector('#ew-focus-done-count');
+      const toast = root.querySelector('#ew-toast');
+      const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+      const chineseMonths = ['一','二','三','四','五','六','七','八','九','十','十一','十二'];
+      const timelineStart = new Date(2026, 6, 27);
+      const today = new Date(2026, 8, 3);
+      const taskNames = {
+        '2026-08-28': ['八月总结', '备份项目资料', '整理账单'],
+        '2026-09-01': ['确认九月计划', '购买咖啡豆'],
+        '2026-09-02': ['完善交互方案', '回复项目邮件', '力量训练'],
+        '2026-09-03': ['调整连续周布局', '补充 2K/4K 适配', '验证 Ctrl+滚轮', '采购晚餐食材', '阅读 30 分钟', '备份旧笔记', '整理桌面'],
+        '2026-09-07': ['节气内容校对'],
+        '2026-09-15': ['移动端适配方案', 'Flutter 技术调研', '缴纳账单'],
+        '2026-09-23': ['季度复盘', '调整十月目标'],
+        '2026-09-25': ['准备中秋礼物', '家庭聚餐'],
+        '2026-10-01': ['国庆出行', '检查门窗'],
+        '2026-10-12': ['十月阶段复盘', '整理照片'],
+        '2026-10-20': ['项目备份', '预约体检'],
+        '2026-11-06': ['冬季计划', '年度目标预览']
+      };
+      const calendarLabels = {
+        '2026-09-07': '白露',
+        '2026-09-23': '秋分',
+        '2026-09-25': '中秋·休',
+        '2026-10-01': '国庆·休',
+        '2026-10-10': '班',
+        '2026-11-07': '立冬'
+      };
+      const taskDetails = {};
+      let visibleWeeks = 5;
+      let startWeek = 5;
+      let selected = new Date(today);
+      let toastTimer;
+      let lastWheelAt = 0;
+      let lastObservedGridHeight = 0;
+      let lastObservedWorkspaceWidth = 0;
+      let sidebarRatio = 0.125;
+      let splitPointerId = null;
+
+      function clampSidebarRatio(value) {
+        return Math.max(0.125, Math.min(0.5, value));
+      }
+
+      function applySidebarRatio(value) {
+        sidebarRatio = clampSidebarRatio(value);
+        const workspaceWidth = workspace.getBoundingClientRect().width;
+        if (workspaceWidth <= 0) return;
+        const dividerWidth = 8;
+        const usableWidth = Math.max(0, workspaceWidth - dividerWidth);
+        const sidebarWidth = usableWidth * sidebarRatio;
+        workspace.style.gridTemplateColumns = `minmax(0, 1fr) ${dividerWidth}px ${sidebarWidth}px`;
+        floatingToday.style.right = `${sidebarWidth + dividerWidth + 16}px`;
+        divider.setAttribute('aria-valuenow', String(Number((sidebarRatio * 100).toFixed(1))));
+        divider.setAttribute('aria-label', `调整日历与 TODO 栏宽度，当前 TODO 栏占 ${Math.round(sidebarRatio * 100)}%`);
+      }
+
+      function ratioFromPointer(clientX) {
+        const bounds = workspace.getBoundingClientRect();
+        const usableWidth = Math.max(1, bounds.width - 8);
+        const sidebarWidth = bounds.right - clientX - 4;
+        return sidebarWidth / usableWidth;
+      }
+
+      function finishSplitDrag(event) {
+        if (splitPointerId === null || (event && event.pointerId !== splitPointerId)) return;
+        if (divider.hasPointerCapture(splitPointerId)) divider.releasePointerCapture(splitPointerId);
+        splitPointerId = null;
+        shell.classList.remove('is-resizing');
+        showToast(`TODO 栏宽度 ${Math.round(sidebarRatio * 100)}%`);
+      }
+
+      function addDays(date, amount) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + amount);
+        return result;
+      }
+
+      function keyOf(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      function sameDate(a, b) {
+        return keyOf(a) === keyOf(b);
+      }
+
+      function clampStart(value) {
+        return Math.max(0, Math.min(24 - visibleWeeks, value));
+      }
+
+      function getDetails(date) {
+        const key = keyOf(date);
+        if (!taskDetails[key]) {
+          const names = taskNames[key] || ['暂无待办'];
+          taskDetails[key] = names.map((name, index) => ({
+            name,
+            meta: index === 0 ? '高 · 09:30 · 工作' : index === 1 ? '中 · 计划 DDL 18:00' : '无优先级',
+            overdue: key === '2026-09-03' && index === 1,
+            done: key === '2026-09-03' && index === names.length - 1
+          }));
+        }
+        return taskDetails[key];
+      }
+
+      function formatShort(date) {
+        return `${date.getMonth() + 1} 月 ${date.getDate()} 日`;
+      }
+
+      function selectedTitle() {
+        return `${selected.getMonth() + 1} 月 ${selected.getDate()} 日，${weekdays[selected.getDay()]}`;
+      }
+
+      function createDay(date, physicalPreviewLimit) {
+        const key = keyOf(date);
+        const tasks = taskNames[key] || [];
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ew-day';
+        button.dataset.dateKey = key;
+        if (sameDate(date, selected)) button.classList.add('is-selected');
+        if (sameDate(date, today)) button.classList.add('is-today');
+        if ([0, 6].includes(date.getDay())) button.classList.add('is-weekend');
+        button.setAttribute('aria-label', `${formatShort(date)}，单击选择，双击全屏打开待办`);
+
+        const top = document.createElement('div');
+        top.className = 'ew-day-top';
+        const dateNumber = document.createElement('span');
+        dateNumber.className = 'ew-date';
+        dateNumber.textContent = String(date.getDate());
+        if (date.getDate() === 1) {
+          button.classList.add('is-month-start');
+          const month = document.createElement('span');
+          month.className = `ew-month-watermark${date.getMonth() >= 10 ? ' is-long' : ''}`;
+          month.textContent = chineseMonths[date.getMonth()];
+          month.setAttribute('aria-hidden', 'true');
+          button.appendChild(month);
+        }
+        top.appendChild(dateNumber);
+        if (calendarLabels[key]) {
+          const label = document.createElement('span');
+          label.className = 'ew-calendar-label';
+          label.textContent = calendarLabels[key];
+          top.appendChild(label);
+        }
+        button.appendChild(top);
+
+        const list = document.createElement('div');
+        list.className = 'ew-preview-list';
+        const shown = Math.min(6, physicalPreviewLimit, tasks.length);
+        tasks.slice(0, shown).forEach((task, index) => {
+          const row = document.createElement('div');
+          row.className = `ew-preview-task${index === 0 ? ' is-high' : ''}`;
+          row.textContent = task;
+          list.appendChild(row);
+        });
+        if (tasks.length > shown) {
+          const more = document.createElement('div');
+          more.className = 'ew-more';
+          more.textContent = `还有 ${tasks.length - shown} 项`;
+          list.appendChild(more);
+        }
+        button.appendChild(list);
+        button.addEventListener('click', () => {
+          selected = new Date(date);
+          updateSelection();
+          renderTaskLists();
+        });
+        button.addEventListener('dblclick', () => {
+          selected = new Date(date);
+          updateSelection();
+          renderTaskLists();
+          openFocus();
+        });
+        return button;
+      }
+
+      function updateSelection() {
+        const selectedKey = keyOf(selected);
+        root.querySelectorAll('.ew-day[data-date-key]').forEach(day => {
+          day.classList.toggle('is-selected', day.dataset.dateKey === selectedKey);
+        });
+      }
+
+      function renderCalendar() {
+        const viewportHeight = Math.max(1, grid.getBoundingClientRect().height);
+        grid.style.gridTemplateRows = `repeat(${visibleWeeks}, minmax(0, 1fr))`;
+        const rowHeight = viewportHeight / visibleWeeks;
+        const physicalPreviewLimit = Math.max(1, Math.floor((rowHeight - 38) / 15));
+        const firstDate = addDays(timelineStart, startWeek * 7);
+        const lastDate = addDays(firstDate, visibleWeeks * 7 - 1);
+        const days = [];
+        for (let offset = 0; offset < visibleWeeks * 7; offset += 1) {
+          days.push(createDay(addDays(firstDate, offset), physicalPreviewLimit));
+        }
+        grid.replaceChildren(...days);
+        weekCountLabel.textContent = `${visibleWeeks} 周`;
+        visibleRange.textContent = `可用 ${Math.round(viewportHeight)}px ÷ ${visibleWeeks} 周 = ${rowHeight.toFixed(1)}px/日 · ${formatShort(firstDate)}—${formatShort(lastDate)} · 最多 ${Math.min(6, physicalPreviewLimit)} 条`;
+        const center = addDays(firstDate, Math.floor(visibleWeeks * 7 / 2));
+        rangeLabel.textContent = `${center.getFullYear()} 年 ${center.getMonth() + 1} 月`;
+      }
+
+      function createTaskRow(item, focusMode) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `${focusMode ? 'ew-focus-task' : 'ew-side-task'}${item.done ? ' is-done' : ''}`;
+        const check = document.createElement('span');
+        check.className = 'ew-checkbox';
+        check.setAttribute('aria-hidden', 'true');
+        const copy = document.createElement('span');
+        copy.className = 'ew-task-copy';
+        const name = document.createElement('span');
+        name.className = 'ew-task-name';
+        name.textContent = item.name;
+        const meta = document.createElement('span');
+        meta.className = `ew-task-meta${item.overdue && !item.done ? ' is-overdue' : ''}`;
+        meta.textContent = item.overdue && !item.done ? `${item.meta} · 已逾期` : item.meta;
+        copy.append(name, meta);
+        button.append(check, copy);
+        button.addEventListener('click', () => {
+          item.done = !item.done;
+          renderTaskLists();
+          showToast(item.done ? '任务已完成并移至底部' : '任务已恢复');
+        });
+        return button;
+      }
+
+      function renderTaskLists() {
+        const items = getDetails(selected);
+        const pending = items.filter(item => !item.done);
+        const completed = items.filter(item => item.done);
+        sideDate.textContent = selectedTitle();
+        sideMeta.textContent = `${pending.length} 项未完成 · ${completed.length} 项已完成`;
+        activeHost.replaceChildren(...pending.map(item => createTaskRow(item, false)));
+        doneHost.replaceChildren(...completed.map(item => createTaskRow(item, false)));
+        doneCount.textContent = String(completed.length);
+        focusTitle.textContent = selectedTitle();
+        focusCount.textContent = `${pending.length} 项未完成`;
+        focusActive.replaceChildren(...pending.map(item => createTaskRow(item, true)));
+        focusDone.replaceChildren(...completed.map(item => createTaskRow(item, true)));
+        focusDoneCount.textContent = String(completed.length);
+      }
+
+      function changeVisibleWeeks(nextValue) {
+        const next = Math.max(5, Math.min(10, nextValue));
+        if (next === visibleWeeks) {
+          showToast(next === 5 ? '最少显示 5 周' : '最多显示 10 周');
+          return;
+        }
+        const centerWeek = startWeek + Math.floor(visibleWeeks / 2);
+        visibleWeeks = next;
+        startWeek = clampStart(centerWeek - Math.floor(visibleWeeks / 2));
+        renderCalendar();
+        showToast(`当前显示 ${visibleWeeks} 周`);
+      }
+
+      function jumpMonth(direction) {
+        const firstDate = addDays(timelineStart, startWeek * 7);
+        const centerDate = addDays(firstDate, Math.floor(visibleWeeks * 7 / 2));
+        const target = new Date(centerDate.getFullYear(), centerDate.getMonth() + direction, 15);
+        const diffDays = Math.round((target - timelineStart) / 86400000);
+        startWeek = clampStart(Math.floor(diffDays / 7) - Math.floor(visibleWeeks / 2));
+        renderCalendar();
+      }
+
+      function openFocus() {
+        focus.classList.add('is-visible');
+        focus.setAttribute('aria-hidden', 'false');
+        focus.querySelector('[data-action="collapse"]').focus();
+      }
+
+      function closeFocus() {
+        focus.classList.remove('is-visible');
+        focus.setAttribute('aria-hidden', 'true');
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 1600);
+      }
+
+      function submitQuickAdd(input) {
+        const value = input.value.trim();
+        if (!value) return;
+        const items = getDetails(selected);
+        if (items.length === 1 && items[0].name === '暂无待办') items.length = 0;
+        items.push({name:value, meta:'无优先级', overdue:false, done:false});
+        input.value = '';
+        renderTaskLists();
+        showToast(`已添加：${value}`);
+      }
+
+      root.querySelector('[data-action="fewer-weeks"]').addEventListener('click', () => changeVisibleWeeks(visibleWeeks - 1));
+      root.querySelector('[data-action="more-weeks"]').addEventListener('click', () => changeVisibleWeeks(visibleWeeks + 1));
+      root.querySelector('[data-action="previous-month"]').addEventListener('click', () => jumpMonth(-1));
+      root.querySelector('[data-action="next-month"]').addEventListener('click', () => jumpMonth(1));
+      root.querySelectorAll('[data-action="today"]').forEach(button => button.addEventListener('click', () => {
+        startWeek = 5;
+        selected = new Date(today);
+        closeFocus();
+        renderCalendar();
+        renderTaskLists();
+        showToast(`已回到今天 · 保持 ${visibleWeeks} 周`);
+      }));
+      root.querySelector('[data-action="expand"]').addEventListener('click', openFocus);
+      root.querySelector('[data-action="collapse"]').addEventListener('click', closeFocus);
+      root.querySelector('#ew-quick-add').addEventListener('keydown', event => {
+        if (event.key === 'Enter') submitQuickAdd(event.currentTarget);
+      });
+      root.querySelector('#ew-focus-add').addEventListener('keydown', event => {
+        if (event.key === 'Enter') submitQuickAdd(event.currentTarget);
+      });
+      divider.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        splitPointerId = event.pointerId;
+        divider.setPointerCapture(event.pointerId);
+        shell.classList.add('is-resizing');
+        applySidebarRatio(ratioFromPointer(event.clientX));
+      });
+      divider.addEventListener('pointermove', event => {
+        if (event.pointerId !== splitPointerId) return;
+        applySidebarRatio(ratioFromPointer(event.clientX));
+      });
+      divider.addEventListener('pointerup', finishSplitDrag);
+      divider.addEventListener('pointercancel', finishSplitDrag);
+      divider.addEventListener('dblclick', () => {
+        applySidebarRatio(0.125);
+        showToast('TODO 栏已恢复为 12.5%');
+      });
+      divider.addEventListener('keydown', event => {
+        let nextRatio = sidebarRatio;
+        if (event.key === 'ArrowLeft') nextRatio += 0.025;
+        else if (event.key === 'ArrowRight') nextRatio -= 0.025;
+        else if (event.key === 'Home') nextRatio = 0.125;
+        else if (event.key === 'End') nextRatio = 0.5;
+        else return;
+        event.preventDefault();
+        applySidebarRatio(nextRatio);
+      });
+      root.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && focus.classList.contains('is-visible')) closeFocus();
+      });
+      grid.addEventListener('wheel', event => {
+        event.preventDefault();
+        const now = Date.now();
+        if (now - lastWheelAt < 110) return;
+        lastWheelAt = now;
+        const direction = event.deltaY > 0 ? 1 : -1;
+        if (event.ctrlKey) {
+          changeVisibleWeeks(visibleWeeks + direction);
+        } else {
+          startWeek = clampStart(startWeek + direction);
+          renderCalendar();
+        }
+      }, {passive:false});
+
+      new ResizeObserver(entries => {
+        const nextHeight = Math.round(entries[0].contentRect.height);
+        if (nextHeight > 0 && nextHeight !== lastObservedGridHeight) {
+          lastObservedGridHeight = nextHeight;
+          renderCalendar();
+        }
+      }).observe(grid);
+      new ResizeObserver(entries => {
+        const nextWidth = Math.round(entries[0].contentRect.width);
+        if (nextWidth > 0 && nextWidth !== lastObservedWorkspaceWidth) {
+          lastObservedWorkspaceWidth = nextWidth;
+          applySidebarRatio(sidebarRatio);
+        }
+      }).observe(workspace);
+      requestAnimationFrame(() => {
+        applySidebarRatio(sidebarRatio);
+        renderCalendar();
+        renderTaskLists();
+      });
+    })();
+  </script>
+</div>
