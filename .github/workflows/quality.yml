@@ -1,0 +1,25 @@
+name: Flutter quality
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  analyze-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.2
+          cache: true
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: dart run build_runner build
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build windows --debug
+      - run: flutter test integration_test -d windows
+      - run: flutter build windows --debug
