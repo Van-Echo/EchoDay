@@ -9,6 +9,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/widgets/app_scaffold.dart';
+import '../../../app/widgets/echoday_date_picker.dart';
 import '../../todos/application/todo_providers.dart';
 import '../../todos/domain/category.dart';
 import '../../todos/domain/local_date.dart';
@@ -54,6 +55,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final categories =
         ref.watch(categoriesProvider).value ?? const <Category>[];
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
+    final categoryWidth = _categoryFilterWidth(context, strings, categories);
     return AppScaffold(
       selectedIndex: 2,
       title: strings.searchTitle,
@@ -97,37 +99,52 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       for (final filter in CompletionFilter.values)
-                        ChoiceChip(
-                          label: Text(_completionName(strings, filter)),
-                          selected: _completion == filter,
-                          onSelected: (_) {
-                            setState(() => _completion = filter);
-                            _scheduleSearch(immediate: true);
-                          },
+                        SizedBox(
+                          height: 40,
+                          child: ChoiceChip(
+                            label: Text(_completionName(strings, filter)),
+                            selected: _completion == filter,
+                            onSelected: (_) {
+                              setState(() => _completion = filter);
+                              _scheduleSearch(immediate: true);
+                            },
+                          ),
                         ),
-                      OutlinedButton.icon(
-                        onPressed: _pickDateRange,
-                        icon: const Icon(Icons.date_range_rounded),
-                        label: Text(_dateRangeText(strings)),
+                      SizedBox(
+                        height: 40,
+                        child: OutlinedButton.icon(
+                          onPressed: _pickDateRange,
+                          icon: const Icon(Icons.date_range_rounded),
+                          label: Text(_dateRangeText(strings)),
+                        ),
                       ),
                       SizedBox(
-                        width: 190,
+                        width: categoryWidth,
+                        height: 40,
                         child: DropdownButtonFormField<String?>(
+                          key: const ValueKey('search-category-filter'),
                           initialValue: _categoryId,
                           isDense: true,
-                          decoration: InputDecoration(
-                            labelText: strings.categoryLabel,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                           items: [
                             DropdownMenuItem<String?>(
                               value: null,
-                              child: Text(strings.searchAll),
+                              child: Text(
+                                '${strings.categoryLabel} · '
+                                '${strings.searchAll}',
+                              ),
                             ),
                             for (final category in categories)
                               DropdownMenuItem<String?>(
                                 value: category.id,
                                 child: Text(
-                                  category.name,
+                                  '${strings.categoryLabel} · ${category.name}',
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -174,6 +191,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ],
       ),
     );
+  }
+
+  double _categoryFilterWidth(
+    BuildContext context,
+    AppLocalizations strings,
+    List<Category> categories,
+  ) {
+    final style = Theme.of(context).textTheme.bodyMedium;
+    final labels = [
+      '${strings.categoryLabel} · ${strings.searchAll}',
+      for (final category in categories)
+        '${strings.categoryLabel} · ${category.name}',
+    ];
+    final widest = labels
+        .map(
+          (label) => (TextPainter(
+            text: TextSpan(text: label, style: style),
+            textDirection: Directionality.of(context),
+            maxLines: 1,
+          )..layout()).width,
+        )
+        .reduce((left, right) => left > right ? left : right);
+    return (widest + 72).clamp(140, 280);
   }
 
   Widget _buildResults(List<Category> categories, List<Tag> tags) {
@@ -267,14 +307,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   Future<void> _pickDateRange() async {
-    final selected = await showDateRangePicker(
+    final result = await showEchoDayDateRangePicker(
       context: context,
-      firstDate: DateTime(1970),
-      lastDate: DateTime(2200),
-      initialDateRange: _dateRange,
+      initialRange: _dateRange,
     );
-    if (selected != null && mounted) {
-      setState(() => _dateRange = selected);
+    if (result != null && mounted) {
+      setState(() => _dateRange = result.range);
       _scheduleSearch(immediate: true);
     }
   }

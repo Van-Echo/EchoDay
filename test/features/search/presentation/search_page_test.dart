@@ -51,6 +51,24 @@ void main() {
     await tester.tap(find.byIcon(Icons.search_outlined));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    final completionHeight = tester
+        .getSize(find.byType(ChoiceChip).first)
+        .height;
+    final dateRangeHeight = tester
+        .getSize(find.byType(OutlinedButton).first)
+        .height;
+    final categoryHeight = tester
+        .getSize(find.byKey(const ValueKey('search-category-filter')))
+        .height;
+    expect(completionHeight, closeTo(40, 0.1));
+    expect(dateRangeHeight, closeTo(40, 0.1));
+    expect(categoryHeight, closeTo(40, 0.1));
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('search-category-filter')))
+          .width,
+      lessThan(200),
+    );
     await tester.enterText(
       find.byKey(const ValueKey('global-search-field')),
       '发布说明',

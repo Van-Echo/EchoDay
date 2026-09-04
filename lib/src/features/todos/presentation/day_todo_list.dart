@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/providers/data_providers.dart';
+import '../../settings/application/app_preferences.dart';
 import '../application/recurrence_actions.dart';
 import '../application/todo_providers.dart';
 import '../domain/category.dart';
@@ -82,6 +84,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
         ref.watch(categoriesProvider).value ?? const <Category>[];
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
     final now = ref.watch(currentTimeProvider).value ?? DateTime.now().toUtc();
+    final postponeDays = ref.watch(postponeDaysProvider).value ?? 1;
     final filteredItems = todos.value?.where((todo) {
       if (_categoryFilter != null && todo.categoryId != _categoryFilter) {
         return false;
@@ -99,7 +102,9 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
           canPostpone:
               !_postponing &&
               (todos.value?.any((todo) => !todo.isCompleted) ?? false),
-          onPostpone: _postponeIncomplete,
+          postponeDays: postponeDays,
+          onPostpone: () => _postponeIncomplete(postponeDays),
+          onConfigurePostpone: () => _configurePostponeDays(postponeDays),
           onFiltersChanged: (filters) => setState(() {
             _categoryFilter = filters.categoryId;
             _tagFilters = {...filters.tagIds};
@@ -128,7 +133,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
     );
   }
 
-  Future<void> _postponeIncomplete() async {
+  Future<void> _postponeIncomplete(int days) async {
     final strings = AppLocalizations.of(context);
     final count = (ref.read(todosByDateProvider(widget.date)).value ?? const [])
         .where((todo) => !todo.isCompleted)
@@ -139,7 +144,11 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
       builder: (context) => AlertDialog(
         title: Text(strings.postponeDialogTitle),
         content: Text(
-          strings.postponeDialogBody(count, widget.date.addDays(1).toString()),
+          strings.postponeDialogBodyDays(
+            count,
+            widget.date.addDays(days).toString(),
+            days,
+          ),
         ),
         actions: [
           TextButton(
@@ -158,10 +167,11 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
     try {
       final moved = await ref
           .read(postponeIncompleteTodosProvider)
-          .call(widget.date);
+          .call(widget.date, days: days);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(strings.postponedTasks(moved))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.postponedTasksDays(moved, days))),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -169,6 +179,50 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
     } finally {
       if (mounted) setState(() => _postponing = false);
     }
+  }
+
+  Future<void> _configurePostponeDays(int initialDays) async {
+    final controller = TextEditingController(text: '$initialDays');
+    final strings = AppLocalizations.of(context);
+    final days = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.configurePostponeDays),
+        content: TextField(
+          key: const ValueKey('postpone-days-field'),
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: InputDecoration(
+            labelText: strings.postponeDaysLabel,
+            helperText: strings.postponeDaysRange,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text);
+              if (parsed != null && parsed >= 1 && parsed <= 365) {
+                Navigator.pop(context, parsed);
+              }
+            },
+            child: Text(strings.save),
+          ),
+        ],
+      ),
+    );
+    if (days != null && mounted) {
+      await ref
+          .read(settingsRepositoryProvider)
+          .set(AppPreferenceKeys.postponeDays, '$days');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    controller.dispose();
   }
 
   Widget _buildList(
@@ -398,7 +452,9 @@ class _SortToolbar extends ConsumerWidget {
     required this.tags,
     required this.filters,
     required this.canPostpone,
+    required this.postponeDays,
     required this.onPostpone,
+    required this.onConfigurePostpone,
     required this.onFiltersChanged,
   });
 
@@ -408,7 +464,9 @@ class _SortToolbar extends ConsumerWidget {
   final List<Tag> tags;
   final _TodoFilters filters;
   final bool canPostpone;
+  final int postponeDays;
   final VoidCallback onPostpone;
+  final VoidCallback onConfigurePostpone;
   final ValueChanged<_TodoFilters> onFiltersChanged;
 
   @override
@@ -444,12 +502,17 @@ class _SortToolbar extends ConsumerWidget {
               ),
             ] else
               const Spacer(),
-            IconButton(
-              key: const ValueKey('postpone-incomplete-todos'),
-              tooltip: strings.postponeIncomplete,
-              onPressed: canPostpone ? onPostpone : null,
-              style: compactIconStyle,
-              icon: const Icon(Icons.next_plan_outlined),
+            GestureDetector(
+              onSecondaryTapDown: canPostpone
+                  ? (_) => onConfigurePostpone()
+                  : null,
+              child: IconButton(
+                key: const ValueKey('postpone-incomplete-todos'),
+                tooltip: strings.postponeIncompleteDays(postponeDays),
+                onPressed: canPostpone ? onPostpone : null,
+                style: compactIconStyle,
+                icon: const Icon(Icons.next_plan_outlined),
+              ),
             ),
             IconButton(
               tooltip: strings.filterTasks,
@@ -684,7 +747,7 @@ class _TodoSection extends StatelessWidget {
   }
 }
 
-enum _TodoAction { edit, toggle, delete }
+enum _TodoAction { edit, toggle, postpone, delete }
 
 class _TodoListTile extends ConsumerWidget {
   const _TodoListTile({
@@ -716,6 +779,8 @@ class _TodoListTile extends ConsumerWidget {
         .where((item) => todo.tagIds.contains(item.id))
         .toList();
     final metadata = _metadata(context, overdue);
+    final postponeDays = ref.watch(postponeDaysProvider).value ?? 1;
+    final notes = todo.notes?.trim();
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
@@ -749,48 +814,78 @@ class _TodoListTile extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        todo.title,
-                        maxLines: compact ? 2 : 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          decoration: todo.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: todo.isCompleted
-                              ? colors.onSurfaceVariant.withValues(alpha: 0.62)
-                              : colors.onSurface,
-                        ),
-                      ),
-                      if (metadata.isNotEmpty) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          metadata,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: overdue ? colors.error : colors.outline,
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              todo.title,
+                              maxLines: compact ? 2 : 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                decoration: todo.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                                color: todo.isCompleted
+                                    ? colors.onSurfaceVariant.withValues(
+                                        alpha: 0.62,
+                                      )
+                                    : colors.onSurface,
                               ),
-                        ),
-                      ],
-                      if (!compact &&
-                          (category != null || todoTags.isNotEmpty)) ...[
-                        const SizedBox(height: 5),
+                            ),
+                          ),
+                          if (notes != null && notes.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Flexible(
+                              flex: 2,
+                              child: Text(
+                                notes,
+                                key: ValueKey('todo-notes-${todo.id}'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: colors.outline.withValues(
+                                        alpha: todo.isCompleted ? 0.62 : 1,
+                                      ),
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (metadata.isNotEmpty ||
+                          category != null ||
+                          todoTags.isNotEmpty) ...[
+                        const SizedBox(height: 3),
                         Wrap(
                           spacing: 5,
                           runSpacing: 3,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             if (category case final category?)
                               _MiniChip(
                                 name: category.name,
                                 color: Color(category.colorValue),
-                                icon: Icons.folder_outlined,
+                                filled: false,
                               ),
-                            for (final tag in todoTags.take(4))
+                            for (final tag in todoTags.take(compact ? 2 : 4))
                               _MiniChip(
                                 name: tag.name,
                                 color: Color(tag.colorValue),
+                                filled: true,
+                              ),
+                            if (metadata.isNotEmpty)
+                              Text(
+                                metadata,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: overdue
+                                          ? colors.error
+                                          : colors.outline,
+                                    ),
                               ),
                           ],
                         ),
@@ -823,8 +918,9 @@ class _TodoListTile extends ConsumerWidget {
                   tooltip: strings.editTask,
                   padding: EdgeInsets.zero,
                   iconSize: 18,
-                  onSelected: (action) => _runAction(context, ref, action),
-                  itemBuilder: (context) => _menuItems(strings),
+                  onSelected: (action) =>
+                      _runAction(context, ref, action, postponeDays),
+                  itemBuilder: (context) => _menuItems(strings, postponeDays),
                 ),
               ],
             ),
@@ -852,7 +948,10 @@ class _TodoListTile extends ConsumerWidget {
     return values.join(' · ');
   }
 
-  List<PopupMenuEntry<_TodoAction>> _menuItems(AppLocalizations strings) => [
+  List<PopupMenuEntry<_TodoAction>> _menuItems(
+    AppLocalizations strings,
+    int postponeDays,
+  ) => [
     PopupMenuItem(
       value: _TodoAction.edit,
       child: ListTile(
@@ -875,6 +974,15 @@ class _TodoListTile extends ConsumerWidget {
         contentPadding: EdgeInsets.zero,
       ),
     ),
+    if (!todo.isCompleted)
+      PopupMenuItem(
+        value: _TodoAction.postpone,
+        child: ListTile(
+          leading: const Icon(Icons.next_plan_outlined),
+          title: Text(strings.postponeOneTaskDays(postponeDays)),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
     PopupMenuItem(
       value: _TodoAction.delete,
       child: ListTile(
@@ -898,10 +1006,18 @@ class _TodoListTile extends ConsumerWidget {
         Rect.fromLTWH(position.dx, position.dy, 0, 0),
         Offset.zero & overlay.size,
       ),
-      items: _menuItems(AppLocalizations.of(context)),
+      items: _menuItems(
+        AppLocalizations.of(context),
+        ref.read(postponeDaysProvider).value ?? 1,
+      ),
     );
     if (action != null && context.mounted) {
-      await _runAction(context, ref, action);
+      await _runAction(
+        context,
+        ref,
+        action,
+        ref.read(postponeDaysProvider).value ?? 1,
+      );
     }
   }
 
@@ -909,14 +1025,34 @@ class _TodoListTile extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     _TodoAction action,
+    int postponeDays,
   ) async {
     switch (action) {
       case _TodoAction.edit:
         await showTodoEditor(context, ref, date: todo.localDate, todo: todo);
       case _TodoAction.toggle:
         await _toggle(context, ref);
+      case _TodoAction.postpone:
+        await _postpone(context, ref, postponeDays);
       case _TodoAction.delete:
         await _delete(context, ref);
+    }
+  }
+
+  Future<void> _postpone(BuildContext context, WidgetRef ref, int days) async {
+    try {
+      await ref.read(postponeIncompleteTodosProvider).moveOne(todo, days: days);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).postponedOneTask(days)),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
+      );
     }
   }
 
@@ -993,32 +1129,32 @@ class _TodoListTile extends ConsumerWidget {
 }
 
 class _MiniChip extends StatelessWidget {
-  const _MiniChip({required this.name, required this.color, this.icon});
+  const _MiniChip({
+    required this.name,
+    required this.color,
+    required this.filled,
+  });
 
   final String name;
   final Color color;
-  final IconData? icon;
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        color: filled ? color : Colors.transparent,
+        border: filled ? null : Border.all(color: color),
+        borderRadius: BorderRadius.circular(5),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon case final value?) ...[
-            Icon(value, size: 10, color: color),
-            const SizedBox(width: 3),
-          ] else ...[
-            CircleAvatar(radius: 3, backgroundColor: color),
-            const SizedBox(width: 4),
-          ],
-          Text(name, style: Theme.of(context).textTheme.labelSmall),
-        ],
+      child: Text(
+        name,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: filled
+              ? (color.computeLuminance() > 0.48 ? Colors.black : Colors.white)
+              : color,
+        ),
       ),
     );
   }

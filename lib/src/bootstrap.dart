@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'app/echoday_app.dart';
 import 'core/errors/app_error_view.dart';
@@ -10,8 +13,12 @@ import 'core/logging/app_logger.dart';
 
 void bootstrap() {
   runZonedGuarded(
-    () {
+    () async {
       WidgetsFlutterBinding.ensureInitialized();
+      if (Platform.isWindows) {
+        await windowManager.ensureInitialized();
+        await hotKeyManager.unregisterAll();
+      }
       configureLogging();
 
       FlutterError.onError = (details) {

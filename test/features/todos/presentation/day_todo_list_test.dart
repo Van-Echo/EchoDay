@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:echoday/l10n/app_localizations.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
+import 'package:echoday/src/features/settings/application/app_preferences.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
 import 'package:echoday/src/features/todos/domain/category.dart';
 import 'package:echoday/src/features/todos/domain/local_date.dart';
+import 'package:echoday/src/features/todos/domain/repositories/category_repository.dart';
+import 'package:echoday/src/features/todos/domain/repositories/tag_repository.dart';
 import 'package:echoday/src/features/todos/domain/repositories/todo_repository.dart';
 import 'package:echoday/src/features/todos/domain/tag.dart';
 import 'package:echoday/src/features/todos/domain/todo_item.dart';
 import 'package:echoday/src/features/todos/domain/todo_search.dart';
 import 'package:echoday/src/features/todos/presentation/day_todo_list.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +24,8 @@ import '../../../support/in_memory_settings_repository.dart';
 
 void main() {
   late _MemoryTodoRepository todos;
+  late _MemoryCategoryRepository categoryRepository;
+  late _MemoryTagRepository tagRepository;
   late InMemorySettingsRepository settings;
   late LocalDate date;
   late DateTime now;
@@ -26,18 +33,24 @@ void main() {
   setUp(() {
     now = DateTime.utc(2026, 9, 4, 12);
     todos = _MemoryTodoRepository(() => now);
+    categoryRepository = _MemoryCategoryRepository();
+    tagRepository = _MemoryTagRepository();
     settings = InMemorySettingsRepository();
     date = LocalDate(2026, 9, 4);
   });
 
-  Widget app() => ProviderScope(
+  Widget app({
+    List<Category> categories = const <Category>[],
+    List<Tag> tags = const <Tag>[],
+    bool compact = false,
+  }) => ProviderScope(
     overrides: [
       todoRepositoryProvider.overrideWithValue(todos),
+      categoryRepositoryProvider.overrideWithValue(categoryRepository),
+      tagRepositoryProvider.overrideWithValue(tagRepository),
       settingsRepositoryProvider.overrideWithValue(settings),
-      categoriesProvider.overrideWith(
-        (ref) => Stream.value(const <Category>[]),
-      ),
-      tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
+      categoriesProvider.overrideWith((ref) => Stream.value(categories)),
+      tagsProvider.overrideWith((ref) => Stream.value(tags)),
       currentTimeProvider.overrideWith((ref) => Stream.value(now)),
     ],
     child: MaterialApp(
@@ -49,7 +62,9 @@ void main() {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: DayTodoList(date: date)),
+      home: Scaffold(
+        body: DayTodoList(date: date, compact: compact),
+      ),
     ),
   );
 
@@ -194,13 +209,276 @@ void main() {
     await tester.tap(find.text('顺延'));
     await tester.pumpAndSettle();
 
-    expect(find.text('已顺延 1 项未完成任务'), findsOneWidget);
+    expect(find.text('已将 1 项未完成任务顺延 1 天'), findsOneWidget);
     expect((await todos.getById(completed.id))?.localDate, date);
     final moved = await todos.getById(incomplete.id);
     expect(moved?.localDate, date.addDays(1));
     expect(moved?.plannedAt, DateTime(2026, 9, 5, 9).toUtc());
     expect(moved?.deadlineAt, DateTime(2026, 9, 5, 18).toUtc());
   });
+
+  testWidgets('shares configured postpone days with single-task context menu', (
+    tester,
+  ) async {
+    final todo = await todos.create(TodoDraft(title: '多日顺延', localDate: date));
+    await tester.pumpWidget(app());
+    await settle(tester);
+
+    await tester.tap(
+      find.byKey(const ValueKey('postpone-incomplete-todos')),
+      buttons: kSecondaryMouseButton,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('postpone-days-field')),
+      '3',
+    );
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect((await settings.get(AppPreferenceKeys.postponeDays))?.value, '3');
+
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(ValueKey('todo-${todo.id}')),
+        matching: find.byIcon(Icons.more_vert),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('将此任务顺延 3 天'));
+    await tester.pumpAndSettle();
+    expect((await todos.getById(todo.id))?.localDate, date.addDays(3));
+  });
+
+  testWidgets(
+    'shows outlined category and filled tag before deadline metadata',
+    (tester) async {
+      const categoryColor = Color(0xFF476C5E);
+      const tagColor = Color(0xFFF2D0A4);
+      final category = Category(
+        id: 'work',
+        name: '工作',
+        colorValue: categoryColor.toARGB32(),
+        createdAt: now,
+        updatedAt: now,
+      );
+      final tag = Tag(
+        id: 'focus',
+        name: '专注',
+        colorValue: tagColor.toARGB32(),
+        createdAt: now,
+        updatedAt: now,
+      );
+      final todo = await todos.create(
+        TodoDraft(
+          title: '带元数据任务',
+          localDate: date,
+          categoryId: category.id,
+          tagIds: {tag.id},
+          notes: '这是一段很长、只应在列表里单行省略显示的备注内容',
+          deadlineAt: DateTime(2026, 9, 4, 19, 25).toUtc(),
+        ),
+      );
+
+      await tester.pumpWidget(app(categories: [category], tags: [tag]));
+      await settle(tester);
+
+      final categoryContainer = tester.widget<Container>(
+        find
+            .ancestor(of: find.text('工作'), matching: find.byType(Container))
+            .first,
+      );
+      final tagContainer = tester.widget<Container>(
+        find
+            .ancestor(of: find.text('专注'), matching: find.byType(Container))
+            .first,
+      );
+      final categoryDecoration = categoryContainer.decoration! as BoxDecoration;
+      final tagDecoration = tagContainer.decoration! as BoxDecoration;
+      expect(categoryDecoration.color, Colors.transparent);
+      expect(categoryDecoration.border, isNotNull);
+      expect(tagDecoration.color, tagColor);
+
+      final row = find.byKey(ValueKey('todo-${todo.id}'));
+      final notes = find.byKey(ValueKey('todo-notes-${todo.id}'));
+      expect(notes, findsOneWidget);
+      final notesText = tester.widget<Text>(notes);
+      expect(notesText.maxLines, 1);
+      expect(notesText.overflow, TextOverflow.ellipsis);
+      expect(
+        tester.getTopLeft(notes).dx,
+        greaterThan(tester.getTopLeft(find.text('带元数据任务')).dx),
+      );
+      final categoryX = tester.getTopLeft(find.text('工作')).dx;
+      final tagX = tester.getTopLeft(find.text('专注')).dx;
+      final deadline = find.descendant(
+        of: row,
+        matching: find.textContaining('19:25'),
+      );
+      expect(categoryX, lessThan(tester.getTopLeft(deadline).dx));
+      expect(tagX, lessThan(tester.getTopLeft(deadline).dx));
+    },
+  );
+
+  testWidgets('catalog color palette supports adding and removing colors', (
+    tester,
+  ) async {
+    await todos.create(TodoDraft(title: '调色任务', localDate: date));
+    await tester.pumpWidget(app());
+    await settle(tester);
+
+    await tester.tap(find.text('调色任务'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('新建分类'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('palette-add-color')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('custom-color-preview')), findsOneWidget);
+
+    await tester.drag(find.byType(Slider).first, const Offset(120, 0));
+    await tester.pump();
+    final colorDialog = find.byType(AlertDialog).last;
+    await tester.tap(
+      find.descendant(of: colorDialog, matching: find.text('保存')),
+    );
+    await tester.pumpAndSettle();
+    final added = jsonDecode(
+      (await settings.get(AppPreferenceKeys.catalogPalette))!.value,
+    ) as List<dynamic>;
+    expect(added.length, defaultCatalogPalette.length + 1);
+
+    await tester.tap(find.byKey(const ValueKey('palette-remove-color')));
+    await tester.pumpAndSettle();
+    final removed = jsonDecode(
+      (await settings.get(AppPreferenceKeys.catalogPalette))!.value,
+    ) as List<dynamic>;
+    expect(removed.length, defaultCatalogPalette.length);
+  });
+
+  testWidgets('double-click edits categories and deletes tags', (tester) async {
+    final category = Category(
+      id: 'work',
+      name: '工作',
+      colorValue: const Color(0xFF476C5E).toARGB32(),
+      createdAt: now,
+      updatedAt: now,
+    );
+    final tag = Tag(
+      id: 'focus',
+      name: '专注',
+      colorValue: const Color(0xFFF2D0A4).toARGB32(),
+      createdAt: now,
+      updatedAt: now,
+    );
+    await todos.create(
+      TodoDraft(
+        title: '目录编辑任务',
+        localDate: date,
+        categoryId: category.id,
+        tagIds: {tag.id},
+      ),
+    );
+    await tester.pumpWidget(app(categories: [category], tags: [tag]));
+    await settle(tester);
+    await tester.tap(find.text('目录编辑任务'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('todo-editor-category')));
+    await tester.pumpAndSettle();
+    final categoryOption = find.byKey(const ValueKey('category-option-work'));
+    await tester.tap(categoryOption);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(categoryOption);
+    await tester.pumpAndSettle();
+    expect(find.text('修改分类'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('catalog-name-field')),
+      '项目',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, '保存').last);
+    await tester.pumpAndSettle();
+    expect(categoryRepository.saved.single.name, '项目');
+
+    final tagChip = find.byKey(const ValueKey('todo-editor-tag-focus'));
+    await tester.tap(tagChip);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(tagChip);
+    await tester.pumpAndSettle();
+    expect(find.text('修改标签'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('catalog-delete')));
+    await tester.pumpAndSettle();
+    expect(find.text('确认删除？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '删除标签'));
+    await tester.pumpAndSettle();
+    expect(tagRepository.deleted, ['focus']);
+  });
+
+  testWidgets('planned time uses the current task date without a date picker', (
+    tester,
+  ) async {
+    final todo = await todos.create(TodoDraft(title: '只选时间', localDate: date));
+    await tester.pumpWidget(app());
+    await settle(tester);
+    await tester.tap(find.text('只选时间'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('todo-editor-planned-at')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TimePickerDialog), findsOneWidget);
+    expect(find.byType(DatePickerDialog), findsNothing);
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '保存').last);
+    await tester.pumpAndSettle();
+
+    final plannedAt = (await todos.getById(todo.id))!.plannedAt!.toLocal();
+    expect(LocalDate(plannedAt.year, plannedAt.month, plannedAt.day), date);
+  });
+}
+
+final class _MemoryCategoryRepository implements CategoryRepository {
+  final saved = <Category>[];
+  final deleted = <String>[];
+
+  @override
+  Future<List<Category>> getAll() async => saved;
+
+  @override
+  Future<Category> save(Category category) async {
+    saved.add(category);
+    return category;
+  }
+
+  @override
+  Future<void> softDelete(String id, {DateTime? at}) async => deleted.add(id);
+
+  @override
+  Future<void> undoDelete(String id) async => deleted.remove(id);
+
+  @override
+  Stream<List<Category>> watchAll() => Stream.value(saved);
+}
+
+final class _MemoryTagRepository implements TagRepository {
+  final saved = <Tag>[];
+  final deleted = <String>[];
+
+  @override
+  Future<List<Tag>> getAll() async => saved;
+
+  @override
+  Future<Tag> save(Tag tag) async {
+    saved.add(tag);
+    return tag;
+  }
+
+  @override
+  Future<void> softDelete(String id, {DateTime? at}) async => deleted.add(id);
+
+  @override
+  Future<void> undoDelete(String id) async => deleted.remove(id);
+
+  @override
+  Stream<List<Tag>> watchAll() => Stream.value(saved);
 }
 
 final class _MemoryTodoRepository implements TodoRepository {

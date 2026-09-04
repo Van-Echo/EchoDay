@@ -11,20 +11,24 @@ abstract final class AppTheme {
   static const Color _darkInk = Color(0xFFE8ECE7);
   static const Color _darkPrimary = Color(0xFF9FB19E);
 
-  static ThemeData get light => _build(
+  static ThemeData get light => lightWith(_lightPrimary);
+
+  static ThemeData lightWith(Color primary) => _build(
     brightness: Brightness.light,
     canvas: _lightCanvas,
     surface: _lightSurface,
     ink: _lightInk,
-    primary: _lightPrimary,
+    primary: primary,
   );
 
-  static ThemeData get dark => _build(
+  static ThemeData get dark => darkWith(_darkPrimary);
+
+  static ThemeData darkWith(Color primary) => _build(
     brightness: Brightness.dark,
     canvas: _darkCanvas,
     surface: _darkSurface,
     ink: _darkInk,
-    primary: _darkPrimary,
+    primary: primary,
   );
 
   static ThemeData _build({
@@ -41,6 +45,7 @@ abstract final class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'EchoDaySans',
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: canvas,

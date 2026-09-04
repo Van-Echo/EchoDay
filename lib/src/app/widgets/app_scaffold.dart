@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../providers/data_providers.dart';
 import '../router/app_routes.dart';
 
-class AppScaffold extends StatelessWidget {
+abstract final class AppScaffoldSettingKeys {
+  static const navigationRailExtended = 'shell.navigationRailExtended';
+}
+
+final navigationRailExtendedProvider = StreamProvider<bool?>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watch(AppScaffoldSettingKeys.navigationRailExtended)
+      .map((setting) => setting == null ? null : setting.value == 'true');
+});
+
+class AppScaffold extends ConsumerWidget {
   const AppScaffold({
     required this.selectedIndex,
     required this.title,
@@ -19,7 +32,7 @@ class AppScaffold extends StatelessWidget {
   final Widget? floatingActionButton;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final localizations = AppLocalizations.of(context);
     final destinations = [
       _Destination(
@@ -42,8 +55,8 @@ class AppScaffold extends StatelessWidget {
       ),
       _Destination(
         label: localizations.navSettings,
-        icon: Icons.tune_outlined,
-        selectedIcon: Icons.tune_rounded,
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings_rounded,
         location: AppRoutes.settings,
       ),
       _Destination(
@@ -53,6 +66,16 @@ class AppScaffold extends StatelessWidget {
         location: AppRoutes.about,
       ),
     ];
+    final labelStyle = Theme.of(context).textTheme.labelMedium;
+    final widestLabel = destinations
+        .map(
+          (destination) => (TextPainter(
+            text: TextSpan(text: destination.label, style: labelStyle),
+            textDirection: Directionality.of(context),
+          )..layout()).width,
+        )
+        .reduce((left, right) => left > right ? left : right);
+    final extendedRailWidth = (widestLabel + 96).clamp(144.0, 196.0);
 
     void navigate(int index) {
       context.go(destinations[index].location);
@@ -61,6 +84,8 @@ class AppScaffold extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= 840;
+        final savedExtended = ref.watch(navigationRailExtendedProvider).value;
+        final railExtended = savedExtended ?? constraints.maxWidth >= 1160;
         final content = ColoredBox(
           color: Theme.of(context).scaffoldBackgroundColor,
           child: body,
@@ -93,7 +118,8 @@ class AppScaffold extends StatelessWidget {
                   children: [
                     NavigationRail(
                       selectedIndex: selectedIndex,
-                      extended: constraints.maxWidth >= 1160,
+                      extended: railExtended,
+                      minExtendedWidth: extendedRailWidth,
                       onDestinationSelected: navigate,
                       destinations: [
                         for (final destination in destinations)
@@ -103,6 +129,36 @@ class AppScaffold extends StatelessWidget {
                             label: Text(destination.label),
                           ),
                       ],
+                      trailing: Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: IconButton(
+                              key: const ValueKey(
+                                'navigation-rail-width-toggle',
+                              ),
+                              tooltip: railExtended
+                                  ? localizations.collapseNavigation
+                                  : localizations.expandNavigation,
+                              onPressed: () async {
+                                await ref
+                                    .read(settingsRepositoryProvider)
+                                    .set(
+                                      AppScaffoldSettingKeys
+                                          .navigationRailExtended,
+                                      '${!railExtended}',
+                                    );
+                              },
+                              icon: Icon(
+                                railExtended
+                                    ? Icons.keyboard_double_arrow_left_rounded
+                                    : Icons.keyboard_double_arrow_right_rounded,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                     VerticalDivider(
                       thickness: 1,

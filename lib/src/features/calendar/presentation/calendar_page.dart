@@ -9,6 +9,8 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/widgets/app_scaffold.dart';
+import '../../../app/widgets/echoday_date_picker.dart';
+import '../../settings/application/app_preferences.dart';
 import '../../todos/application/todo_providers.dart';
 import '../../todos/domain/local_date.dart';
 import '../../todos/domain/todo_item.dart';
@@ -37,16 +39,40 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
+    final state = ref.watch(calendarControllerProvider);
+    final today = LocalDate.fromDateTime(DateTime.now());
+    final selectedIsToday = state.selectedDate == today;
     return AppScaffold(
       selectedIndex: 0,
       title: localizations.calendarTitle,
       body: const _CalendarWorkspace(),
-      floatingActionButton: FloatingActionButton.extended(
-        tooltip: localizations.backToToday,
-        onPressed: () =>
-            ref.read(calendarControllerProvider.notifier).goToToday(),
-        icon: const Icon(Icons.today_rounded),
-        label: Text(localizations.today),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!selectedIsToday) ...[
+            FloatingActionButton.extended(
+              heroTag: 'selected-date',
+              tooltip: localizations.backToSelectedDate,
+              onPressed: () => ref
+                  .read(calendarControllerProvider.notifier)
+                  .focusSelectedDate(),
+              icon: const Icon(Icons.event_rounded),
+              label: Text(
+                '${state.selectedDate.month.toString().padLeft(2, '0')}/'
+                '${state.selectedDate.day.toString().padLeft(2, '0')}',
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          FloatingActionButton.extended(
+            heroTag: 'today',
+            tooltip: localizations.backToToday,
+            onPressed: () =>
+                ref.read(calendarControllerProvider.notifier).goToToday(),
+            icon: const Icon(Icons.today_rounded),
+            label: Text(localizations.today),
+          ),
+        ],
       ),
     );
   }
@@ -187,63 +213,210 @@ class _CalendarToolbar extends ConsumerWidget {
     final localizations = AppLocalizations.of(context);
     final controller = ref.read(calendarControllerProvider.notifier);
     final dates = state.visibleDates;
-    final first = dates.first;
-    final last = dates.last;
-    final sameMonth = first.year == last.year && first.month == last.month;
+    final today = LocalDate.fromDateTime(DateTime.now());
+    final titleDate = state.selectedDate != today
+        ? state.selectedDate
+        : _dominantVisibleMonth(dates);
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final firstText = DateFormat.yMMMM(locale)
-        .format(DateTime(first.year, first.month));
-    final lastText = DateFormat.yMMMM(locale)
-        .format(DateTime(last.year, last.month));
-    final title = sameMonth ? firstText : '$firstText — $lastText';
+    final title = DateFormat.yMMMM(locale)
+        .format(DateTime(titleDate.year, titleDate.month));
     final visibleYears = dates.map((date) => date.year).toSet().toList()
       ..sort();
+    final motto =
+        ref.watch(calendarMottoProvider).value ?? defaultCalendarMotto;
     return SizedBox(
       height: 54,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Row(
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            IconButton(
-              tooltip: localizations.previousMonth,
-              onPressed: () => controller.showAdjacentMonth(-1),
-              icon: const Icon(Icons.chevron_left_rounded),
-            ),
-            IconButton(
-              tooltip: localizations.nextMonth,
-              onPressed: () => controller.showAdjacentMonth(1),
-              icon: const Icon(Icons.chevron_right_rounded),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
+            Positioned.fill(
+              child: Center(
+                child: FractionallySizedBox(
+                  widthFactor: 0.44,
+                  child: Tooltip(
+                    message: localizations.editMotto,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _editMotto(context, ref, motto),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 7,
+                          ),
+                          child: Text(
+                            motto,
+                            key: const ValueKey('calendar-motto'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-            _HolidayCoverageIndicator(years: visibleYears),
-            Text(localizations.visibleWeeks(state.visibleWeekCount)),
-            IconButton(
-              tooltip: localizations.showFewerWeeks,
-              onPressed: state.visibleWeekCount <= 5
-                  ? null
-                  : () => controller.changeVisibleWeeks(-1),
-              icon: const Icon(Icons.zoom_in_rounded),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    key: const ValueKey('calendar-date-picker'),
+                    tooltip: localizations.chooseDate,
+                    onPressed: () async {
+                      final selected = await showEchoDayDatePicker(
+                        context: context,
+                        initialDate: DateTime(
+                          state.selectedDate.year,
+                          state.selectedDate.month,
+                          state.selectedDate.day,
+                        ),
+                      );
+                      if (selected != null) {
+                        controller.goToDate(LocalDate.fromDateTime(selected));
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_month_outlined),
+                  ),
+                  IconButton(
+                    tooltip: localizations.previousMonth,
+                    onPressed: () => controller.showAdjacentMonth(-1),
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  IconButton(
+                    tooltip: localizations.nextMonth,
+                    onPressed: () => controller.showAdjacentMonth(1),
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 150),
+                    child: Text(
+                      key: const ValueKey('calendar-month-title'),
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            IconButton(
-              tooltip: localizations.showMoreWeeks,
-              onPressed: state.visibleWeekCount >= 10
-                  ? null
-                  : () => controller.changeVisibleWeeks(1),
-              icon: const Icon(Icons.zoom_out_rounded),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _HolidayCoverageIndicator(years: visibleYears),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+Future<void> _editMotto(
+  BuildContext context,
+  WidgetRef ref,
+  String currentValue,
+) async {
+  final value = await showDialog<String>(
+    context: context,
+    builder: (context) => _MottoEditorDialog(initialValue: currentValue),
+  );
+  if (value == null) return;
+  await ref
+      .read(settingsRepositoryProvider)
+      .set(AppPreferenceKeys.motto, value.trim());
+}
+
+class _MottoEditorDialog extends StatefulWidget {
+  const _MottoEditorDialog({required this.initialValue});
+
+  final String initialValue;
+
+  @override
+  State<_MottoEditorDialog> createState() => _MottoEditorDialogState();
+}
+
+class _MottoEditorDialogState extends State<_MottoEditorDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(strings.mottoTitle),
+      content: SizedBox(
+        width: 420,
+        child: TextField(
+          key: const ValueKey('calendar-motto-field'),
+          controller: _controller,
+          autofocus: true,
+          maxLength: 80,
+          minLines: 2,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: strings.mottoLabel,
+            alignLabelWithHint: true,
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(strings.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: Text(strings.save),
+        ),
+      ],
+    );
+  }
+}
+
+LocalDate _dominantVisibleMonth(List<LocalDate> dates) {
+  final counts = <(int, int), int>{};
+  for (final date in dates) {
+    final key = (date.year, date.month);
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  final orderedMonths = counts.keys.toList()
+    ..sort((left, right) {
+      final byYear = left.$1.compareTo(right.$1);
+      return byYear != 0 ? byYear : left.$2.compareTo(right.$2);
+    });
+  for (final month in orderedMonths) {
+    final daysInMonth = DateTime(month.$1, month.$2 + 1, 0).day;
+    if (counts[month] == daysInMonth) {
+      return LocalDate(month.$1, month.$2, 1);
+    }
+  }
+  final entries = counts.entries.toList()
+    ..sort((left, right) {
+      final byCount = right.value.compareTo(left.value);
+      if (byCount != 0) return byCount;
+      final byYear = left.key.$1.compareTo(right.key.$1);
+      return byYear != 0 ? byYear : left.key.$2.compareTo(right.key.$2);
+    });
+  return LocalDate(entries.first.key.$1, entries.first.key.$2, 1);
 }
 
 class _HolidayCoverageIndicator extends ConsumerWidget {
@@ -341,17 +514,27 @@ class _DayCell extends ConsumerWidget {
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Center(
-                      child: Text(
-                        chineseMonthNumber(date.month),
-                        style: TextStyle(
-                          fontFamily: 'KaiTi',
-                          fontWeight: FontWeight.w500,
-                          fontSize: (layout.dayCellHeight * 0.54).clamp(28, 88),
-                          color: colors.onSurface.withValues(
-                            alpha:
-                                Theme.of(context).brightness == Brightness.light
-                                ? 0.08
-                                : 0.07,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            key: ValueKey('month-watermark-$date'),
+                            chineseMonthNumber(date.month),
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
+                            style: TextStyle(
+                              fontFamily: 'EchoDayMonthKai',
+                              fontWeight: FontWeight.w400,
+                              fontSize: (layout.dayCellHeight * 0.54).clamp(
+                                28,
+                                88,
+                              ),
+                              height: 1,
+                              color: const Color(0xFF767171)
+                                  .withValues(alpha: 0.60),
+                            ),
                           ),
                         ),
                       ),
@@ -507,6 +690,7 @@ class _TaskPreviews extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -515,6 +699,17 @@ class _TaskPreviews extends StatelessWidget {
             height: CalendarLayout.todoRowExtent,
             child: Row(
               children: [
+                if (item.plannedAt != null || item.deadlineAt != null) ...[
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 76),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: _TaskPreviewTime(item: item, locale: locale),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 Icon(
                   item.isCompleted
                       ? Icons.check_rounded
@@ -558,6 +753,52 @@ class _TaskPreviews extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _TaskPreviewTime extends StatelessWidget {
+  const _TaskPreviewTime({required this.item, required this.locale});
+
+  static const plannedColor = Color(0xFF7D8F7A);
+
+  final TodoItem item;
+  final String locale;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final completedColor = colors.outline;
+    final plannedAt = item.plannedAt;
+    final deadlineAt = item.deadlineAt;
+    final baseStyle = Theme.of(context).textTheme.labelSmall
+        ?.copyWith(fontSize: 9);
+    return Text.rich(
+      TextSpan(
+        children: [
+          if (plannedAt != null)
+            TextSpan(
+              text: DateFormat.Hm(locale).format(plannedAt.toLocal()),
+              style: baseStyle?.copyWith(
+                color: item.isCompleted ? completedColor : plannedColor,
+              ),
+            ),
+          if (plannedAt != null && deadlineAt != null)
+            TextSpan(
+              text: ' - ',
+              style: baseStyle?.copyWith(color: completedColor),
+            ),
+          if (deadlineAt != null)
+            TextSpan(
+              text: DateFormat.Hm(locale).format(deadlineAt.toLocal()),
+              style: baseStyle?.copyWith(
+                color: item.isCompleted ? completedColor : colors.error,
+              ),
+            ),
+        ],
+      ),
+      key: ValueKey('calendar-task-time-${item.id}'),
+      maxLines: 1,
     );
   }
 }

@@ -75,4 +75,21 @@ void main() {
       );
     },
   );
+
+  test('moves a single task by the configured number of days', () async {
+    final date = LocalDate(2026, 9, 2);
+    final todo = await todos.create(
+      TodoDraft(
+        title: '单项任务',
+        localDate: date,
+        deadlineAt: DateTime(2026, 9, 2, 18).toUtc(),
+      ),
+    );
+
+    await postpone.moveOne(todo, days: 4);
+
+    final moved = await todos.getById(todo.id);
+    expect(moved?.localDate, LocalDate(2026, 9, 6));
+    expect(moved?.deadlineAt, DateTime(2026, 9, 6, 18).toUtc());
+  });
 }

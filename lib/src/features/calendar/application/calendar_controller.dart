@@ -112,6 +112,17 @@ class CalendarController extends Notifier<CalendarViewState> {
     );
   }
 
+  void goToDate(LocalDate date) {
+    state = state.copyWith(
+      selectedDate: date,
+      anchorWeekStart: startOfIsoWeek(date),
+    );
+  }
+
+  void focusSelectedDate() {
+    state = state.copyWith(anchorWeekStart: startOfIsoWeek(state.selectedDate));
+  }
+
   void scrollWeeks(int delta) {
     if (delta == 0) return;
     state = state.copyWith(
@@ -134,6 +145,15 @@ class CalendarController extends Notifier<CalendarViewState> {
     await ref
         .read(settingsRepositoryProvider)
         .set(CalendarSettingKeys.visibleWeekCount, '$newCount');
+  }
+
+  Future<void> setPreviewLimit(int value) async {
+    final normalized = value.clamp(1, 12);
+    if (normalized == state.previewLimit && state.preferencesLoaded) return;
+    state = state.copyWith(previewLimit: normalized);
+    await ref
+        .read(settingsRepositoryProvider)
+        .set(CalendarSettingKeys.previewLimit, '$normalized');
   }
 
   void ensureSelectedVisible() {

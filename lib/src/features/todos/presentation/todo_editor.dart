@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../core/ids/id_generator.dart';
+import '../../settings/application/app_preferences.dart';
 import '../application/recurrence_actions.dart';
 import '../application/todo_providers.dart';
 import '../domain/category.dart';
@@ -53,15 +55,6 @@ class _TodoEditor extends ConsumerStatefulWidget {
 }
 
 class _TodoEditorState extends ConsumerState<_TodoEditor> {
-  static const _palette = <int>[
-    0xFF7D8F7A,
-    0xFF8A7F9F,
-    0xFFB07D62,
-    0xFF557C8B,
-    0xFFA06C78,
-    0xFF8C8665,
-  ];
-
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
@@ -138,6 +131,9 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     final categories =
         ref.watch(categoriesProvider).value ?? const <Category>[];
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
+    final selectedCategory = categories
+        .where((item) => item.id == _categoryId)
+        .firstOrNull;
     final width = math.min(MediaQuery.sizeOf(context).width * 0.94, 520.0);
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -186,6 +182,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                       ),
                       const SizedBox(height: 12),
                       _DateField(
+                        key: const ValueKey('todo-editor-planned-at'),
                         icon: Icons.schedule_rounded,
                         label: strings.plannedAtLabel,
                         value: _formatDateTime(_plannedAt),
@@ -196,6 +193,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                       ),
                       const SizedBox(height: 12),
                       _DateField(
+                        key: const ValueKey('todo-editor-deadline-at'),
                         icon: Icons.flag_outlined,
                         label: strings.deadlineAtLabel,
                         value: _formatDateTime(_deadlineAt),
@@ -223,31 +221,11 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String?>(
-                        initialValue:
-                            categories.any((item) => item.id == _categoryId)
-                            ? _categoryId
-                            : null,
-                        decoration: InputDecoration(
-                          labelText: strings.categoryLabel,
-                          prefixIcon: const Icon(Icons.folder_outlined),
-                        ),
-                        items: [
-                          DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text(strings.priorityNone),
-                          ),
-                          for (final category in categories)
-                            DropdownMenuItem<String?>(
-                              value: category.id,
-                              child: _CatalogLabel(
-                                name: category.name,
-                                colorValue: category.colorValue,
-                              ),
-                            ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _categoryId = value),
+                      _CategoryField(
+                        category: selectedCategory,
+                        label: strings.categoryLabel,
+                        emptyLabel: strings.priorityNone,
+                        onTap: () => _pickCategory(categories),
                       ),
                       Align(
                         alignment: Alignment.centerLeft,
@@ -268,17 +246,19 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                         runSpacing: 6,
                         children: [
                           for (final tag in tags)
-                            FilterChip(
+                            _EditableTagChip(
+                              key: ValueKey('todo-editor-tag-${tag.id}'),
                               selected: _tagIds.contains(tag.id),
-                              avatar: CircleAvatar(
-                                backgroundColor: Color(tag.colorValue),
-                              ),
-                              label: Text(tag.name),
-                              onSelected: (selected) => setState(() {
+                              name: tag.name,
+                              color: Color(tag.colorValue),
+                              editHint: strings.catalogEditHint,
+                              onTap: () => setState(() {
+                                final selected = !_tagIds.contains(tag.id);
                                 selected
                                     ? _tagIds.add(tag.id)
                                     : _tagIds.remove(tag.id);
                               }),
+                              onDoubleTap: () => _editTag(tag),
                             ),
                           ActionChip(
                             avatar: const Icon(Icons.add_rounded, size: 18),
@@ -484,7 +464,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
   }
 
   String _formatDateTime(DateTime? value) {
-    if (value == null) return AppLocalizations.of(context).chooseDateTime;
+    if (value == null) return AppLocalizations.of(context).chooseTime;
     final locale = Localizations.localeOf(context).toLanguageTag();
     return DateFormat.yMMMd(locale).add_Hm().format(value.toLocal());
   }
@@ -497,8 +477,25 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
       lastDate: DateTime(2200),
     );
     if (selected != null && mounted) {
-      setState(() => _date = LocalDate.fromDateTime(selected));
+      final nextDate = LocalDate.fromDateTime(selected);
+      setState(() {
+        _date = nextDate;
+        _plannedAt = _moveTimeToDate(_plannedAt, nextDate);
+        _deadlineAt = _moveTimeToDate(_deadlineAt, nextDate);
+      });
     }
+  }
+
+  DateTime? _moveTimeToDate(DateTime? value, LocalDate date) {
+    if (value == null) return null;
+    final local = value.toLocal();
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      local.hour,
+      local.minute,
+    ).toUtc();
   }
 
   Future<void> _pickDateTime({required bool isDeadline}) async {
@@ -506,22 +503,15 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     final initialLocal =
         current?.toLocal() ??
         DateTime(_date.year, _date.month, _date.day, isDeadline ? 18 : 9);
-    final selectedDate = await showDatePicker(
-      context: context,
-      initialDate: initialLocal,
-      firstDate: DateTime(1970),
-      lastDate: DateTime(2200),
-    );
-    if (selectedDate == null || !mounted) return;
     final selectedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialLocal),
     );
     if (selectedTime == null || !mounted) return;
     final value = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
+      _date.year,
+      _date.month,
+      _date.day,
       selectedTime.hour,
       selectedTime.minute,
     ).toUtc();
@@ -535,9 +525,10 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
   }
 
   Future<void> _createCategory() async {
-    final draft = await _askForCatalog(
+    final result = await _askForCatalog(
       AppLocalizations.of(context).createCategory,
     );
+    final draft = result?.draft;
     if (draft == null || !mounted) return;
     final now = DateTime.now().toUtc();
     final category = Category(
@@ -552,7 +543,8 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
   }
 
   Future<void> _createTag() async {
-    final draft = await _askForCatalog(AppLocalizations.of(context).createTag);
+    final result = await _askForCatalog(AppLocalizations.of(context).createTag);
+    final draft = result?.draft;
     if (draft == null || !mounted) return;
     final now = DateTime.now().toUtc();
     final tag = Tag(
@@ -566,11 +558,179 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     if (mounted) setState(() => _tagIds.add(tag.id));
   }
 
-  Future<_CatalogDraft?> _askForCatalog(String title) async {
+  Future<void> _pickCategory(List<Category> categories) async {
     final strings = AppLocalizations.of(context);
-    final controller = TextEditingController();
-    var selectedColor = _palette.first;
-    final result = await showDialog<_CatalogDraft>(
+    final result = await showDialog<_CategoryPickerResult>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.selectCategory),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                strings.catalogEditHint,
+                style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(dialogContext).colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    _CategoryPickerRow(
+                      key: const ValueKey('category-option-none'),
+                      name: strings.priorityNone,
+                      selected: _categoryId == null,
+                      onTap: () => Navigator.pop(
+                        dialogContext,
+                        const _CategoryPickerResult.select(null),
+                      ),
+                    ),
+                    for (final category in categories)
+                      _CategoryPickerRow(
+                        key: ValueKey('category-option-${category.id}'),
+                        name: category.name,
+                        colorValue: category.colorValue,
+                        selected: _categoryId == category.id,
+                        onTap: () => Navigator.pop(
+                          dialogContext,
+                          _CategoryPickerResult.select(category.id),
+                        ),
+                        onDoubleTap: () => Navigator.pop(
+                          dialogContext,
+                          _CategoryPickerResult.edit(category),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(strings.cancel),
+          ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) return;
+    if (result.category case final category?) {
+      await _editCategory(category);
+      return;
+    }
+    setState(() => _categoryId = result.categoryId);
+  }
+
+  Future<void> _editCategory(Category category) async {
+    final strings = AppLocalizations.of(context);
+    final result = await _askForCatalog(
+      strings.editCategory,
+      initialName: category.name,
+      initialColor: category.colorValue,
+      deleteLabel: strings.deleteCategory,
+    );
+    if (result == null || !mounted) return;
+    if (result.deleteRequested) {
+      if (!await _confirmCatalogDelete(strings.deleteCategory) || !mounted) {
+        return;
+      }
+      await ref.read(categoryRepositoryProvider).softDelete(category.id);
+      if (mounted && _categoryId == category.id) {
+        setState(() => _categoryId = null);
+      }
+      return;
+    }
+    final draft = result.draft;
+    if (draft == null) return;
+    await ref
+        .read(categoryRepositoryProvider)
+        .save(
+          Category(
+            id: category.id,
+            name: draft.name,
+            colorValue: draft.colorValue,
+            sortOrder: category.sortOrder,
+            createdAt: category.createdAt,
+            updatedAt: DateTime.now().toUtc(),
+            revision: category.revision,
+          ),
+        );
+  }
+
+  Future<void> _editTag(Tag tag) async {
+    final strings = AppLocalizations.of(context);
+    final result = await _askForCatalog(
+      strings.editTag,
+      initialName: tag.name,
+      initialColor: tag.colorValue,
+      deleteLabel: strings.deleteTag,
+    );
+    if (result == null || !mounted) return;
+    if (result.deleteRequested) {
+      if (!await _confirmCatalogDelete(strings.deleteTag) || !mounted) return;
+      await ref.read(tagRepositoryProvider).softDelete(tag.id);
+      if (mounted) setState(() => _tagIds.remove(tag.id));
+      return;
+    }
+    final draft = result.draft;
+    if (draft == null) return;
+    await ref
+        .read(tagRepositoryProvider)
+        .save(
+          Tag(
+            id: tag.id,
+            name: draft.name,
+            colorValue: draft.colorValue,
+            sortOrder: tag.sortOrder,
+            createdAt: tag.createdAt,
+            updatedAt: DateTime.now().toUtc(),
+            revision: tag.revision,
+          ),
+        );
+  }
+
+  Future<bool> _confirmCatalogDelete(String deleteLabel) async {
+    final strings = AppLocalizations.of(context);
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(strings.deleteCatalogTitle),
+            content: Text(strings.deleteCatalogMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(strings.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(deleteLabel),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<_CatalogDialogResult?> _askForCatalog(
+    String title, {
+    String initialName = '',
+    int? initialColor,
+    String? deleteLabel,
+  }) async {
+    final strings = AppLocalizations.of(context);
+    final controller = TextEditingController(text: initialName);
+    var palette = [
+      ...(ref.read(catalogPaletteProvider).value ?? defaultCatalogPalette),
+    ];
+    var selectedColor = initialColor ?? palette.first;
+    if (!palette.contains(selectedColor)) palette.add(selectedColor);
+    final result = await showDialog<_CatalogDialogResult>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -580,6 +740,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
+                key: const ValueKey('catalog-name-field'),
                 controller: controller,
                 autofocus: true,
                 decoration: InputDecoration(hintText: strings.nameHint),
@@ -587,7 +748,9 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                   if (value.trim().isNotEmpty) {
                     Navigator.pop(
                       context,
-                      _CatalogDraft(value.trim(), selectedColor),
+                      _CatalogDialogResult.save(
+                        _CatalogDraft(value.trim(), selectedColor),
+                      ),
                     );
                   }
                 },
@@ -600,8 +763,9 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
               const SizedBox(height: 10),
               Wrap(
                 spacing: 10,
+                runSpacing: 8,
                 children: [
-                  for (final colorValue in _palette)
+                  for (final colorValue in palette)
                     InkWell(
                       customBorder: const CircleBorder(),
                       onTap: () =>
@@ -630,11 +794,60 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                             : null,
                       ),
                     ),
+                  IconButton.outlined(
+                    key: const ValueKey('palette-add-color'),
+                    tooltip: strings.addCustomColor,
+                    onPressed: () async {
+                      final picked = await _pickCustomColor(
+                        Color(selectedColor),
+                      );
+                      if (picked == null || !context.mounted) return;
+                      final value = picked.toARGB32();
+                      if (!palette.contains(value)) palette.add(value);
+                      selectedColor = value;
+                      setDialogState(() {});
+                      await ref
+                          .read(settingsRepositoryProvider)
+                          .set(
+                            AppPreferenceKeys.catalogPalette,
+                            jsonEncode(palette),
+                          );
+                    },
+                    icon: const Icon(Icons.colorize_rounded, size: 18),
+                  ),
+                  IconButton.outlined(
+                    key: const ValueKey('palette-remove-color'),
+                    tooltip: strings.removeSelectedColor,
+                    onPressed: palette.length <= 1
+                        ? null
+                        : () async {
+                            palette.remove(selectedColor);
+                            selectedColor = palette.first;
+                            setDialogState(() {});
+                            await ref
+                                .read(settingsRepositoryProvider)
+                                .set(
+                                  AppPreferenceKeys.catalogPalette,
+                                  jsonEncode(palette),
+                                );
+                          },
+                    icon: const Icon(Icons.remove_rounded, size: 18),
+                  ),
                 ],
               ),
             ],
           ),
           actions: [
+            if (deleteLabel != null)
+              TextButton(
+                key: const ValueKey('catalog-delete'),
+                onPressed: () =>
+                    Navigator.pop(context, const _CatalogDialogResult.delete()),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: Text(deleteLabel),
+              ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(strings.cancel),
@@ -643,7 +856,12 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
               onPressed: () {
                 final value = controller.text.trim();
                 if (value.isNotEmpty) {
-                  Navigator.pop(context, _CatalogDraft(value, selectedColor));
+                  Navigator.pop(
+                    context,
+                    _CatalogDialogResult.save(
+                      _CatalogDraft(value, selectedColor),
+                    ),
+                  );
                 }
               },
               child: Text(strings.save),
@@ -652,8 +870,70 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
         ),
       ),
     );
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     controller.dispose();
     return result;
+  }
+
+  Future<Color?> _pickCustomColor(Color initial) {
+    var hsv = HSVColor.fromColor(initial);
+    final strings = AppLocalizations.of(context);
+    return showDialog<Color>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setPickerState) {
+          final color = hsv.toColor();
+          return AlertDialog(
+            title: Text(strings.addCustomColor),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    key: const ValueKey('custom-color-preview'),
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  _ColorSlider(
+                    label: strings.hueLabel,
+                    value: hsv.hue,
+                    max: 360,
+                    onChanged: (value) =>
+                        setPickerState(() => hsv = hsv.withHue(value)),
+                  ),
+                  _ColorSlider(
+                    label: strings.saturationLabel,
+                    value: hsv.saturation,
+                    onChanged: (value) =>
+                        setPickerState(() => hsv = hsv.withSaturation(value)),
+                  ),
+                  _ColorSlider(
+                    label: strings.brightnessLabel,
+                    value: hsv.value,
+                    onChanged: (value) =>
+                        setPickerState(() => hsv = hsv.withValue(value)),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(strings.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, color),
+                child: Text(strings.save),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _save() async {
@@ -785,6 +1065,48 @@ final class _CatalogDraft {
   final int colorValue;
 }
 
+final class _CatalogDialogResult {
+  const _CatalogDialogResult.save(this.draft) : deleteRequested = false;
+  const _CatalogDialogResult.delete() : draft = null, deleteRequested = true;
+
+  final _CatalogDraft? draft;
+  final bool deleteRequested;
+}
+
+final class _CategoryPickerResult {
+  const _CategoryPickerResult.select(this.categoryId) : category = null;
+  const _CategoryPickerResult.edit(this.category) : categoryId = null;
+
+  final String? categoryId;
+  final Category? category;
+}
+
+class _ColorSlider extends StatelessWidget {
+  const _ColorSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.max = 1,
+  });
+
+  final String label;
+  final double value;
+  final double max;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 56, child: Text(label)),
+        Expanded(
+          child: Slider(value: value, max: max, onChanged: onChanged),
+        ),
+      ],
+    );
+  }
+}
+
 class _EditorHeader extends StatelessWidget {
   const _EditorHeader({
     required this.title,
@@ -839,6 +1161,7 @@ class _DateField extends StatelessWidget {
     required this.value,
     required this.onTap,
     this.onClear,
+    super.key,
   });
 
   final IconData icon;
@@ -885,6 +1208,138 @@ class _CatalogLabel extends StatelessWidget {
         const SizedBox(width: 8),
         Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
       ],
+    );
+  }
+}
+
+class _CategoryField extends StatelessWidget {
+  const _CategoryField({
+    required this.category,
+    required this.label,
+    required this.emptyLabel,
+    required this.onTap,
+  });
+
+  final Category? category;
+  final String label;
+  final String emptyLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: const ValueKey('todo-editor-category'),
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.folder_outlined),
+          suffixIcon: const Icon(Icons.arrow_drop_down_rounded),
+        ),
+        child: category == null
+            ? Text(emptyLabel)
+            : _CatalogLabel(
+                name: category!.name,
+                colorValue: category!.colorValue,
+              ),
+      ),
+    );
+  }
+}
+
+class _CategoryPickerRow extends StatelessWidget {
+  const _CategoryPickerRow({
+    required this.name,
+    required this.selected,
+    required this.onTap,
+    this.colorValue,
+    this.onDoubleTap,
+    super.key,
+  });
+
+  final String name;
+  final int? colorValue;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback? onDoubleTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? colors.secondaryContainer : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        onDoubleTap: onDoubleTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              if (colorValue case final value?) ...[
+                CircleAvatar(radius: 5, backgroundColor: Color(value)),
+                const SizedBox(width: 8),
+              ] else ...[
+                const SizedBox(width: 18),
+              ],
+              Expanded(child: Text(name, overflow: TextOverflow.ellipsis)),
+              if (selected) const Icon(Icons.check_rounded, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EditableTagChip extends StatelessWidget {
+  const _EditableTagChip({
+    required this.selected,
+    required this.name,
+    required this.color,
+    required this.editHint,
+    required this.onTap,
+    required this.onDoubleTap,
+    super.key,
+  });
+
+  final bool selected;
+  final String name;
+  final Color color;
+  final String editHint;
+  final VoidCallback onTap;
+  final VoidCallback onDoubleTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: editHint,
+      child: Semantics(
+        button: true,
+        selected: selected,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          onDoubleTap: onDoubleTap,
+          child: Chip(
+            avatar: CircleAvatar(backgroundColor: color),
+            label: Text(name),
+            backgroundColor: selected
+                ? colors.secondaryContainer
+                : colors.surfaceContainerLow,
+            side: BorderSide(
+              color: selected ? colors.primary : colors.outlineVariant,
+            ),
+            deleteIcon: selected
+                ? Icon(Icons.check_rounded, size: 16, color: colors.primary)
+                : null,
+            onDeleted: selected ? onTap : null,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -31,6 +31,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navAbout => '关于';
 
   @override
+  String get expandNavigation => '显示导航文字';
+
+  @override
+  String get collapseNavigation => '仅显示导航图标';
+
+  @override
   String get calendarTitle => '月历工作台';
 
   @override
@@ -47,6 +53,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backToToday => '回到今天';
+
+  @override
+  String get backToSelectedDate => '回到选中日期';
 
   @override
   String visibleWeeks(int count) {
@@ -204,10 +213,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String get createTag => '新建标签';
 
   @override
+  String get selectCategory => '选择分类';
+
+  @override
+  String get catalogEditHint => '单击选择，双击修改';
+
+  @override
+  String get editCategory => '修改分类';
+
+  @override
+  String get editTag => '修改标签';
+
+  @override
+  String get deleteCategory => '删除分类';
+
+  @override
+  String get deleteTag => '删除标签';
+
+  @override
+  String get deleteCatalogTitle => '确认删除？';
+
+  @override
+  String get deleteCatalogMessage => '删除后任务本身会保留，但不再显示这个分类或标签。';
+
+  @override
   String get nameHint => '输入名称';
 
   @override
   String get colorLabel => '颜色';
+
+  @override
+  String get addCustomColor => '从调色盘增加颜色';
+
+  @override
+  String get removeSelectedColor => '删除当前选中的颜色';
+
+  @override
+  String get hueLabel => '色相';
+
+  @override
+  String get saturationLabel => '饱和度';
+
+  @override
+  String get brightnessLabel => '明度';
 
   @override
   String get repeatRuleLabel => '重复规则';
@@ -264,6 +312,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chooseDateTime => '选择日期和时间';
 
   @override
+  String get chooseTime => '选择时间';
+
+  @override
+  String get chooseDate => '选择日期';
+
+  @override
+  String get yearLabel => '年份';
+
+  @override
+  String get monthLabel => '月份';
+
+  @override
+  String monthValue(int month) {
+    return '$month月';
+  }
+
+  @override
   String get taskSaveFailed => '保存失败，请重试';
 
   @override
@@ -271,6 +336,40 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get postponeIncomplete => '未完成任务顺延至下一天';
+
+  @override
+  String postponeIncompleteDays(int days) {
+    return '未完成任务顺延 $days 天（右键配置）';
+  }
+
+  @override
+  String get configurePostponeDays => '配置顺延天数';
+
+  @override
+  String get postponeDaysLabel => '顺延 X 天';
+
+  @override
+  String get postponeDaysRange => '可填写 1～365 天；批量与单项任务共用';
+
+  @override
+  String postponeDialogBodyDays(int count, String date, int days) {
+    return '将这一天的 $count 项未完成任务移至 $date，顺延 $days 天。计划执行时间和计划 DDL 也会同步移动。';
+  }
+
+  @override
+  String postponedTasksDays(int count, int days) {
+    return '已将 $count 项未完成任务顺延 $days 天';
+  }
+
+  @override
+  String postponeOneTaskDays(int days) {
+    return '将此任务顺延 $days 天';
+  }
+
+  @override
+  String postponedOneTask(int days) {
+    return '已将任务顺延 $days 天';
+  }
 
   @override
   String get postponeDialogTitle => '顺延未完成任务？';
@@ -364,6 +463,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsDescription => '主题与本地偏好设置骨架。';
 
   @override
+  String get mottoTitle => '碎碎念~';
+
+  @override
+  String get mottoLabel => '显示在日历上方的一句话';
+
+  @override
+  String get mottoSaved => '碎碎念已保存';
+
+  @override
+  String get editMotto => '修改碎碎念';
+
+  @override
+  String get hotkeysTitle => '键位';
+
+  @override
+  String get summonHotkey => '全局呼出「丸成」';
+
+  @override
+  String get todayHotkey => '回到「今天」';
+
+  @override
+  String get editHotkey => '修改快捷键';
+
+  @override
+  String get recordHotkeyHint => '请按下新的快捷键组合';
+
+  @override
   String get holidayDataTitle => '中国法定节假日数据';
 
   @override
@@ -407,6 +533,67 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aboutDescription => '丸成 / EchoDay\n由丸一口 / Van Echo 创作';
 
   @override
+  String get aboutBrand => '丸成 | EchoDay';
+
+  @override
+  String get aboutCreator => '由 丸一口 / Van Echo 使用 ChatGPT 5.6 Sol 创作';
+
+  @override
+  String get aboutWelcome => '欢迎';
+
+  @override
+  String get supportCharging => '充电支持';
+
+  @override
+  String get aboutAnd => '及';
+
+  @override
+  String get bugFeedback => 'BUG反馈';
+
+  @override
+  String get aboutTilde => '~';
+
+  @override
+  String get aboutLicensePrefix => '本项目采用';
+
+  @override
+  String get aboutLicenseName => 'GNU Affero General Public License v3.0';
+
+  @override
+  String get aboutLicenseSuffix => '';
+
+  @override
+  String get communityLicenseDialogTitle =>
+      'GNU Affero General Public License v3.0';
+
+  @override
+  String get communityLicenseDialogSubtitle =>
+      'SPDX：AGPL-3.0-only · OSI 认可的强 Copyleft 开源协议';
+
+  @override
+  String get communityLicenseLoading => '正在载入协议……';
+
+  @override
+  String get communityLicenseLoadFailed => '协议正文载入失败，请查看软件目录中的 LICENSE 文件。';
+
+  @override
+  String get close => '关闭';
+
+  @override
+  String get aboutPersonalUse => '个人、企业及商业使用均被允许';
+
+  @override
+  String get aboutCommercialUse => '发布修改版，或将修改版作为网络服务提供时，须遵循 AGPLv3 并提供对应源代码';
+
+  @override
+  String aboutVersion(String version, String date) {
+    return 'v$version | $date';
+  }
+
+  @override
+  String get linkOpenFailed => '无法打开链接，请检查系统默认浏览器';
+
+  @override
   String get themeModeLabel => '主题模式';
 
   @override
@@ -417,6 +604,88 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeDark => '深色';
+
+  @override
+  String get primaryColorLabel => '主色';
+
+  @override
+  String get calendarTaskSettingsTitle => '日历与任务';
+
+  @override
+  String get calendarPreviewLabel => '日期格 TODO 预览';
+
+  @override
+  String calendarPreviewValue(int count) {
+    return '最多 $count 条';
+  }
+
+  @override
+  String get defaultSortLabel => '默认任务排序';
+
+  @override
+  String get dataSafetyTitle => '数据备份与恢复';
+
+  @override
+  String get dataSafetyDescription => '备份包含任务、分类、标签、重复规则和用户设置；法定节假日缓存不会写入。';
+
+  @override
+  String get exportBackup => '导出 JSON 备份';
+
+  @override
+  String get importBackup => '导入 JSON 备份';
+
+  @override
+  String get backupExported => '备份已导出';
+
+  @override
+  String backupOperationFailed(String reason) {
+    return '操作失败：$reason';
+  }
+
+  @override
+  String backupInvalid(String reason) {
+    return '备份预检未通过：$reason';
+  }
+
+  @override
+  String get backupPreviewTitle => '备份预检通过';
+
+  @override
+  String backupPreviewBody(
+    int formatVersion,
+    String appVersion,
+    String exportedAt,
+    int todoCount,
+    int totalCount,
+  ) {
+    return '格式 v$formatVersion · 应用 v$appVersion\n导出时间：$exportedAt\nTODO：$todoCount 项 · 全部记录：$totalCount 项';
+  }
+
+  @override
+  String get mergeImport => '合并导入';
+
+  @override
+  String get replaceRestore => '覆盖恢复';
+
+  @override
+  String get replaceConfirmTitle => '确认覆盖当前数据？';
+
+  @override
+  String get replaceConfirmBody =>
+      '当前任务和设置会被备份文件替换。丸成会先在应用数据目录自动创建一份安全备份；导入失败时数据库不会改变。';
+
+  @override
+  String get replaceConfirmAction => '确认覆盖';
+
+  @override
+  String backupImportCompleted(int imported, int skipped) {
+    return '已导入 $imported 项，跳过 $skipped 项';
+  }
+
+  @override
+  String backupSafetyCreated(String path) {
+    return '覆盖前安全备份：$path';
+  }
 
   @override
   String get routeNotFound => '页面不存在';

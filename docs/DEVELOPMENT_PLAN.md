@@ -24,7 +24,7 @@ Flutter 官方支持编译原生 Windows 桌面应用，并允许插件按平台
 | 路由 | go_router | 月历、当日详情、搜索、设置与未来深链 |
 | 本地数据库 | Drift + SQLite | 关系数据、响应式查询、迁移和跨原生平台支持 |
 | 序列化 | json_serializable | 版本化备份 DTO 与节假日 JSON |
-| 文件访问 | path_provider + file_picker | 数据库存储、导出和导入选择 |
+| 文件访问 | path_provider + file_selector | 数据库存储、导出和导入选择；采用 Flutter 官方跨平台插件并保留 Android 接口 |
 | 本地化 | intl + Flutter l10n | 中文优先，并预留英文界面 |
 | ID | UUID | 本地唯一标识和未来同步主键 |
 

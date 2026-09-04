@@ -31,6 +31,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navAbout => 'About';
 
   @override
+  String get expandNavigation => 'Show navigation labels';
+
+  @override
+  String get collapseNavigation => 'Show navigation icons only';
+
+  @override
   String get calendarTitle => 'Calendar workspace';
 
   @override
@@ -48,6 +54,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backToToday => 'Back to today';
+
+  @override
+  String get backToSelectedDate => 'Back to selected date';
 
   @override
   String visibleWeeks(int count) {
@@ -205,10 +214,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get createTag => 'New tag';
 
   @override
+  String get selectCategory => 'Choose category';
+
+  @override
+  String get catalogEditHint => 'Click to select; double-click to edit';
+
+  @override
+  String get editCategory => 'Edit category';
+
+  @override
+  String get editTag => 'Edit tag';
+
+  @override
+  String get deleteCategory => 'Delete category';
+
+  @override
+  String get deleteTag => 'Delete tag';
+
+  @override
+  String get deleteCatalogTitle => 'Confirm deletion?';
+
+  @override
+  String get deleteCatalogMessage =>
+      'The tasks will be kept, but this category or tag will no longer be shown.';
+
+  @override
   String get nameHint => 'Enter a name';
 
   @override
   String get colorLabel => 'Color';
+
+  @override
+  String get addCustomColor => 'Add color from picker';
+
+  @override
+  String get removeSelectedColor => 'Remove selected color';
+
+  @override
+  String get hueLabel => 'Hue';
+
+  @override
+  String get saturationLabel => 'Saturation';
+
+  @override
+  String get brightnessLabel => 'Value';
 
   @override
   String get repeatRuleLabel => 'Repeat rule';
@@ -266,6 +315,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chooseDateTime => 'Choose date and time';
 
   @override
+  String get chooseTime => 'Choose time';
+
+  @override
+  String get chooseDate => 'Choose date';
+
+  @override
+  String get yearLabel => 'Year';
+
+  @override
+  String get monthLabel => 'Month';
+
+  @override
+  String monthValue(int month) {
+    return 'Month $month';
+  }
+
+  @override
   String get taskSaveFailed => 'Could not save. Try again.';
 
   @override
@@ -273,6 +339,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postponeIncomplete => 'Move incomplete tasks to the next day';
+
+  @override
+  String postponeIncompleteDays(int days) {
+    return 'Move incomplete tasks by $days days (right-click to configure)';
+  }
+
+  @override
+  String get configurePostponeDays => 'Configure postponement';
+
+  @override
+  String get postponeDaysLabel => 'Move by X days';
+
+  @override
+  String get postponeDaysRange =>
+      'Enter 1–365 days; shared by batch and single-task actions';
+
+  @override
+  String postponeDialogBodyDays(int count, String date, int days) {
+    return 'Move this day\'s $count incomplete tasks to $date, $days days later. Planned times and deadlines will move too.';
+  }
+
+  @override
+  String postponedTasksDays(int count, int days) {
+    return 'Moved $count incomplete tasks by $days days';
+  }
+
+  @override
+  String postponeOneTaskDays(int days) {
+    return 'Move this task by $days days';
+  }
+
+  @override
+  String postponedOneTask(int days) {
+    return 'Moved the task by $days days';
+  }
 
   @override
   String get postponeDialogTitle => 'Move incomplete tasks?';
@@ -366,6 +467,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDescription => 'Theme and local preference scaffolding.';
 
   @override
+  String get mottoTitle => 'Calendar note~';
+
+  @override
+  String get mottoLabel => 'A short message above the calendar';
+
+  @override
+  String get mottoSaved => 'Calendar note saved';
+
+  @override
+  String get editMotto => 'Edit calendar note';
+
+  @override
+  String get hotkeysTitle => 'Keyboard shortcuts';
+
+  @override
+  String get summonHotkey => 'Summon “EchoDay” globally';
+
+  @override
+  String get todayHotkey => 'Go to “Today”';
+
+  @override
+  String get editHotkey => 'Edit shortcut';
+
+  @override
+  String get recordHotkeyHint => 'Press the new shortcut combination';
+
+  @override
   String get holidayDataTitle => 'China public holiday data';
 
   @override
@@ -413,6 +541,71 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutDescription => 'EchoDay / 丸成\nCreated by Van Echo / 丸一口';
 
   @override
+  String get aboutBrand => '丸成 | EchoDay';
+
+  @override
+  String get aboutCreator => 'Created by 丸一口 / Van Echo with ChatGPT 5.6 Sol';
+
+  @override
+  String get aboutWelcome => 'Support us on';
+
+  @override
+  String get supportCharging => 'Bilibili';
+
+  @override
+  String get aboutAnd => 'or report issues on';
+
+  @override
+  String get bugFeedback => 'GitHub';
+
+  @override
+  String get aboutTilde => '~';
+
+  @override
+  String get aboutLicensePrefix => 'This project is licensed under the';
+
+  @override
+  String get aboutLicenseName => 'GNU Affero General Public License v3.0';
+
+  @override
+  String get aboutLicenseSuffix => '';
+
+  @override
+  String get communityLicenseDialogTitle =>
+      'GNU Affero General Public License v3.0';
+
+  @override
+  String get communityLicenseDialogSubtitle =>
+      'SPDX: AGPL-3.0-only · OSI-approved strong copyleft license';
+
+  @override
+  String get communityLicenseLoading => 'Loading license…';
+
+  @override
+  String get communityLicenseLoadFailed =>
+      'The license could not be loaded. See the LICENSE file in the application directory.';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get aboutPersonalUse =>
+      'Personal, organizational, and commercial use are permitted.';
+
+  @override
+  String get aboutCommercialUse =>
+      'Distributed modifications and modified network services must follow AGPLv3 and provide the corresponding source.';
+
+  @override
+  String aboutVersion(String version, String date) {
+    return 'v$version | $date';
+  }
+
+  @override
+  String get linkOpenFailed =>
+      'Could not open the link. Check the system default browser.';
+
+  @override
   String get themeModeLabel => 'Theme mode';
 
   @override
@@ -423,6 +616,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeDark => 'Dark';
+
+  @override
+  String get primaryColorLabel => 'Primary color';
+
+  @override
+  String get calendarTaskSettingsTitle => 'Calendar and tasks';
+
+  @override
+  String get calendarPreviewLabel => 'TODO previews per day';
+
+  @override
+  String calendarPreviewValue(int count) {
+    return 'Up to $count';
+  }
+
+  @override
+  String get defaultSortLabel => 'Default task sorting';
+
+  @override
+  String get dataSafetyTitle => 'Backup and restore';
+
+  @override
+  String get dataSafetyDescription =>
+      'Backups include tasks, categories, tags, recurrence rules, and user settings. Public-holiday cache data is excluded.';
+
+  @override
+  String get exportBackup => 'Export JSON backup';
+
+  @override
+  String get importBackup => 'Import JSON backup';
+
+  @override
+  String get backupExported => 'Backup exported';
+
+  @override
+  String backupOperationFailed(String reason) {
+    return 'Operation failed: $reason';
+  }
+
+  @override
+  String backupInvalid(String reason) {
+    return 'Backup inspection failed: $reason';
+  }
+
+  @override
+  String get backupPreviewTitle => 'Backup inspection passed';
+
+  @override
+  String backupPreviewBody(
+    int formatVersion,
+    String appVersion,
+    String exportedAt,
+    int todoCount,
+    int totalCount,
+  ) {
+    return 'Format v$formatVersion · App v$appVersion\nExported: $exportedAt\nTODOs: $todoCount · All records: $totalCount';
+  }
+
+  @override
+  String get mergeImport => 'Merge import';
+
+  @override
+  String get replaceRestore => 'Replace and restore';
+
+  @override
+  String get replaceConfirmTitle => 'Replace current data?';
+
+  @override
+  String get replaceConfirmBody =>
+      'Current tasks and settings will be replaced. EchoDay first creates a safety backup in its app-data directory; a failed import leaves the database unchanged.';
+
+  @override
+  String get replaceConfirmAction => 'Replace data';
+
+  @override
+  String backupImportCompleted(int imported, int skipped) {
+    return 'Imported $imported; skipped $skipped';
+  }
+
+  @override
+  String backupSafetyCreated(String path) {
+    return 'Pre-restore safety backup: $path';
+  }
 
   @override
   String get routeNotFound => 'Page not found';

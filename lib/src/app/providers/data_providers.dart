@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/app_database.dart';
+import '../../features/backup/data/local_backup_repository.dart';
+import '../../features/backup/domain/backup_repository.dart';
 import '../../features/holidays/data/gov_cn_holiday_source.dart';
 import '../../features/holidays/data/holiday_sources.dart';
 import '../../features/holidays/data/layered_holiday_repository.dart';
@@ -44,6 +46,10 @@ final tagRepositoryProvider = Provider<TagRepository>((ref) {
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return LocalSettingsRepository(ref.watch(appDatabaseProvider));
+});
+
+final backupRepositoryProvider = Provider<BackupRepository>((ref) {
+  return LocalBackupRepository(ref.watch(appDatabaseProvider));
 });
 
 final holidayRepositoryProvider = Provider<HolidayRepository>((ref) {

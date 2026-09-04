@@ -140,6 +140,18 @@ abstract class AppLocalizations {
   /// **'关于'**
   String get navAbout;
 
+  /// No description provided for @expandNavigation.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示导航文字'**
+  String get expandNavigation;
+
+  /// No description provided for @collapseNavigation.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅显示导航图标'**
+  String get collapseNavigation;
+
   /// No description provided for @calendarTitle.
   ///
   /// In zh, this message translates to:
@@ -175,6 +187,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'回到今天'**
   String get backToToday;
+
+  /// No description provided for @backToSelectedDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到选中日期'**
+  String get backToSelectedDate;
 
   /// No description provided for @visibleWeeks.
   ///
@@ -482,6 +500,54 @@ abstract class AppLocalizations {
   /// **'新建标签'**
   String get createTag;
 
+  /// No description provided for @selectCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择分类'**
+  String get selectCategory;
+
+  /// No description provided for @catalogEditHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'单击选择，双击修改'**
+  String get catalogEditHint;
+
+  /// No description provided for @editCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改分类'**
+  String get editCategory;
+
+  /// No description provided for @editTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改标签'**
+  String get editTag;
+
+  /// No description provided for @deleteCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除分类'**
+  String get deleteCategory;
+
+  /// No description provided for @deleteTag.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除标签'**
+  String get deleteTag;
+
+  /// No description provided for @deleteCatalogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认删除？'**
+  String get deleteCatalogTitle;
+
+  /// No description provided for @deleteCatalogMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除后任务本身会保留，但不再显示这个分类或标签。'**
+  String get deleteCatalogMessage;
+
   /// No description provided for @nameHint.
   ///
   /// In zh, this message translates to:
@@ -493,6 +559,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'颜色'**
   String get colorLabel;
+
+  /// No description provided for @addCustomColor.
+  ///
+  /// In zh, this message translates to:
+  /// **'从调色盘增加颜色'**
+  String get addCustomColor;
+
+  /// No description provided for @removeSelectedColor.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除当前选中的颜色'**
+  String get removeSelectedColor;
+
+  /// No description provided for @hueLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'色相'**
+  String get hueLabel;
+
+  /// No description provided for @saturationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'饱和度'**
+  String get saturationLabel;
+
+  /// No description provided for @brightnessLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'明度'**
+  String get brightnessLabel;
 
   /// No description provided for @repeatRuleLabel.
   ///
@@ -602,6 +698,36 @@ abstract class AppLocalizations {
   /// **'选择日期和时间'**
   String get chooseDateTime;
 
+  /// No description provided for @chooseTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择时间'**
+  String get chooseTime;
+
+  /// No description provided for @chooseDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择日期'**
+  String get chooseDate;
+
+  /// No description provided for @yearLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'年份'**
+  String get yearLabel;
+
+  /// No description provided for @monthLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'月份'**
+  String get monthLabel;
+
+  /// No description provided for @monthValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{month}月'**
+  String monthValue(int month);
+
   /// No description provided for @taskSaveFailed.
   ///
   /// In zh, this message translates to:
@@ -619,6 +745,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未完成任务顺延至下一天'**
   String get postponeIncomplete;
+
+  /// No description provided for @postponeIncompleteDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'未完成任务顺延 {days} 天（右键配置）'**
+  String postponeIncompleteDays(int days);
+
+  /// No description provided for @configurePostponeDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置顺延天数'**
+  String get configurePostponeDays;
+
+  /// No description provided for @postponeDaysLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'顺延 X 天'**
+  String get postponeDaysLabel;
+
+  /// No description provided for @postponeDaysRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'可填写 1～365 天；批量与单项任务共用'**
+  String get postponeDaysRange;
+
+  /// No description provided for @postponeDialogBodyDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'将这一天的 {count} 项未完成任务移至 {date}，顺延 {days} 天。计划执行时间和计划 DDL 也会同步移动。'**
+  String postponeDialogBodyDays(int count, String date, int days);
+
+  /// No description provided for @postponedTasksDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将 {count} 项未完成任务顺延 {days} 天'**
+  String postponedTasksDays(int count, int days);
+
+  /// No description provided for @postponeOneTaskDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'将此任务顺延 {days} 天'**
+  String postponeOneTaskDays(int days);
+
+  /// No description provided for @postponedOneTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将任务顺延 {days} 天'**
+  String postponedOneTask(int days);
 
   /// No description provided for @postponeDialogTitle.
   ///
@@ -782,6 +956,60 @@ abstract class AppLocalizations {
   /// **'主题与本地偏好设置骨架。'**
   String get settingsDescription;
 
+  /// No description provided for @mottoTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'碎碎念~'**
+  String get mottoTitle;
+
+  /// No description provided for @mottoLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示在日历上方的一句话'**
+  String get mottoLabel;
+
+  /// No description provided for @mottoSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'碎碎念已保存'**
+  String get mottoSaved;
+
+  /// No description provided for @editMotto.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改碎碎念'**
+  String get editMotto;
+
+  /// No description provided for @hotkeysTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'键位'**
+  String get hotkeysTitle;
+
+  /// No description provided for @summonHotkey.
+  ///
+  /// In zh, this message translates to:
+  /// **'全局呼出「丸成」'**
+  String get summonHotkey;
+
+  /// No description provided for @todayHotkey.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到「今天」'**
+  String get todayHotkey;
+
+  /// No description provided for @editHotkey.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改快捷键'**
+  String get editHotkey;
+
+  /// No description provided for @recordHotkeyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请按下新的快捷键组合'**
+  String get recordHotkeyHint;
+
   /// No description provided for @holidayDataTitle.
   ///
   /// In zh, this message translates to:
@@ -860,6 +1088,120 @@ abstract class AppLocalizations {
   /// **'丸成 / EchoDay\n由丸一口 / Van Echo 创作'**
   String get aboutDescription;
 
+  /// No description provided for @aboutBrand.
+  ///
+  /// In zh, this message translates to:
+  /// **'丸成 | EchoDay'**
+  String get aboutBrand;
+
+  /// No description provided for @aboutCreator.
+  ///
+  /// In zh, this message translates to:
+  /// **'由 丸一口 / Van Echo 使用 ChatGPT 5.6 Sol 创作'**
+  String get aboutCreator;
+
+  /// No description provided for @aboutWelcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'欢迎'**
+  String get aboutWelcome;
+
+  /// No description provided for @supportCharging.
+  ///
+  /// In zh, this message translates to:
+  /// **'充电支持'**
+  String get supportCharging;
+
+  /// No description provided for @aboutAnd.
+  ///
+  /// In zh, this message translates to:
+  /// **'及'**
+  String get aboutAnd;
+
+  /// No description provided for @bugFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'BUG反馈'**
+  String get bugFeedback;
+
+  /// No description provided for @aboutTilde.
+  ///
+  /// In zh, this message translates to:
+  /// **'~'**
+  String get aboutTilde;
+
+  /// No description provided for @aboutLicensePrefix.
+  ///
+  /// In zh, this message translates to:
+  /// **'本项目采用'**
+  String get aboutLicensePrefix;
+
+  /// No description provided for @aboutLicenseName.
+  ///
+  /// In zh, this message translates to:
+  /// **'GNU Affero General Public License v3.0'**
+  String get aboutLicenseName;
+
+  /// No description provided for @aboutLicenseSuffix.
+  ///
+  /// In zh, this message translates to:
+  /// **''**
+  String get aboutLicenseSuffix;
+
+  /// No description provided for @communityLicenseDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'GNU Affero General Public License v3.0'**
+  String get communityLicenseDialogTitle;
+
+  /// No description provided for @communityLicenseDialogSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'SPDX：AGPL-3.0-only · OSI 认可的强 Copyleft 开源协议'**
+  String get communityLicenseDialogSubtitle;
+
+  /// No description provided for @communityLicenseLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在载入协议……'**
+  String get communityLicenseLoading;
+
+  /// No description provided for @communityLicenseLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'协议正文载入失败，请查看软件目录中的 LICENSE 文件。'**
+  String get communityLicenseLoadFailed;
+
+  /// No description provided for @close.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get close;
+
+  /// No description provided for @aboutPersonalUse.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人、企业及商业使用均被允许'**
+  String get aboutPersonalUse;
+
+  /// No description provided for @aboutCommercialUse.
+  ///
+  /// In zh, this message translates to:
+  /// **'发布修改版，或将修改版作为网络服务提供时，须遵循 AGPLv3 并提供对应源代码'**
+  String get aboutCommercialUse;
+
+  /// No description provided for @aboutVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'v{version} | {date}'**
+  String aboutVersion(String version, String date);
+
+  /// No description provided for @linkOpenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开链接，请检查系统默认浏览器'**
+  String get linkOpenFailed;
+
   /// No description provided for @themeModeLabel.
   ///
   /// In zh, this message translates to:
@@ -883,6 +1225,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'深色'**
   String get themeDark;
+
+  /// No description provided for @primaryColorLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主色'**
+  String get primaryColorLabel;
+
+  /// No description provided for @calendarTaskSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'日历与任务'**
+  String get calendarTaskSettingsTitle;
+
+  /// No description provided for @calendarPreviewLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'日期格 TODO 预览'**
+  String get calendarPreviewLabel;
+
+  /// No description provided for @calendarPreviewValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'最多 {count} 条'**
+  String calendarPreviewValue(int count);
+
+  /// No description provided for @defaultSortLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认任务排序'**
+  String get defaultSortLabel;
+
+  /// No description provided for @dataSafetyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据备份与恢复'**
+  String get dataSafetyTitle;
+
+  /// No description provided for @dataSafetyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份包含任务、分类、标签、重复规则和用户设置；法定节假日缓存不会写入。'**
+  String get dataSafetyDescription;
+
+  /// No description provided for @exportBackup.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出 JSON 备份'**
+  String get exportBackup;
+
+  /// No description provided for @importBackup.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入 JSON 备份'**
+  String get importBackup;
+
+  /// No description provided for @backupExported.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份已导出'**
+  String get backupExported;
+
+  /// No description provided for @backupOperationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作失败：{reason}'**
+  String backupOperationFailed(String reason);
+
+  /// No description provided for @backupInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份预检未通过：{reason}'**
+  String backupInvalid(String reason);
+
+  /// No description provided for @backupPreviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份预检通过'**
+  String get backupPreviewTitle;
+
+  /// No description provided for @backupPreviewBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'格式 v{formatVersion} · 应用 v{appVersion}\n导出时间：{exportedAt}\nTODO：{todoCount} 项 · 全部记录：{totalCount} 项'**
+  String backupPreviewBody(
+    int formatVersion,
+    String appVersion,
+    String exportedAt,
+    int todoCount,
+    int totalCount,
+  );
+
+  /// No description provided for @mergeImport.
+  ///
+  /// In zh, this message translates to:
+  /// **'合并导入'**
+  String get mergeImport;
+
+  /// No description provided for @replaceRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'覆盖恢复'**
+  String get replaceRestore;
+
+  /// No description provided for @replaceConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认覆盖当前数据？'**
+  String get replaceConfirmTitle;
+
+  /// No description provided for @replaceConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前任务和设置会被备份文件替换。丸成会先在应用数据目录自动创建一份安全备份；导入失败时数据库不会改变。'**
+  String get replaceConfirmBody;
+
+  /// No description provided for @replaceConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认覆盖'**
+  String get replaceConfirmAction;
+
+  /// No description provided for @backupImportCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已导入 {imported} 项，跳过 {skipped} 项'**
+  String backupImportCompleted(int imported, int skipped);
+
+  /// No description provided for @backupSafetyCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'覆盖前安全备份：{path}'**
+  String backupSafetyCreated(String path);
 
   /// No description provided for @routeNotFound.
   ///

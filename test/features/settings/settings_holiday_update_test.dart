@@ -1,8 +1,10 @@
 import 'package:echoday/l10n/app_localizations.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
+import 'package:echoday/src/features/calendar/application/calendar_controller.dart';
 import 'package:echoday/src/features/holidays/domain/holiday_repository.dart';
 import 'package:echoday/src/features/holidays/domain/holiday_year.dart';
 import 'package:echoday/src/features/settings/presentation/settings_page.dart';
+import 'package:echoday/src/features/todos/application/todo_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,6 +58,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('检查更新'), findsNothing);
+    await tester.tap(find.text('中国法定节假日数据'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<int>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('${DateTime.now().year + 1}').last);
@@ -65,5 +70,59 @@ void main() {
 
     expect(holidays.refreshedYear, DateTime.now().year + 1);
     expect(find.text('本地数据库和中国政府网均未找到该年度的有效节假日安排'), findsOneWidget);
+  });
+
+  testWidgets('persists calendar preview and default sorting preferences', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final settings = InMemorySettingsRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(settings),
+          holidayRepositoryProvider.overrideWithValue(_HolidayRepository()),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('日历与任务'));
+    await tester.pumpAndSettle();
+    final slider = find.byKey(const ValueKey('calendar-preview-slider'));
+    await tester.drag(slider, const Offset(500, 0));
+    await tester.pumpAndSettle();
+    expect(
+      int.parse((await settings.get(CalendarSettingKeys.previewLimit))!.value),
+      greaterThan(6),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('default-sort-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('创建时间（早到晚）').last);
+    await tester.pumpAndSettle();
+    expect(
+      (await settings.get(TodoSettingKeys.sortMode))?.value,
+      'createdAtAscending',
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('数据备份与恢复'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('数据备份与恢复'), findsOneWidget);
   });
 }
