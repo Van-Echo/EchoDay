@@ -2,6 +2,11 @@
 
 一个以连续周日历为主体的本地优先 TODO 规划应用。第一阶段面向 Windows，工程同时保留 Android 平台入口。
 
+# For 普通用户
+请前往https://github.com/Van-Echo/EchoDay/releases下载EchoDay-v0.1.0-windows-x64-portable.zip，解压后即可使用
+
+
+# For 开发者
 ## 当前阶段
 
 - P0：交互原型与视觉基线已完成。
