@@ -224,6 +224,9 @@ class _CalendarToolbar extends ConsumerWidget {
       ..sort();
     final motto =
         ref.watch(calendarMottoProvider).value ?? defaultCalendarMotto;
+    final mottoStyle =
+        ref.watch(calendarMottoStyleProvider).value ??
+        const CalendarMottoStyle();
     return SizedBox(
       height: 54,
       child: Padding(
@@ -253,7 +256,20 @@ class _CalendarToolbar extends ConsumerWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontSize: mottoStyle.fontSize,
+                                  color: Color(mottoStyle.colorValue),
+                                  fontWeight: mottoStyle.bold
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                  fontStyle: mottoStyle.italic
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                  decoration: mottoStyle.underline
+                                      ? TextDecoration.underline
+                                      : TextDecoration.none,
+                                ),
                           ),
                         ),
                       ),
@@ -488,190 +504,244 @@ class _DayCell extends ConsumerWidget {
         .firstOrNull;
     final solarTerm = ref.watch(solarTermServiceProvider).onDate(date);
     final colors = Theme.of(context).colorScheme;
-    return Semantics(
-      key: ValueKey('day-cell-$date'),
-      button: true,
-      selected: selected,
-      label: date.toString(),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => controller.selectDate(date),
-        onDoubleTap: () => context.go(AppRoutes.dayTodosForLocalDate(date)),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          decoration: BoxDecoration(
-            color: selected
-                ? colors.primaryContainer.withValues(alpha: 0.55)
-                : colors.surface,
-            border: Border(
-              right: BorderSide(color: Theme.of(context).dividerColor),
-              bottom: BorderSide(color: Theme.of(context).dividerColor),
-            ),
-          ),
-          child: Stack(
-            children: [
-              if (date.day == 1)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            key: ValueKey('month-watermark-$date'),
-                            chineseMonthNumber(date.month),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.visible,
-                            style: TextStyle(
-                              fontFamily: 'EchoDayMonthKai',
-                              fontWeight: FontWeight.w400,
-                              fontSize: (layout.dayCellHeight * 0.54).clamp(
-                                28,
-                                88,
+    return DragTarget<TodoDragPayload>(
+      hitTestBehavior: HitTestBehavior.translucent,
+      onWillAcceptWithDetails: (details) => details.data.todo.localDate != date,
+      onAcceptWithDetails: (details) =>
+          _moveTodoToDate(context, ref, details.data.todo, date),
+      builder: (context, candidateData, rejectedData) {
+        final isDropTarget = candidateData.isNotEmpty;
+        return Semantics(
+          key: ValueKey('day-cell-$date'),
+          button: true,
+          selected: selected,
+          label: date.toString(),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => controller.selectDate(date),
+            onDoubleTap: () => context.go(AppRoutes.dayTodosForLocalDate(date)),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              decoration: BoxDecoration(
+                color: isDropTarget
+                    ? colors.secondaryContainer.withValues(alpha: 0.88)
+                    : selected
+                    ? colors.primaryContainer.withValues(alpha: 0.55)
+                    : colors.surface,
+                border: Border(
+                  right: BorderSide(color: Theme.of(context).dividerColor),
+                  bottom: BorderSide(color: Theme.of(context).dividerColor),
+                ),
+              ),
+              child: Stack(
+                children: [
+                  if (date.day == 1)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                key: ValueKey('month-watermark-$date'),
+                                chineseMonthNumber(date.month),
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.visible,
+                                style: TextStyle(
+                                  fontFamily: 'EchoDayMonthKai',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: (layout.dayCellHeight * 0.54).clamp(
+                                    28,
+                                    88,
+                                  ),
+                                  height: 1,
+                                  color: const Color(0xFF767171)
+                                      .withValues(alpha: 0.60),
+                                ),
                               ),
-                              height: 1,
-                              color: const Color(0xFF767171)
-                                  .withValues(alpha: 0.60),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(7, 5, 5, 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      height: 28,
-                      child: LayoutBuilder(
-                        builder: (context, constraints) => Row(
-                          children: [
-                            Container(
-                              width: 26,
-                              height: 26,
-                              alignment: Alignment.center,
-                              decoration: isToday
-                                  ? BoxDecoration(
-                                      color: colors.primary,
-                                      shape: BoxShape.circle,
-                                    )
-                                  : null,
-                              child: Text(
-                                '${date.day}',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      color: isToday ? colors.onPrimary : null,
-                                      fontWeight: selected
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                              ),
-                            ),
-                            if (constraints.maxWidth >= 66) ...[
-                              const Spacer(),
-                              IconButton(
-                                tooltip: AppLocalizations.of(context).addTask,
-                                visualDensity: VisualDensity.compact,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints.tightFor(
-                                  width: 28,
-                                  height: 28,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(7, 5, 5, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(
+                          height: 28,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) => Row(
+                              children: [
+                                Container(
+                                  width: 26,
+                                  height: 26,
+                                  alignment: Alignment.center,
+                                  decoration: isToday
+                                      ? BoxDecoration(
+                                          color: colors.primary,
+                                          shape: BoxShape.circle,
+                                        )
+                                      : null,
+                                  child: Text(
+                                    '${date.day}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelLarge
+                                        ?.copyWith(
+                                          color: isToday
+                                              ? colors.onPrimary
+                                              : null,
+                                          fontWeight: selected
+                                              ? FontWeight.w600
+                                              : FontWeight.w400,
+                                        ),
+                                  ),
                                 ),
-                                onPressed: () =>
-                                    showQuickAddTodoDialog(context, ref, date),
-                                icon: const Icon(Icons.add_rounded, size: 18),
-                              ),
+                                if (constraints.maxWidth >= 66) ...[
+                                  const Spacer(),
+                                  IconButton(
+                                    tooltip: AppLocalizations.of(context)
+                                        .addTask,
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints.tightFor(
+                                      width: 28,
+                                      height: 28,
+                                    ),
+                                    onPressed: () => showQuickAddTodoDialog(
+                                      context,
+                                      ref,
+                                      date,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.add_rounded,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          height: 16,
+                          child: Row(
+                            children: [
+                              if (holiday != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (holiday.isDayOff
+                                                ? colors.error
+                                                : colors.tertiary)
+                                            .withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: Text(
+                                    holiday.isDayOff
+                                        ? AppLocalizations.of(context)
+                                              .holidayDayOff
+                                        : AppLocalizations.of(context)
+                                              .holidayWorkday,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          fontSize: 9,
+                                          color: holiday.isDayOff
+                                              ? colors.error
+                                              : colors.tertiary,
+                                        ),
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Flexible(
+                                  child: Text(
+                                    holiday.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          fontSize: 9,
+                                          color: holiday.isDayOff
+                                              ? colors.error
+                                              : colors.tertiary,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                              if (holiday != null && solarTerm != null)
+                                const SizedBox(width: 4),
+                              if (solarTerm != null)
+                                Flexible(
+                                  child: Text(
+                                    solarTerm.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelSmall
+                                        ?.copyWith(
+                                          fontSize: 9,
+                                          color: colors.primary,
+                                        ),
+                                  ),
+                                ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                    SizedBox(
-                      height: 16,
-                      child: Row(
-                        children: [
-                          if (holiday != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color:
-                                    (holiday.isDayOff
-                                            ? colors.error
-                                            : colors.tertiary)
-                                        .withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(
-                                holiday.isDayOff
-                                    ? AppLocalizations.of(context).holidayDayOff
-                                    : AppLocalizations.of(context)
-                                          .holidayWorkday,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      fontSize: 9,
-                                      color: holiday.isDayOff
-                                          ? colors.error
-                                          : colors.tertiary,
-                                    ),
-                              ),
+                        Expanded(
+                          child: tasks.when(
+                            data: (items) => _TaskPreviews(
+                              items: items,
+                              capacity: layout.capacityFor(items.length),
+                              date: date,
                             ),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(
-                                holiday.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      fontSize: 9,
-                                      color: holiday.isDayOff
-                                          ? colors.error
-                                          : colors.tertiary,
-                                    ),
-                              ),
-                            ),
-                          ],
-                          if (holiday != null && solarTerm != null)
-                            const SizedBox(width: 4),
-                          if (solarTerm != null)
-                            Flexible(
-                              child: Text(
-                                solarTerm.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      fontSize: 9,
-                                      color: colors.primary,
-                                    ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: tasks.when(
-                        data: (items) => _TaskPreviews(
-                          items: items,
-                          capacity: layout.capacityFor(items.length),
-                          date: date,
+                            loading: () => const SizedBox.shrink(),
+                            error: (error, stackTrace) =>
+                                const SizedBox.shrink(),
+                          ),
                         ),
-                        loading: () => const SizedBox.shrink(),
-                        error: (error, stackTrace) => const SizedBox.shrink(),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+        );
+      },
+    );
+  }
+}
+
+Future<void> _moveTodoToDate(
+  BuildContext context,
+  WidgetRef ref,
+  TodoItem todo,
+  LocalDate targetDate,
+) async {
+  try {
+    await ref.read(moveTodoToDateProvider).call(todo, targetDate);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context).taskMovedToDate(targetDate.toString()),
         ),
       ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
     );
   }
 }
@@ -693,60 +763,41 @@ class _TaskPreviews extends ConsumerWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final now = ref.watch(currentTimeProvider).value ?? DateTime.now().toUtc();
     final colors = Theme.of(context).colorScheme;
+    final todoFontSize =
+        ref.watch(calendarTodoFontSizeProvider).value ??
+        defaultCalendarTodoFontSize;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final item in items.take(capacity.visibleTodoCount))
-          SizedBox(
-            key: ValueKey('calendar-task-${item.id}'),
-            height: CalendarLayout.todoRowExtent,
-            child: Builder(
-              builder: (context) {
-                final overdue = item.isOverdueAt(now);
-                final itemColor = overdue ? colors.error : null;
-                return Row(
-                  children: [
-                    if (item.plannedAt != null || item.deadlineAt != null) ...[
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 76),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: _TaskPreviewTime(
-                            item: item,
-                            locale: locale,
-                            overdue: overdue,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    Icon(
-                      item.isCompleted
-                          ? Icons.check_rounded
-                          : Icons.circle_outlined,
-                      size: 9,
-                      color: item.isCompleted
-                          ? colors.outline
-                          : itemColor ?? colors.primary,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          decoration: item.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: item.isCompleted ? colors.outline : itemColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+          Draggable<TodoDragPayload>(
+            data: TodoDragPayload(item),
+            dragAnchorStrategy: pointerDragAnchorStrategy,
+            rootOverlay: true,
+            feedback: _CalendarTaskDragFeedback(
+              title: item.title,
+              fontSize: todoFontSize,
+            ),
+            childWhenDragging: Opacity(
+              opacity: 0.35,
+              child: _CalendarTaskPreviewRow(
+                item: item,
+                locale: locale,
+                now: now,
+                fontSize: todoFontSize,
+              ),
+            ),
+            child: Tooltip(
+              message: localizations.dragTodoToDate,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.grab,
+                child: _CalendarTaskPreviewRow(
+                  item: item,
+                  locale: locale,
+                  now: now,
+                  fontSize: todoFontSize,
+                ),
+              ),
             ),
           ),
         if (capacity.hiddenTodoCount > 0)
@@ -759,11 +810,118 @@ class _TaskPreviews extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.labelSmall
-                    ?.copyWith(color: Theme.of(context).colorScheme.primary),
+                    ?.copyWith(fontSize: todoFontSize, color: colors.primary),
               ),
             ),
           ),
       ],
+    );
+  }
+}
+
+class _CalendarTaskPreviewRow extends StatelessWidget {
+  const _CalendarTaskPreviewRow({
+    required this.item,
+    required this.locale,
+    required this.now,
+    required this.fontSize,
+  });
+
+  final TodoItem item;
+  final String locale;
+  final DateTime now;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final overdue = item.isOverdueAt(now);
+    final itemColor = overdue ? colors.error : null;
+    return SizedBox(
+      key: ValueKey('calendar-task-${item.id}'),
+      height: CalendarLayout.todoRowExtent,
+      child: Row(
+        children: [
+          if (item.plannedAt != null || item.deadlineAt != null) ...[
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 76),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: _TaskPreviewTime(
+                  item: item,
+                  locale: locale,
+                  overdue: overdue,
+                  fontSize: fontSize,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Icon(
+            item.isCompleted ? Icons.check_rounded : Icons.circle_outlined,
+            size: 9,
+            color: item.isCompleted
+                ? colors.outline
+                : itemColor ?? colors.primary,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              item.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: fontSize,
+                decoration: item.isCompleted
+                    ? TextDecoration.lineThrough
+                    : null,
+                color: item.isCompleted ? colors.outline : itemColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CalendarTaskDragFeedback extends StatelessWidget {
+  const _CalendarTaskDragFeedback({
+    required this.title,
+    required this.fontSize,
+  });
+
+  final String title;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(8),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 280),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.drag_indicator_rounded, size: 16),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: fontSize),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -773,6 +931,7 @@ class _TaskPreviewTime extends StatelessWidget {
     required this.item,
     required this.locale,
     required this.overdue,
+    required this.fontSize,
   });
 
   static const plannedColor = Color(0xFF7D8F7A);
@@ -780,6 +939,7 @@ class _TaskPreviewTime extends StatelessWidget {
   final TodoItem item;
   final String locale;
   final bool overdue;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -788,8 +948,9 @@ class _TaskPreviewTime extends StatelessWidget {
     final activeColor = overdue ? colors.error : null;
     final plannedAt = item.plannedAt;
     final deadlineAt = item.deadlineAt;
+    final timeFontSize = (fontSize - 2).clamp(8.0, 14.0).toDouble();
     final baseStyle = Theme.of(context).textTheme.labelSmall
-        ?.copyWith(fontSize: 9);
+        ?.copyWith(fontSize: timeFontSize);
     return Text.rich(
       TextSpan(
         children: [

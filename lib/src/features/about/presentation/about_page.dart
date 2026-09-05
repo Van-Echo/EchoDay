@@ -152,7 +152,7 @@ class AboutPage extends StatelessWidget {
 }
 
 final _bilibiliUri = Uri.parse('https://space.bilibili.com/3461572290677609');
-final _githubUri = Uri.parse('https://github.com/Van-Echo');
+final _githubUri = Uri.parse('https://github.com/Van-Echo/EchoDay/issues');
 
 Future<void> _showCommunityLicenseDialog(BuildContext context) {
   return showDialog<void>(

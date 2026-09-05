@@ -16,6 +16,12 @@ import '../domain/todo_priority.dart';
 import '../domain/todo_sort.dart';
 import 'todo_editor.dart';
 
+final class TodoDragPayload {
+  const TodoDragPayload(this.todo);
+
+  final TodoItem todo;
+}
+
 Future<void> showQuickAddTodoDialog(
   BuildContext context,
   WidgetRef ref,
@@ -69,7 +75,7 @@ class DayTodoList extends ConsumerStatefulWidget {
 }
 
 class _DayTodoListState extends ConsumerState<DayTodoList> {
-  bool _completedExpanded = false;
+  bool _completedExpanded = true;
   bool _postponing = false;
   String? _categoryFilter;
   Set<String> _tagFilters = {};
@@ -85,6 +91,10 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
     final now = ref.watch(currentTimeProvider).value ?? DateTime.now().toUtc();
     final postponeDays = ref.watch(postponeDaysProvider).value ?? 1;
+    final todoFontSize = widget.compact
+        ? ref.watch(sidebarTodoFontSizeProvider).value ??
+              defaultSidebarTodoFontSize
+        : ref.watch(dayTodoFontSizeProvider).value ?? defaultDayTodoFontSize;
     final filteredItems = todos.value?.where((todo) {
       if (_categoryFilter != null && todo.categoryId != _categoryFilter) {
         return false;
@@ -119,6 +129,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
               categories,
               tags,
               now,
+              todoFontSize,
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stackTrace) => Center(
@@ -232,6 +243,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
     List<Category> categories,
     List<Tag> tags,
     DateTime now,
+    double todoFontSize,
   ) {
     final strings = AppLocalizations.of(context);
     if (items.isEmpty) {
@@ -285,6 +297,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
               now,
               categories,
               tags,
+              todoFontSize,
               (oldIndex, newIndex) => _reorderSection(
                 incomplete,
                 completed,
@@ -310,6 +323,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
               now,
               categories,
               tags,
+              todoFontSize,
               (oldIndex, newIndex) => _reorderSection(
                 incomplete,
                 completed,
@@ -343,6 +357,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
             now: now,
             categories: categories,
             tags: tags,
+            todoFontSize: todoFontSize,
           ),
         if (completed.isNotEmpty) ...[
           const SizedBox(height: 10),
@@ -360,6 +375,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
               now: now,
               categories: categories,
               tags: tags,
+              todoFontSize: todoFontSize,
             ),
         ],
       ],
@@ -383,6 +399,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
     DateTime now,
     List<Category> categories,
     List<Tag> tags,
+    double todoFontSize,
     ReorderCallback onReorder,
   ) {
     return SliverPadding(
@@ -399,6 +416,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
             now: now,
             categories: categories,
             tags: tags,
+            todoFontSize: todoFontSize,
             dragHandle: ReorderableDragStartListener(
               index: index,
               child: Tooltip(
@@ -719,6 +737,7 @@ class _TodoSection extends StatelessWidget {
     required this.now,
     required this.categories,
     required this.tags,
+    required this.todoFontSize,
   });
 
   final List<TodoItem> todos;
@@ -726,6 +745,7 @@ class _TodoSection extends StatelessWidget {
   final DateTime now;
   final List<Category> categories;
   final List<Tag> tags;
+  final double todoFontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -740,6 +760,7 @@ class _TodoSection extends StatelessWidget {
             now: now,
             categories: categories,
             tags: tags,
+            todoFontSize: todoFontSize,
           ),
         ],
       ],
@@ -756,6 +777,7 @@ class _TodoListTile extends ConsumerWidget {
     required this.now,
     required this.categories,
     required this.tags,
+    required this.todoFontSize,
     this.dragHandle,
     super.key,
   });
@@ -765,6 +787,7 @@ class _TodoListTile extends ConsumerWidget {
   final DateTime now;
   final List<Category> categories;
   final List<Tag> tags;
+  final double todoFontSize;
   final Widget? dragHandle;
 
   @override
@@ -782,7 +805,7 @@ class _TodoListTile extends ConsumerWidget {
     final postponeDays = ref.watch(postponeDaysProvider).value ?? 1;
     final notes = todo.notes?.trim();
 
-    return GestureDetector(
+    Widget buildTile() => GestureDetector(
       behavior: HitTestBehavior.translucent,
       onSecondaryTapDown: (details) =>
           _showContextMenu(context, ref, details.globalPosition),
@@ -826,6 +849,7 @@ class _TodoListTile extends ConsumerWidget {
                               maxLines: compact ? 2 : 3,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
+                                fontSize: todoFontSize,
                                 decoration: todo.isCompleted
                                     ? TextDecoration.lineThrough
                                     : null,
@@ -931,6 +955,18 @@ class _TodoListTile extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+    if (!compact) return buildTile();
+    return Draggable<TodoDragPayload>(
+      data: TodoDragPayload(todo),
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      rootOverlay: true,
+      feedback: _TodoDragFeedback(todo: todo, fontSize: todoFontSize),
+      childWhenDragging: Opacity(opacity: 0.35, child: buildTile()),
+      child: Tooltip(
+        message: strings.dragTodoToDate,
+        child: MouseRegion(cursor: SystemMouseCursors.grab, child: buildTile()),
       ),
     );
   }
@@ -1130,6 +1166,43 @@ class _TodoListTile extends ConsumerWidget {
         SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
       );
     }
+  }
+}
+
+class _TodoDragFeedback extends StatelessWidget {
+  const _TodoDragFeedback({required this.todo, required this.fontSize});
+
+  final TodoItem todo;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(8),
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.drag_indicator_rounded, size: 18),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  todo.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: fontSize),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

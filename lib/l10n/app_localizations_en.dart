@@ -479,6 +479,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get editMotto => 'Edit calendar note';
 
   @override
+  String get calendarTodoFontSizeLabel => 'Calendar-cell TODO font size';
+
+  @override
+  String get sidebarTodoFontSizeLabel => 'Sidebar TODOList font size';
+
+  @override
+  String get dayTodoFontSizeLabel => 'Day TODO font size';
+
+  @override
+  String get mottoFontSizeLabel => 'Calendar-note font size';
+
+  @override
+  String get mottoColorLabel => 'Calendar-note color';
+
+  @override
+  String get mottoBoldLabel => 'Bold';
+
+  @override
+  String get mottoItalicLabel => 'Italic';
+
+  @override
+  String get mottoUnderlineLabel => 'Underline';
+
+  @override
+  String get dragTodoToDate => 'Drag to another date';
+
+  @override
+  String taskMovedToDate(String date) {
+    return 'Moved task to $date';
+  }
+
+  @override
   String get hotkeysTitle => 'Keyboard shortcuts';
 
   @override

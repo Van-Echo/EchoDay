@@ -53,10 +53,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final calendarState = ref.watch(calendarControllerProvider);
     final sortMode =
         ref.watch(todoSortModeProvider).value ?? TodoSortMode.composite;
+    final calendarTodoFontSize =
+        ref.watch(calendarTodoFontSizeProvider).value ??
+        defaultCalendarTodoFontSize;
+    final sidebarTodoFontSize =
+        ref.watch(sidebarTodoFontSizeProvider).value ??
+        defaultSidebarTodoFontSize;
     final years = ref.watch(holidayAvailableYearsProvider);
     final currentYear = DateTime.now().year;
     final holidayYear = ref.watch(holidayYearProvider(_selectedHolidayYear));
     final motto = ref.watch(calendarMottoProvider);
+    final mottoStyle =
+        ref.watch(calendarMottoStyleProvider).value ??
+        const CalendarMottoStyle();
     if (!_mottoLoaded && motto.hasValue) {
       _mottoController.text = motto.value ?? defaultCalendarMotto;
       _mottoLoaded = true;
@@ -170,6 +179,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           .setPreviewLimit(value.round()),
                     ),
                     const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _FontSizeDropdown(
+                          key: const ValueKey('calendar-todo-font-size'),
+                          label: localizations.calendarTodoFontSizeLabel,
+                          value: calendarTodoFontSize,
+                          values: const [9, 10, 11, 12, 13, 14, 15, 16],
+                          onChanged: (value) => setTodoFontSize(
+                            ref,
+                            AppPreferenceKeys.calendarTodoFontSize,
+                            value,
+                          ),
+                        ),
+                        _FontSizeDropdown(
+                          key: const ValueKey('sidebar-todo-font-size'),
+                          label: localizations.sidebarTodoFontSizeLabel,
+                          value: sidebarTodoFontSize,
+                          values: const [12, 13, 14, 15, 16, 17, 18, 19, 20],
+                          onChanged: (value) => setTodoFontSize(
+                            ref,
+                            AppPreferenceKeys.sidebarTodoFontSize,
+                            value,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<TodoSortMode>(
                       key: const ValueKey('default-sort-field'),
                       initialValue: sortMode,
@@ -264,32 +302,100 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 key: const ValueKey('motto-settings'),
                 icon: Icons.chat_bubble_outline_rounded,
                 title: localizations.mottoTitle,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        key: const ValueKey('motto-field'),
-                        controller: _mottoController,
-                        maxLength: 80,
-                        minLines: 2,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          labelText: localizations.mottoLabel,
-                          alignLabelWithHint: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 18,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: const ValueKey('motto-field'),
+                            controller: _mottoController,
+                            maxLength: 80,
+                            minLines: 2,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: localizations.mottoLabel,
+                              alignLabelWithHint: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 18,
+                              ),
+                            ),
+                            onSubmitted: (_) => _saveMotto(),
                           ),
                         ),
-                        onSubmitted: (_) => _saveMotto(),
-                      ),
+                        const SizedBox(width: 12),
+                        FilledButton.icon(
+                          onPressed: _saveMotto,
+                          icon: const Icon(Icons.save_outlined),
+                          label: Text(localizations.save),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: _saveMotto,
-                      icon: const Icon(Icons.save_outlined),
-                      label: Text(localizations.save),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _FontSizeDropdown(
+                          key: const ValueKey('motto-font-size'),
+                          label: localizations.mottoFontSizeLabel,
+                          value: mottoStyle.fontSize,
+                          values: const [
+                            10,
+                            12,
+                            14,
+                            16,
+                            18,
+                            20,
+                            22,
+                            24,
+                            26,
+                            28,
+                          ],
+                          onChanged: (value) => _saveMottoStyle(
+                            mottoStyle.copyWith(fontSize: value),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          key: const ValueKey('motto-color-button'),
+                          onPressed: () => _pickMottoColor(mottoStyle),
+                          icon: CircleAvatar(
+                            radius: 8,
+                            backgroundColor: Color(mottoStyle.colorValue),
+                          ),
+                          label: Text(localizations.mottoColorLabel),
+                        ),
+                        FilterChip(
+                          key: const ValueKey('motto-bold-toggle'),
+                          selected: mottoStyle.bold,
+                          onSelected: (value) =>
+                              _saveMottoStyle(mottoStyle.copyWith(bold: value)),
+                          avatar: const Icon(Icons.format_bold, size: 18),
+                          label: Text(localizations.mottoBoldLabel),
+                        ),
+                        FilterChip(
+                          key: const ValueKey('motto-italic-toggle'),
+                          selected: mottoStyle.italic,
+                          onSelected: (value) => _saveMottoStyle(
+                            mottoStyle.copyWith(italic: value),
+                          ),
+                          avatar: const Icon(Icons.format_italic, size: 18),
+                          label: Text(localizations.mottoItalicLabel),
+                        ),
+                        FilterChip(
+                          key: const ValueKey('motto-underline-toggle'),
+                          selected: mottoStyle.underline,
+                          onSelected: (value) => _saveMottoStyle(
+                            mottoStyle.copyWith(underline: value),
+                          ),
+                          avatar: const Icon(Icons.format_underlined, size: 18),
+                          label: Text(localizations.mottoUnderlineLabel),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -505,6 +611,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     ref.invalidate(primaryColorProvider);
     ref.invalidate(todoSortModeProvider);
     ref.invalidate(calendarMottoProvider);
+    ref.invalidate(calendarMottoStyleProvider);
+    ref.invalidate(calendarTodoFontSizeProvider);
+    ref.invalidate(sidebarTodoFontSizeProvider);
+    ref.invalidate(dayTodoFontSizeProvider);
     ref.invalidate(postponeDaysProvider);
     ref.invalidate(catalogPaletteProvider);
     ref.invalidate(navigationRailExtendedProvider);
@@ -591,6 +701,74 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  Future<void> _saveMottoStyle(CalendarMottoStyle style) {
+    return setCalendarMottoStyle(ref, style);
+  }
+
+  Future<void> _pickMottoColor(CalendarMottoStyle style) async {
+    var hsv = HSVColor.fromColor(Color(style.colorValue));
+    final strings = AppLocalizations.of(context);
+    final picked = await showDialog<Color>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final color = hsv.toColor();
+          return AlertDialog(
+            title: Text(strings.mottoColorLabel),
+            content: SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    key: const ValueKey('motto-color-preview'),
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  _SettingsColorSlider(
+                    label: strings.hueLabel,
+                    value: hsv.hue,
+                    max: 360,
+                    onChanged: (value) =>
+                        setDialogState(() => hsv = hsv.withHue(value)),
+                  ),
+                  _SettingsColorSlider(
+                    label: strings.saturationLabel,
+                    value: hsv.saturation,
+                    onChanged: (value) =>
+                        setDialogState(() => hsv = hsv.withSaturation(value)),
+                  ),
+                  _SettingsColorSlider(
+                    label: strings.brightnessLabel,
+                    value: hsv.value,
+                    onChanged: (value) =>
+                        setDialogState(() => hsv = hsv.withValue(value)),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(strings.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, color),
+                child: Text(strings.save),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (picked != null && mounted) {
+      await _saveMottoStyle(style.copyWith(colorValue: picked.toARGB32()));
+    }
+  }
+
   Future<void> _refreshHolidays(int year) async {
     setState(() => _refreshingHolidays = true);
     try {
@@ -665,6 +843,68 @@ class _ExpandableSettingsCard extends StatelessWidget {
         childrenPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         children: [child],
       ),
+    );
+  }
+}
+
+class _FontSizeDropdown extends StatelessWidget {
+  const _FontSizeDropdown({
+    required this.label,
+    required this.value,
+    required this.values,
+    required this.onChanged,
+    super.key,
+  });
+
+  final String label;
+  final double value;
+  final List<double> values;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: DropdownButtonFormField<double>(
+        initialValue: values.contains(value) ? value : values.first,
+        decoration: InputDecoration(labelText: label),
+        items: [
+          for (final option in values)
+            DropdownMenuItem(
+              value: option,
+              child: Text('${option.toInt()} px'),
+            ),
+        ],
+        onChanged: (selected) {
+          if (selected != null) onChanged(selected);
+        },
+      ),
+    );
+  }
+}
+
+class _SettingsColorSlider extends StatelessWidget {
+  const _SettingsColorSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.max = 1,
+  });
+
+  final String label;
+  final double value;
+  final double max;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 54, child: Text(label)),
+        Expanded(
+          child: Slider(value: value, max: max, onChanged: onChanged),
+        ),
+      ],
     );
   }
 }

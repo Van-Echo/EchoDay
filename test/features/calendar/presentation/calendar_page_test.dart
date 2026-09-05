@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:echoday/src/app/echoday_app.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/features/calendar/application/calendar_controller.dart';
@@ -5,8 +7,11 @@ import 'package:echoday/src/features/settings/application/app_preferences.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
 import 'package:echoday/src/features/todos/domain/category.dart';
 import 'package:echoday/src/features/todos/domain/local_date.dart';
+import 'package:echoday/src/features/todos/domain/repositories/todo_repository.dart';
 import 'package:echoday/src/features/todos/domain/tag.dart';
 import 'package:echoday/src/features/todos/domain/todo_item.dart';
+import 'package:echoday/src/features/todos/domain/todo_search.dart';
+import 'package:echoday/src/features/todos/presentation/day_todo_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,6 +121,10 @@ void main() {
     expect(find.text('5 周'), findsNothing);
     expect(find.byKey(const ValueKey('calendar-date-picker')), findsOneWidget);
     expect(find.text(defaultCalendarMotto), findsOneWidget);
+    final defaultMotto = tester.widget<Text>(
+      find.byKey(const ValueKey('calendar-motto')),
+    );
+    expect(defaultMotto.style?.color, const Color(0xFF8B8BF2));
     expect(
       tester.getCenter(find.byKey(const ValueKey('calendar-motto'))).dx,
       closeTo(
@@ -123,6 +132,19 @@ void main() {
         1,
       ),
     );
+    await settings.set(
+      AppPreferenceKeys.mottoStyle,
+      '{"fontSize":18,"colorValue":4282664004,'
+      '"bold":true,"italic":true,"underline":true}',
+    );
+    await render(tester);
+    final styledMotto = tester.widget<Text>(
+      find.byKey(const ValueKey('calendar-motto')),
+    );
+    expect(styledMotto.style?.fontSize, 18);
+    expect(styledMotto.style?.fontWeight, FontWeight.w700);
+    expect(styledMotto.style?.fontStyle, FontStyle.italic);
+    expect(styledMotto.style?.decoration, TextDecoration.underline);
 
     await tester.tap(find.byKey(const ValueKey('calendar-motto')));
     await tester.pumpAndSettle();
@@ -158,6 +180,7 @@ void main() {
           25,
         ).toUtc(),
       );
+      await settings.set(AppPreferenceKeys.calendarTodoFontSize, '16');
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -196,9 +219,15 @@ void main() {
       );
       final timeText = tester.widget<Text>(time);
       final spans = (timeText.textSpan! as TextSpan).children!;
+      final titleText = tester.widget<Text>(
+        find.descendant(of: cell, matching: find.text('提交材料')),
+      );
+      expect(titleText.style?.fontSize, 16);
       expect(spans[0].style?.color, const Color(0xFF7D8F7A));
       expect(spans[1].toPlainText(), ' - ');
       expect(spans[2].style?.color, isNot(const Color(0xFF7D8F7A)));
+      expect(find.byType(Draggable<TodoDragPayload>), findsNWidgets(2));
+      expect(find.byType(DragTarget<TodoDragPayload>), findsNWidgets(35));
     },
   );
 
@@ -264,6 +293,72 @@ void main() {
         }),
       ),
     );
+  });
+
+  testWidgets('drags tasks from calendar cells and sidebar to another date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final today = LocalDate.fromDateTime(DateTime.now());
+    final firstTarget = today.addDays(1);
+    final secondTarget = today.addDays(2);
+    final todo = TodoItem(
+      id: 'drag-todo',
+      title: '拖动任务',
+      localDate: today,
+      createdAt: DateTime.now().toUtc(),
+      updatedAt: DateTime.now().toUtc(),
+      plannedAt: DateTime(today.year, today.month, today.day, 9, 15).toUtc(),
+      deadlineAt: DateTime(today.year, today.month, today.day, 19, 25).toUtc(),
+    );
+    final repository = _DragTodoRepository(todo);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(settings),
+          todoRepositoryProvider.overrideWithValue(repository),
+          categoriesProvider.overrideWith(
+            (ref) => Stream.value(const <Category>[]),
+          ),
+          tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
+          holidayYearProvider.overrideWith((ref, year) async => null),
+        ],
+        child: const EchoDayApp(locale: Locale('zh')),
+      ),
+    );
+    await render(tester);
+
+    final calendarTask = find.byKey(ValueKey('calendar-task-${todo.id}'));
+    final firstTargetCell = find.byKey(ValueKey('day-cell-$firstTarget'));
+    await tester.drag(
+      calendarTask,
+      tester.getCenter(firstTargetCell) - tester.getCenter(calendarTask),
+    );
+    await tester.pumpAndSettle();
+    var moved = await repository.getById(todo.id);
+    expect(moved?.localDate, firstTarget);
+    expect(moved?.plannedAt?.toLocal().hour, 9);
+    expect(moved?.deadlineAt?.toLocal().hour, 19);
+
+    await tester.tap(firstTargetCell);
+    await render(tester);
+    final sidebarTask = find.byKey(ValueKey('todo-${todo.id}'));
+    final secondTargetCell = find.byKey(ValueKey('day-cell-$secondTarget'));
+    await tester.drag(
+      sidebarTask,
+      tester.getCenter(secondTargetCell) - tester.getCenter(sidebarTask),
+    );
+    await tester.pumpAndSettle();
+    moved = await repository.getById(todo.id);
+    expect(moved?.localDate, secondTarget);
+    expect(moved?.plannedAt?.toLocal().minute, 15);
+    expect(moved?.deadlineAt?.toLocal().minute, 25);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await repository.dispose();
   });
 
   testWidgets(
@@ -362,6 +457,20 @@ void main() {
       await tester.tap(finder);
       await render(tester);
       expect(find.byTooltip('返回月历'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('day-todo-font-size-menu')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('day-todo-font-size-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(CheckedPopupMenuItem<double>, '20 px'),
+      );
+      await render(tester);
+      expect(
+        (await settings.get(AppPreferenceKeys.dayTodoFontSize))?.value,
+        '20.0',
+      );
 
       await tester.tap(find.byTooltip('返回月历'));
       await render(tester);
@@ -411,4 +520,61 @@ void main() {
     expect(splitter, findsNothing);
     expect(find.byKey(const ValueKey('selected-day-sidebar')), findsNothing);
   });
+}
+
+final class _DragTodoRepository implements TodoRepository {
+  _DragTodoRepository(this._todo);
+
+  TodoItem _todo;
+  final _changes = StreamController<void>.broadcast(sync: true);
+
+  List<TodoItem> _itemsFor(LocalDate date) =>
+      _todo.localDate == date ? [_todo] : const [];
+
+  Future<void> dispose() => _changes.close();
+
+  @override
+  Stream<List<TodoItem>> watchByDate(LocalDate date) async* {
+    yield _itemsFor(date);
+    yield* _changes.stream.map((_) => _itemsFor(date));
+  }
+
+  @override
+  Future<List<TodoItem>> getByDate(LocalDate date) async => _itemsFor(date);
+
+  @override
+  Future<TodoItem?> getById(String id, {bool includeDeleted = false}) async =>
+      id == _todo.id ? _todo : null;
+
+  @override
+  Future<TodoItem> save(TodoItem todo) async {
+    _todo = todo;
+    _changes.add(null);
+    return todo;
+  }
+
+  @override
+  Future<TodoItem> create(TodoDraft draft) => throw UnimplementedError();
+
+  @override
+  Future<void> complete(String id, {DateTime? at}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> restore(String id) => throw UnimplementedError();
+
+  @override
+  Future<void> softDelete(String id, {DateTime? at}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> undoDelete(String id) => throw UnimplementedError();
+
+  @override
+  Future<void> reorder(LocalDate date, List<String> orderedIds) =>
+      throw UnimplementedError();
+
+  @override
+  Future<TodoSearchPage> search(TodoSearchQuery query) =>
+      throw UnimplementedError();
 }

@@ -980,6 +980,66 @@ abstract class AppLocalizations {
   /// **'修改碎碎念'**
   String get editMotto;
 
+  /// No description provided for @calendarTodoFontSizeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'日历格 TODO 字体大小'**
+  String get calendarTodoFontSizeLabel;
+
+  /// No description provided for @sidebarTodoFontSizeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'右侧 TODOList 字体大小'**
+  String get sidebarTodoFontSizeLabel;
+
+  /// No description provided for @dayTodoFontSizeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'当日 TODO 字体大小'**
+  String get dayTodoFontSizeLabel;
+
+  /// No description provided for @mottoFontSizeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'碎碎念字体大小'**
+  String get mottoFontSizeLabel;
+
+  /// No description provided for @mottoColorLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'碎碎念颜色'**
+  String get mottoColorLabel;
+
+  /// No description provided for @mottoBoldLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'加粗'**
+  String get mottoBoldLabel;
+
+  /// No description provided for @mottoItalicLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'斜体'**
+  String get mottoItalicLabel;
+
+  /// No description provided for @mottoUnderlineLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'下划线'**
+  String get mottoUnderlineLabel;
+
+  /// No description provided for @dragTodoToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'拖动到其他日期'**
+  String get dragTodoToDate;
+
+  /// No description provided for @taskMovedToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'已将任务移动到 {date}'**
+  String taskMovedToDate(String date);
+
   /// No description provided for @hotkeysTitle.
   ///
   /// In zh, this message translates to:

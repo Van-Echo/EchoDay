@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:echoday/l10n/app_localizations.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/features/calendar/application/calendar_controller.dart';
 import 'package:echoday/src/features/holidays/domain/holiday_repository.dart';
 import 'package:echoday/src/features/holidays/domain/holiday_year.dart';
+import 'package:echoday/src/features/settings/application/app_preferences.dart';
 import 'package:echoday/src/features/settings/presentation/settings_page.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
 import 'package:flutter/material.dart';
@@ -109,6 +112,24 @@ void main() {
       greaterThan(6),
     );
 
+    await tester.tap(find.byKey(const ValueKey('calendar-todo-font-size')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('16 px').last);
+    await tester.pumpAndSettle();
+    expect(
+      (await settings.get(AppPreferenceKeys.calendarTodoFontSize))?.value,
+      '16.0',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('sidebar-todo-font-size')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('20 px').last);
+    await tester.pumpAndSettle();
+    expect(
+      (await settings.get(AppPreferenceKeys.sidebarTodoFontSize))?.value,
+      '20.0',
+    );
+
     await tester.tap(find.byKey(const ValueKey('default-sort-field')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('创建时间（早到晚）').last);
@@ -136,5 +157,37 @@ void main() {
     expect(find.textContaining('法定节假日缓存会保留'), findsOneWidget);
     await tester.tap(find.text('取消').last);
     await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('motto-settings')),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('motto-settings')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('motto-bold-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('motto-bold-toggle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('motto-font-size')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('18 px').last);
+    await tester.pumpAndSettle();
+
+    final mottoStyle = jsonDecode(
+      (await settings.get(AppPreferenceKeys.mottoStyle))!.value,
+    ) as Map<String, dynamic>;
+    expect(mottoStyle['bold'], isTrue);
+    expect(mottoStyle['fontSize'], 18.0);
+
+    await tester.tap(find.byKey(const ValueKey('motto-color-button')));
+    await tester.pumpAndSettle();
+    final preview = tester.widget<Container>(
+      find.byKey(const ValueKey('motto-color-preview')),
+    );
+    expect(
+      (preview.decoration! as BoxDecoration).color,
+      const Color(defaultCalendarMottoColorValue),
+    );
   });
 }

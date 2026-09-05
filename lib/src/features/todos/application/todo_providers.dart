@@ -6,6 +6,7 @@ import '../domain/local_date.dart';
 import '../domain/tag.dart';
 import '../domain/todo_item.dart';
 import '../domain/todo_sort.dart';
+import 'move_todo_to_date.dart';
 import 'postpone_incomplete_todos.dart';
 import 'recurrence_actions.dart';
 
@@ -25,6 +26,10 @@ final postponeIncompleteTodosProvider = Provider<PostponeIncompleteTodos>((
   ref,
 ) {
   return PostponeIncompleteTodos(ref.watch(todoRepositoryProvider));
+});
+
+final moveTodoToDateProvider = Provider<MoveTodoToDate>((ref) {
+  return MoveTodoToDate(ref.watch(todoRepositoryProvider));
 });
 
 final todoSortModeProvider = StreamProvider<TodoSortMode>((ref) {

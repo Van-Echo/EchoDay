@@ -475,6 +475,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get editMotto => '修改碎碎念';
 
   @override
+  String get calendarTodoFontSizeLabel => '日历格 TODO 字体大小';
+
+  @override
+  String get sidebarTodoFontSizeLabel => '右侧 TODOList 字体大小';
+
+  @override
+  String get dayTodoFontSizeLabel => '当日 TODO 字体大小';
+
+  @override
+  String get mottoFontSizeLabel => '碎碎念字体大小';
+
+  @override
+  String get mottoColorLabel => '碎碎念颜色';
+
+  @override
+  String get mottoBoldLabel => '加粗';
+
+  @override
+  String get mottoItalicLabel => '斜体';
+
+  @override
+  String get mottoUnderlineLabel => '下划线';
+
+  @override
+  String get dragTodoToDate => '拖动到其他日期';
+
+  @override
+  String taskMovedToDate(String date) {
+    return '已将任务移动到 $date';
+  }
+
+  @override
   String get hotkeysTitle => '键位';
 
   @override

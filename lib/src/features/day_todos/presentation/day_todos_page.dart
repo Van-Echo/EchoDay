@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../app/router/app_routes.dart';
+import '../../settings/application/app_preferences.dart';
 import '../../todos/domain/local_date.dart';
 import '../../todos/presentation/day_todo_list.dart';
 import '../../todos/presentation/todo_editor.dart';
@@ -37,6 +38,8 @@ class _DayTodosPageState extends ConsumerState<DayTodosPage> {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final title = DateFormat.yMMMMEEEEd(locale)
         .format(DateTime(parsedDate.year, parsedDate.month, parsedDate.day));
+    final todoFontSize =
+        ref.watch(dayTodoFontSizeProvider).value ?? defaultDayTodoFontSize;
     void goBack() => context.go(AppRoutes.calendar);
 
     return CallbackShortcuts(
@@ -52,6 +55,33 @@ class _DayTodosPageState extends ConsumerState<DayTodosPage> {
             ),
             title: Text(title),
             actions: [
+              PopupMenuButton<double>(
+                key: const ValueKey('day-todo-font-size-menu'),
+                tooltip: localizations.dayTodoFontSizeLabel,
+                icon: const Icon(Icons.format_size_rounded),
+                initialValue: todoFontSize,
+                onSelected: (value) => setTodoFontSize(
+                  ref,
+                  AppPreferenceKeys.dayTodoFontSize,
+                  value,
+                ),
+                itemBuilder: (context) => [
+                  for (final value in const <double>[
+                    12,
+                    14,
+                    16,
+                    18,
+                    20,
+                    22,
+                    24,
+                  ])
+                    CheckedPopupMenuItem(
+                      value: value,
+                      checked: value == todoFontSize,
+                      child: Text('${value.toInt()} px'),
+                    ),
+                ],
+              ),
               IconButton(
                 tooltip: localizations.addTask,
                 onPressed: () => showTodoEditor(context, ref, date: parsedDate),

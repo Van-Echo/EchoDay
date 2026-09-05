@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:echoday/src/data/database/app_database.dart';
+import 'package:echoday/src/features/todos/application/move_todo_to_date.dart';
 import 'package:echoday/src/features/todos/application/postpone_incomplete_todos.dart';
 import 'package:echoday/src/features/todos/data/local_recurrence_repository.dart';
 import 'package:echoday/src/features/todos/data/local_todo_repository.dart';
@@ -92,4 +93,30 @@ void main() {
     expect(moved?.localDate, LocalDate(2026, 9, 6));
     expect(moved?.deadlineAt, DateTime(2026, 9, 6, 18).toUtc());
   });
+
+  test(
+    'moves a task to any date and preserves local wall-clock times',
+    () async {
+      final source = LocalDate(2026, 9, 5);
+      final target = LocalDate(2026, 8, 28);
+      final todo = await todos.create(
+        TodoDraft(
+          title: '拖动任务',
+          localDate: source,
+          plannedAt: DateTime(2026, 9, 5, 9, 15).toUtc(),
+          deadlineAt: DateTime(2026, 9, 5, 19, 25).toUtc(),
+        ),
+      );
+
+      await MoveTodoToDate(todos)(todo, target);
+
+      final moved = await todos.getById(todo.id);
+      expect(moved?.localDate, target);
+      expect(moved?.plannedAt?.toLocal().hour, 9);
+      expect(moved?.plannedAt?.toLocal().minute, 15);
+      expect(moved?.deadlineAt?.toLocal().hour, 19);
+      expect(moved?.deadlineAt?.toLocal().minute, 25);
+      expect(await todos.getByDate(source), isEmpty);
+    },
+  );
 }

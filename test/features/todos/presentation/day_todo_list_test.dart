@@ -106,10 +106,7 @@ void main() {
       ),
     );
     await settle(tester);
-    expect(find.text('提交周报'), findsNothing);
-
-    await tester.tap(find.text('已完成'));
-    await settle(tester);
+    // Completed sections start expanded in both the sidebar and day page.
     expect(find.text('提交周报'), findsOneWidget);
     expect((await todos.getById(todo.id))?.isCompleted, isTrue);
 
@@ -140,6 +137,35 @@ void main() {
     expect(await todos.getById(todo.id), isNotNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
+  });
+
+  testWidgets('uses independent full-page and sidebar TODO font sizes', (
+    tester,
+  ) async {
+    final todo = await todos.create(TodoDraft(title: '字号测试', localDate: date));
+    await settings.set(AppPreferenceKeys.dayTodoFontSize, '20');
+    await settings.set(AppPreferenceKeys.sidebarTodoFontSize, '18');
+
+    await tester.pumpWidget(app());
+    await settle(tester);
+    var title = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(ValueKey('todo-${todo.id}')),
+        matching: find.text('字号测试'),
+      ),
+    );
+    expect(title.style?.fontSize, 20);
+
+    await tester.pumpWidget(app(compact: true));
+    await settle(tester);
+    title = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(ValueKey('todo-${todo.id}')),
+        matching: find.text('字号测试'),
+      ),
+    );
+    expect(title.style?.fontSize, 18);
+    expect(find.byType(Draggable<TodoDragPayload>), findsOneWidget);
   });
 
   testWidgets(

@@ -7,8 +7,8 @@
 ## 1. 候选产物
 
 - `dist/EchoDay-v0.1.0-windows-x64-portable.zip`
-- 大小：26,629,673 字节。
-- SHA-256：`c83290c42dacbcc367640d21a2bd4113f9bdd1cdef87ab7fd471bf345ed4b561`。
+- 大小：26,651,236 字节。
+- SHA-256：`7ac64f96165369299385b7a00264acec27458d4be07719dd8fc372577d23ac41`。
 - 包内包含完整 Flutter Runner、DLL、data、`LICENSE`、便携版说明、备份指南和 v0.1.0 发布说明。
 - 包内提供 `msvcp140.dll`、`vcruntime140.dll`、`vcruntime140_1.dll` 应用本地运行库，终端用户无需安装 Flutter、Visual Studio 或 C++ 开发工具。
 - 打包和解压验收会扫描并拒绝 SQLite、数据库及 EchoDay 备份 JSON；本候选包用户数据文件数为 0。
@@ -35,7 +35,7 @@
 - `tool/quality.ps1 -SkipPubGet`：通过。
 - 格式检查：96 个 Dart 文件无改动。
 - `flutter analyze`：无问题。
-- 普通自动化测试：92 项通过；1 项访问中国政府网的真实联网测试按设计默认跳过。
+- 普通自动化测试：95 项通过；1 项访问中国政府网的真实联网测试按设计默认跳过。
 - Windows 原生集成测试：1 项通过，验证真实 Runner 可启动应用壳层。
 - 10,000 条本地任务搜索在测试阈值 3 秒内完成并准确命中唯一任务。
 - SQLite 查询计划确认活动日期查询使用 v2 复合索引。
