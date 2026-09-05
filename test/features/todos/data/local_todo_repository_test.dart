@@ -235,15 +235,15 @@ void main() {
   });
 
   test(
-    'ordinary search stays responsive with two thousand local tasks',
+    'ordinary search stays responsive with ten thousand local tasks',
     () async {
       await database.batch((batch) {
-        for (var index = 0; index < 2000; index++) {
+        for (var index = 0; index < 10000; index++) {
           batch.insert(
             database.todos,
             TodosCompanion.insert(
               id: 'bulk-$index',
-              title: index == 1777 ? '唯一性能针' : '普通任务 $index',
+              title: index == 7777 ? '唯一性能针' : '普通任务 $index',
               localDate: date.toString(),
               createdAt: now,
               updatedAt: now,
@@ -256,7 +256,7 @@ void main() {
       final page = await todos.search(const TodoSearchQuery(text: '唯一性能针'));
       stopwatch.stop();
 
-      expect(page.items.single.id, 'bulk-1777');
+      expect(page.items.single.id, 'bulk-7777');
       expect(stopwatch.elapsed, lessThan(const Duration(seconds: 3)));
     },
   );

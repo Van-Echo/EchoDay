@@ -1280,6 +1280,42 @@ abstract class AppLocalizations {
   /// **'导入 JSON 备份'**
   String get importBackup;
 
+  /// No description provided for @clearData.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空数据'**
+  String get clearData;
+
+  /// No description provided for @clearDataConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认清空全部用户数据？'**
+  String get clearDataConfirmTitle;
+
+  /// No description provided for @clearDataConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'TODO、分类、标签、重复规则和全部用户设置将被清空，法定节假日缓存会保留。丸成会先自动创建一份安全备份。'**
+  String get clearDataConfirmBody;
+
+  /// No description provided for @clearDataConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认清空'**
+  String get clearDataConfirmAction;
+
+  /// No description provided for @clearDataCompleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已清空 {count} 条记录'**
+  String clearDataCompleted(int count);
+
+  /// No description provided for @clearDataSafetyCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空前安全备份：{path}'**
+  String clearDataSafetyCreated(String path);
+
   /// No description provided for @backupExported.
   ///
   /// In zh, this message translates to:

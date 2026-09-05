@@ -635,6 +635,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importBackup => '导入 JSON 备份';
 
   @override
+  String get clearData => '清空数据';
+
+  @override
+  String get clearDataConfirmTitle => '确认清空全部用户数据？';
+
+  @override
+  String get clearDataConfirmBody =>
+      'TODO、分类、标签、重复规则和全部用户设置将被清空，法定节假日缓存会保留。丸成会先自动创建一份安全备份。';
+
+  @override
+  String get clearDataConfirmAction => '确认清空';
+
+  @override
+  String clearDataCompleted(int count) {
+    return '已清空 $count 条记录';
+  }
+
+  @override
+  String clearDataSafetyCreated(String path) {
+    return '清空前安全备份：$path';
+  }
+
+  @override
   String get backupExported => '备份已导出';
 
   @override

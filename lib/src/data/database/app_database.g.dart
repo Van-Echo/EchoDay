@@ -4116,6 +4116,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'todos_updated',
     'CREATE INDEX todos_updated ON todos (updated_at)',
   );
+  late final Index todosActiveDateCompletion = Index(
+    'todos_active_date_completion',
+    'CREATE INDEX todos_active_date_completion ON todos (deleted_at, local_date, is_completed)',
+  );
   late final Index categoriesActiveOrder = Index(
     'categories_active_order',
     'CREATE INDEX categories_active_order ON categories (deleted_at, sort_order)',
@@ -4148,6 +4152,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     todosDateActive,
     todosDeadline,
     todosUpdated,
+    todosActiveDateCompletion,
     categoriesActiveOrder,
     tagsActiveOrder,
     todoTagsTag,

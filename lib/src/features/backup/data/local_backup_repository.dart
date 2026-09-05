@@ -75,13 +75,7 @@ final class LocalBackupRepository implements BackupRepository {
   @override
   Future<ImportResult> replace(String path) async {
     final document = await _readDocument(path);
-    final safetyDirectory = await _safetyBackupDirectory();
-    await safetyDirectory.create(recursive: true);
-    final safetyPath = _join(
-      safetyDirectory.path,
-      'before-restore-${standardBackupFileName(_now())}',
-    );
-    await exportTo(safetyPath);
+    final safetyPath = await _createSafetyBackup('before-restore');
 
     final result = await _database.transaction(() async {
       await _clearUserData();
@@ -93,6 +87,46 @@ final class LocalBackupRepository implements BackupRepository {
       );
     });
     return result;
+  }
+
+  @override
+  Future<ClearDataResult> clearUserData() async {
+    final safetyPath = await _createSafetyBackup('before-clear');
+    final deletedRecordCount = await _database.transaction(() async {
+      final count =
+          (await _database.select(_database.categories).get()).length +
+          (await _database.select(_database.tags).get()).length +
+          (await _database.select(_database.recurrenceSeriesEntries).get())
+              .length +
+          (await _database.select(_database.todos).get()).length +
+          (await _database.select(_database.todoTags).get()).length +
+          (await _database.select(_database.recurrenceExceptions).get())
+              .length +
+          (await _database.select(_database.settings).get()).length;
+      await _clearUserData();
+      return count;
+    });
+    return ClearDataResult(
+      deletedRecordCount: deletedRecordCount,
+      safetyBackupPath: safetyPath,
+    );
+  }
+
+  Future<String> _createSafetyBackup(String prefix) async {
+    final directory = await _safetyBackupDirectory();
+    await directory.create(recursive: true);
+    final fileName = '$prefix-${standardBackupFileName(_now())}';
+    var path = _join(directory.path, fileName);
+    var suffix = 2;
+    while (await File(path).exists()) {
+      path = _join(
+        directory.path,
+        fileName.replaceFirst('.json', '-$suffix.json'),
+      );
+      suffix++;
+    }
+    await exportTo(path);
+    return path;
   }
 
   Future<_BackupDocument> _snapshot(DateTime exportedAt) {

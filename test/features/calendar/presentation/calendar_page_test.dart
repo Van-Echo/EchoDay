@@ -170,6 +170,9 @@ void main() {
             ),
             tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
             holidayYearProvider.overrideWith((ref, year) async => null),
+            currentTimeProvider.overrideWith(
+              (ref) => Stream.value(DateTime.utc(2026, 9, 5, 10)),
+            ),
           ],
           child: const EchoDayApp(locale: Locale('zh')),
         ),
@@ -198,6 +201,70 @@ void main() {
       expect(spans[2].style?.color, isNot(const Color(0xFF7D8F7A)));
     },
   );
+
+  testWidgets('overdue calendar preview uses the error color', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final today = LocalDate(2026, 9, 5);
+    final item = TodoItem(
+      id: 'overdue-preview',
+      title: '完成EchoDay开发',
+      localDate: today,
+      createdAt: DateTime.utc(2026, 9, 5, 8),
+      updatedAt: DateTime.utc(2026, 9, 5, 8),
+      plannedAt: DateTime.utc(2026, 9, 5, 9),
+      deadlineAt: DateTime.utc(2026, 9, 5, 19, 25),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(settings),
+          todosByDateProvider.overrideWith(
+            (ref, date) => Stream.value(date == today ? [item] : const []),
+          ),
+          categoriesProvider.overrideWith(
+            (ref) => Stream.value(const <Category>[]),
+          ),
+          tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
+          holidayYearProvider.overrideWith((ref, year) async => null),
+          currentTimeProvider.overrideWith(
+            (ref) => Stream.value(DateTime.utc(2026, 9, 5, 20)),
+          ),
+        ],
+        child: const EchoDayApp(locale: Locale('zh')),
+      ),
+    );
+    await render(tester);
+
+    final task = find.byKey(const ValueKey('calendar-task-overdue-preview'));
+    expect(task, findsOneWidget);
+    final errorColor = Theme.of(tester.element(task)).colorScheme.error;
+    final title = tester.widget<Text>(
+      find.descendant(of: task, matching: find.text('完成EchoDay开发')),
+    );
+    final statusIcon = tester.widget<Icon>(
+      find.descendant(of: task, matching: find.byIcon(Icons.circle_outlined)),
+    );
+    final time = tester.widget<Text>(
+      find.descendant(
+        of: task,
+        matching: find.byKey(
+          const ValueKey('calendar-task-time-overdue-preview'),
+        ),
+      ),
+    );
+    final timeSpans = (time.textSpan! as TextSpan).children!;
+    expect(title.style?.color, errorColor);
+    expect(statusIcon.color, errorColor);
+    expect(
+      timeSpans,
+      everyElement(
+        predicate<TextSpan>((span) {
+          return span.style?.color == errorColor;
+        }),
+      ),
+    );
+  });
 
   testWidgets(
     'December watermark stays on one line with the bundled Kai font',

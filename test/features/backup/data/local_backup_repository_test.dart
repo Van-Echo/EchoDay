@@ -98,6 +98,25 @@ void main() {
     expect(await database.select(database.todoTags).get(), hasLength(1));
   });
 
+  test('clear creates a safety backup and preserves holiday cache', () async {
+    final result = await repository.clearUserData();
+
+    expect(result.deletedRecordCount, 7);
+    expect(await File(result.safetyBackupPath).exists(), isTrue);
+    expect((await repository.inspect(result.safetyBackupPath)).todoCount, 1);
+    expect(await database.select(database.todos).get(), isEmpty);
+    expect(await database.select(database.categories).get(), isEmpty);
+    expect(await database.select(database.tags).get(), isEmpty);
+    expect(
+      await database.select(database.recurrenceSeriesEntries).get(),
+      isEmpty,
+    );
+    expect(await database.select(database.recurrenceExceptions).get(), isEmpty);
+    expect(await database.select(database.todoTags).get(), isEmpty);
+    expect(await database.select(database.settings).get(), isEmpty);
+    expect(await database.select(database.holidayYears).get(), hasLength(1));
+  });
+
   test('invalid backup never changes the database', () async {
     final path =
         '${temporaryDirectory.path}${Platform.pathSeparator}invalid.json';

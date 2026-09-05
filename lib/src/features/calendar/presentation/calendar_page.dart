@@ -676,7 +676,7 @@ class _DayCell extends ConsumerWidget {
   }
 }
 
-class _TaskPreviews extends StatelessWidget {
+class _TaskPreviews extends ConsumerWidget {
   const _TaskPreviews({
     required this.items,
     required this.capacity,
@@ -688,54 +688,65 @@ class _TaskPreviews extends StatelessWidget {
   final LocalDate date;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final localizations = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
+    final now = ref.watch(currentTimeProvider).value ?? DateTime.now().toUtc();
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final item in items.take(capacity.visibleTodoCount))
           SizedBox(
+            key: ValueKey('calendar-task-${item.id}'),
             height: CalendarLayout.todoRowExtent,
-            child: Row(
-              children: [
-                if (item.plannedAt != null || item.deadlineAt != null) ...[
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 76),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: _TaskPreviewTime(item: item, locale: locale),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-                Icon(
-                  item.isCompleted
-                      ? Icons.check_rounded
-                      : Icons.circle_outlined,
-                  size: 9,
-                  color: item.isCompleted
-                      ? Theme.of(context).colorScheme.outline
-                      : Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      decoration: item.isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
+            child: Builder(
+              builder: (context) {
+                final overdue = item.isOverdueAt(now);
+                final itemColor = overdue ? colors.error : null;
+                return Row(
+                  children: [
+                    if (item.plannedAt != null || item.deadlineAt != null) ...[
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 76),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: _TaskPreviewTime(
+                            item: item,
+                            locale: locale,
+                            overdue: overdue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Icon(
+                      item.isCompleted
+                          ? Icons.check_rounded
+                          : Icons.circle_outlined,
+                      size: 9,
                       color: item.isCompleted
-                          ? Theme.of(context).colorScheme.outline
-                          : null,
+                          ? colors.outline
+                          : itemColor ?? colors.primary,
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          decoration: item.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: item.isCompleted ? colors.outline : itemColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         if (capacity.hiddenTodoCount > 0)
@@ -758,17 +769,23 @@ class _TaskPreviews extends StatelessWidget {
 }
 
 class _TaskPreviewTime extends StatelessWidget {
-  const _TaskPreviewTime({required this.item, required this.locale});
+  const _TaskPreviewTime({
+    required this.item,
+    required this.locale,
+    required this.overdue,
+  });
 
   static const plannedColor = Color(0xFF7D8F7A);
 
   final TodoItem item;
   final String locale;
+  final bool overdue;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final completedColor = colors.outline;
+    final activeColor = overdue ? colors.error : null;
     final plannedAt = item.plannedAt;
     final deadlineAt = item.deadlineAt;
     final baseStyle = Theme.of(context).textTheme.labelSmall
@@ -780,19 +797,27 @@ class _TaskPreviewTime extends StatelessWidget {
             TextSpan(
               text: DateFormat.Hm(locale).format(plannedAt.toLocal()),
               style: baseStyle?.copyWith(
-                color: item.isCompleted ? completedColor : plannedColor,
+                color: item.isCompleted
+                    ? completedColor
+                    : activeColor ?? plannedColor,
               ),
             ),
           if (plannedAt != null && deadlineAt != null)
             TextSpan(
               text: ' - ',
-              style: baseStyle?.copyWith(color: completedColor),
+              style: baseStyle?.copyWith(
+                color: item.isCompleted
+                    ? completedColor
+                    : activeColor ?? completedColor,
+              ),
             ),
           if (deadlineAt != null)
             TextSpan(
               text: DateFormat.Hm(locale).format(deadlineAt.toLocal()),
               style: baseStyle?.copyWith(
-                color: item.isCompleted ? completedColor : colors.error,
+                color: item.isCompleted
+                    ? completedColor
+                    : activeColor ?? colors.error,
               ),
             ),
         ],

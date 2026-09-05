@@ -235,6 +235,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           icon: const Icon(Icons.upload_file_outlined),
                           label: Text(localizations.importBackup),
                         ),
+                        OutlinedButton.icon(
+                          key: const ValueKey('clear-data-button'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Theme.of(context)
+                                .colorScheme
+                                .error,
+                          ),
+                          onPressed: _backupBusy ? null : _clearData,
+                          icon: const Icon(Icons.delete_sweep_outlined),
+                          label: Text(localizations.clearData),
+                        ),
                         if (_backupBusy)
                           const Padding(
                             padding: EdgeInsets.all(8),
@@ -412,10 +423,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         _ImportChoice.replace => await repository.replace(file.path),
       };
       if (!mounted) return;
-      ref.invalidate(calendarControllerProvider);
-      ref.invalidate(themeModeProvider);
-      ref.invalidate(primaryColorProvider);
-      ref.invalidate(todoSortModeProvider);
+      _refreshPreferences();
       final strings = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -437,6 +445,70 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } finally {
       if (mounted) setState(() => _backupBusy = false);
     }
+  }
+
+  Future<void> _clearData() async {
+    final strings = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const ValueKey('clear-data-confirm-dialog'),
+        title: Text(strings.clearDataConfirmTitle),
+        content: Text(strings.clearDataConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(strings.clearDataConfirmAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _backupBusy = true);
+    try {
+      final result = await ref.read(backupRepositoryProvider).clearUserData();
+      if (!mounted) return;
+      _mottoController.text = defaultCalendarMotto;
+      _mottoLoaded = true;
+      _refreshPreferences();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.clearDataCompleted(result.deletedRecordCount)),
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            strings.clearDataSafetyCreated(result.safetyBackupPath),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      _showBackupError(error);
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  void _refreshPreferences() {
+    ref.invalidate(calendarControllerProvider);
+    ref.invalidate(themeModeProvider);
+    ref.invalidate(primaryColorProvider);
+    ref.invalidate(todoSortModeProvider);
+    ref.invalidate(calendarMottoProvider);
+    ref.invalidate(postponeDaysProvider);
+    ref.invalidate(catalogPaletteProvider);
+    ref.invalidate(navigationRailExtendedProvider);
+    ref.invalidate(hotkeyPreferenceProvider);
   }
 
   Future<_ImportChoice?> _showImportPreview(ImportPreview preview) {

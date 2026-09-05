@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:echoday/src/data/database/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('schema version 1 creates every M1 table and critical index', () async {
+  test('current schema creates every user table and critical index', () async {
     final objects = await database.customSelect(
       '''SELECT type, name FROM sqlite_master
 WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
@@ -25,7 +26,7 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
         .map((row) => row.read<String>('name'))
         .toSet();
 
-    expect(database.schemaVersion, 1);
+    expect(database.schemaVersion, 2);
     expect(
       tableNames,
       containsAll({
@@ -45,6 +46,7 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
         'todos_date_active',
         'todos_deadline',
         'todos_updated',
+        'todos_active_date_completion',
         'todo_tags_tag',
         'recurrence_exceptions_series_date',
       }),
@@ -65,4 +67,23 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
       expect(todoTagKeys, hasLength(2));
     },
   );
+
+  test('active day query uses the v2 composite index', () async {
+    final plan = await database
+        .customSelect(
+          '''EXPLAIN QUERY PLAN
+SELECT * FROM todos
+WHERE deleted_at IS NULL AND local_date = ? AND is_completed = ?''',
+          variables: [
+            const Variable<String>('2026-09-05'),
+            const Variable<int>(0),
+          ],
+        )
+        .get();
+
+    expect(
+      plan.map((row) => row.read<String>('detail')).join('\n'),
+      contains('todos_active_date_completion'),
+    );
+  });
 }

@@ -88,6 +88,16 @@ void main() {
 
     expect(find.text('提交周报'), findsOneWidget);
     expect(find.textContaining('已逾期'), findsOneWidget);
+    final overdueTile = find.byKey(ValueKey('todo-${todo.id}'));
+    final errorColor = Theme.of(tester.element(overdueTile)).colorScheme.error;
+    final overdueTitle = tester.widget<Text>(
+      find.descendant(of: overdueTile, matching: find.text('提交周报')),
+    );
+    final overdueCheckbox = tester.widget<Checkbox>(
+      find.descendant(of: overdueTile, matching: find.byType(Checkbox)),
+    );
+    expect(overdueTitle.style?.color, errorColor);
+    expect(overdueCheckbox.side?.color, errorColor);
 
     await tester.tap(
       find.descendant(

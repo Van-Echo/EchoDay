@@ -808,6 +808,9 @@ class _TodoListTile extends ConsumerWidget {
                 Checkbox(
                   value: todo.isCompleted,
                   visualDensity: VisualDensity.compact,
+                  side: overdue
+                      ? BorderSide(color: colors.error, width: 1.5)
+                      : null,
                   onChanged: (_) => _toggle(context, ref),
                 ),
                 Expanded(
@@ -830,6 +833,8 @@ class _TodoListTile extends ConsumerWidget {
                                     ? colors.onSurfaceVariant.withValues(
                                         alpha: 0.62,
                                       )
+                                    : overdue
+                                    ? colors.error
                                     : colors.onSurface,
                               ),
                             ),

@@ -119,7 +119,7 @@ void main() {
     expect(find.text('GNU Affero General Public License v3.0'), findsOneWidget);
     expect(find.text('个人、企业及商业使用均被允许'), findsOneWidget);
     expect(find.textContaining('计算机软件著作权登记号'), findsNothing);
-    expect(find.text('v0.1.0 | 2026/9/4'), findsOneWidget);
+    expect(find.text('v0.1.0 | 2026/9/5'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('about-license-link')));
     await tester.pumpAndSettle();
     expect(

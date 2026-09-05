@@ -42,6 +42,16 @@ final class ImportResult {
   final String? safetyBackupPath;
 }
 
+final class ClearDataResult {
+  const ClearDataResult({
+    required this.deletedRecordCount,
+    required this.safetyBackupPath,
+  });
+
+  final int deletedRecordCount;
+  final String safetyBackupPath;
+}
+
 final class BackupFormatException implements FormatException {
   const BackupFormatException(this.message, [this.source, this.offset]);
 
@@ -61,6 +71,7 @@ abstract interface class BackupRepository {
   Future<ImportPreview> inspect(String path);
   Future<ImportResult> merge(String path);
   Future<ImportResult> replace(String path);
+  Future<ClearDataResult> clearUserData();
 }
 
 String standardBackupFileName(DateTime value) {

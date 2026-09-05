@@ -648,6 +648,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importBackup => 'Import JSON backup';
 
   @override
+  String get clearData => 'Clear data';
+
+  @override
+  String get clearDataConfirmTitle => 'Clear all user data?';
+
+  @override
+  String get clearDataConfirmBody =>
+      'TODOs, categories, tags, recurrence rules, and all user settings will be cleared. Public-holiday cache data will remain. EchoDay creates a safety backup first.';
+
+  @override
+  String get clearDataConfirmAction => 'Clear data';
+
+  @override
+  String clearDataCompleted(int count) {
+    return 'Cleared $count records';
+  }
+
+  @override
+  String clearDataSafetyCreated(String path) {
+    return 'Pre-clear safety backup: $path';
+  }
+
+  @override
   String get backupExported => 'Backup exported';
 
   @override

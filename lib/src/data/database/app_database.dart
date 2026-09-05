@@ -57,6 +57,10 @@ class RecurrenceSeriesEntries extends Table {
 @TableIndex(name: 'todos_date_active', columns: {#localDate, #deletedAt})
 @TableIndex(name: 'todos_deadline', columns: {#deadlineAt})
 @TableIndex(name: 'todos_updated', columns: {#updatedAt})
+@TableIndex(
+  name: 'todos_active_date_completion',
+  columns: {#deletedAt, #localDate, #isCompleted},
+)
 class Todos extends Table {
   TextColumn get id => text()();
   TextColumn get title => text()();
@@ -163,16 +167,25 @@ class Settings extends Table {
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(driftDatabase(name: 'echoday'));
+  AppDatabase([QueryExecutor? executor])
+    : super(executor ?? driftDatabase(name: 'echoday'));
 
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await customStatement(
+          'CREATE INDEX todos_active_date_completion '
+          'ON todos (deleted_at, local_date, is_completed)',
+        );
+      }
+    },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },

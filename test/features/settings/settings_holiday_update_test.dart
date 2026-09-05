@@ -124,5 +124,17 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('数据备份与恢复'), findsOneWidget);
+    await tester.tap(find.text('数据备份与恢复'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('clear-data-button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('clear-data-confirm-dialog')),
+      findsOneWidget,
+    );
+    expect(find.text('法定节假日缓存会保留', findRichText: true), findsNothing);
+    expect(find.textContaining('法定节假日缓存会保留'), findsOneWidget);
+    await tester.tap(find.text('取消').last);
+    await tester.pumpAndSettle();
   });
 }

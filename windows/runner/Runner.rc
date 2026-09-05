@@ -89,11 +89,10 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.vanecho" "\0"
             VALUE "FileDescription", "丸成 EchoDay" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "EchoDay" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.vanecho. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 丸一口 / Van Echo. AGPL-3.0-only." "\0"
             VALUE "OriginalFilename", "EchoDay.exe" "\0"
             VALUE "ProductName", "丸成 EchoDay" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
