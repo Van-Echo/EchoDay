@@ -5,6 +5,7 @@ import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/features/calendar/application/calendar_controller.dart';
 import 'package:echoday/src/features/settings/application/app_preferences.dart';
+import 'package:echoday/src/features/settings/application/hotkey_preferences.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
 import 'package:echoday/src/features/todos/domain/category.dart';
 import 'package:echoday/src/features/todos/domain/local_date.dart';
@@ -75,11 +76,58 @@ void main() {
     expect(find.text('调休未覆盖'), findsOneWidget);
   });
 
-  testWidgets('Android uses a two-week calendar above a three-part TODO pane', (
+  testWidgets('add TODO hotkey request opens editor for selected date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    late ProviderContainer container;
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container = ProviderContainer(
+          overrides: [
+            platformCapabilitiesProvider.overrideWithValue(
+              const PlatformCapabilities(isAndroid: false, isWindows: true),
+            ),
+            settingsRepositoryProvider.overrideWithValue(settings),
+            todosByDateProvider.overrideWith(
+              (ref, date) => Stream.value(const <TodoItem>[]),
+            ),
+            categoriesProvider.overrideWith(
+              (ref) => Stream.value(const <Category>[]),
+            ),
+            tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
+            holidayYearProvider.overrideWith((ref, year) async => null),
+          ],
+        ),
+        child: const EchoDayApp(locale: Locale('zh')),
+      ),
+    );
+    addTearDown(container.dispose);
+    await render(tester);
+
+    final selectedDate = container
+        .read(calendarControllerProvider)
+        .selectedDate;
+    container.read(addTodoHotkeyRequestProvider.notifier).request(selectedDate);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.byKey(const ValueKey('todo-editor-desktop')), findsOneWidget);
+    expect(
+      container.read(calendarControllerProvider).selectedDate,
+      selectedDate,
+    );
+  });
+
+  testWidgets('Android focus card follows its startup preference', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(412, 915));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final today = LocalDate.fromDateTime(DateTime.now());
+    await settings.set(AppPreferenceKeys.androidExpandTodayByDefault, 'true');
 
     await tester.pumpWidget(app(isAndroid: true));
     await render(tester);
@@ -92,7 +140,6 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byKey(const ValueKey('calendar-motto')), findsNothing);
     expect(find.byKey(const ValueKey('android-todo-pane')), findsOneWidget);
-    final today = LocalDate.fromDateTime(DateTime.now());
     final focusCard = find.byKey(ValueKey('expanded-day-card-$today'));
     expect(focusCard, findsOneWidget);
     final dayCellSize = tester.getSize(find.byKey(ValueKey('day-cell-$today')));
@@ -106,6 +153,18 @@ void main() {
         .getSize(find.byKey(const ValueKey('android-todo-pane')))
         .height;
     expect(todoHeight / calendarHeight, closeTo(1.5, 0.02));
+    final month = find.descendant(
+      of: focusCard,
+      matching: find.text(
+        DateFormat.MMM('zh')
+            .format(DateTime(today.year, today.month, today.day)),
+      ),
+    );
+    final day = find.descendant(
+      of: focusCard,
+      matching: find.text('${today.day}'),
+    );
+    expect(tester.getCenter(month).dx, lessThan(tester.getCenter(day).dx));
 
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await render(tester);
@@ -113,6 +172,17 @@ void main() {
     expect(find.byKey(const ValueKey('hotkey-settings')), findsNothing);
     expect(find.byKey(const ValueKey('language-settings')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Android does not expand today by default', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(app(isAndroid: true));
+    await render(tester);
+
+    final today = LocalDate.fromDateTime(DateTime.now());
+    expect(find.byKey(ValueKey('expanded-day-card-$today')), findsNothing);
   });
 
   testWidgets('Android compact calendar supports its complete touch flow', (
@@ -398,7 +468,9 @@ void main() {
     final defaultMotto = tester.widget<Text>(
       find.byKey(const ValueKey('calendar-motto')),
     );
-    expect(defaultMotto.style?.color, const Color(0xFF8B8BF2));
+    expect(defaultMotto.style?.fontSize, 14);
+    expect(defaultMotto.style?.color, Colors.black);
+    expect(defaultMotto.style?.fontWeight, FontWeight.w700);
     expect(
       tester.getCenter(find.byKey(const ValueKey('calendar-motto'))).dx,
       closeTo(

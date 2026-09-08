@@ -11,6 +11,8 @@ abstract final class AppPreferenceKeys {
   static const motto = 'calendar.motto';
   static const mottoStyle = 'calendar.mottoStyle';
   static const calendarTodoFontSize = 'calendar.todoFontSize';
+  static const androidExpandTodayByDefault =
+      'calendar.androidExpandTodayByDefault';
   static const sidebarTodoFontSize = 'todo.sidebarFontSize';
   static const dayTodoFontSize = 'todo.dayFontSize';
   static const postponeDays = 'todo.postponeDays';
@@ -56,13 +58,13 @@ const defaultCalendarMotto = '请支持丸一口喵~谢谢喵~';
 const defaultCalendarTodoFontSize = 11.0;
 const defaultSidebarTodoFontSize = 14.0;
 const defaultDayTodoFontSize = 14.0;
-const defaultCalendarMottoColorValue = 0xFF8B8BF2;
+const defaultCalendarMottoColorValue = 0xFF000000;
 
 final class CalendarMottoStyle {
   const CalendarMottoStyle({
     this.fontSize = 14,
     this.colorValue = defaultCalendarMottoColorValue,
-    this.bold = false,
+    this.bold = true,
     this.italic = false,
     this.underline = false,
   });
@@ -80,7 +82,7 @@ final class CalendarMottoStyle {
       colorValue: colorValue is int
           ? colorValue
           : defaultCalendarMottoColorValue,
-      bold: source['bold'] == true,
+      bold: source['bold'] is bool ? source['bold'] as bool : true,
       italic: source['italic'] == true,
       underline: source['underline'] == true,
     );
@@ -159,6 +161,13 @@ final calendarTodoFontSizeProvider = StreamProvider<double>((ref) {
       );
 });
 
+final androidExpandTodayByDefaultProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watch(AppPreferenceKeys.androidExpandTodayByDefault)
+      .map((setting) => setting?.value == 'true');
+});
+
 final sidebarTodoFontSizeProvider = StreamProvider<double>((ref) {
   return ref
       .watch(settingsRepositoryProvider)
@@ -233,6 +242,12 @@ Future<void> setCalendarMottoStyle(WidgetRef ref, CalendarMottoStyle style) {
 
 Future<void> setTodoFontSize(WidgetRef ref, String key, double value) {
   return ref.read(settingsRepositoryProvider).set(key, '$value');
+}
+
+Future<void> setAndroidExpandTodayByDefault(WidgetRef ref, bool value) {
+  return ref
+      .read(settingsRepositoryProvider)
+      .set(AppPreferenceKeys.androidExpandTodayByDefault, '$value');
 }
 
 Future<void> setPostponeDays(Ref ref, int days) {

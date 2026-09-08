@@ -1,6 +1,6 @@
 # 丸成 / EchoDay — Android 开发计划
 
-> 状态：A7 本地发布候选已生成；待正式签名首次迁移验收与 GitHub Release 上传
+> 状态：A7 正式候选已完成本机、模拟器与 ARM64 真机验收；待 GitHub Release 上传
 > 制定日期：2026-09-05
 > 最近核验：2026-09-08
 > 现有基线：Windows v0.1.0，Flutter 3.47.2 / Dart 3.13.2
@@ -198,7 +198,7 @@ A0 收尾：
 - [x] 记录现有页面在手机视口下的截图、编译问题和插件差异清单。
 - [x] 开发阶段继续使用 `com.vanecho.echoday`；首发以签名 APK 直接分发，Google Play 为可选渠道。正式发布前再做最终包名复核。
 
-详细结果见根目录 `ANDROID_A0_AUDIT.md`。
+详细结果见 [`ANDROID_A0_AUDIT.md`](../ANDROID_A0_AUDIT.md)。
 
 完成标志：
 
@@ -305,7 +305,7 @@ A4 验证结果：`flutter analyze` 无问题；116 项测试通过、1 项按�
 - [x] Release 构建可以更新法定节假日。
 - [x] 应用不要求不必要的存储权限。
 
-A5 验证结果：`flutter analyze` 无问题；122 项测试通过、1 项按既有条件跳过，另行启用的 gov.cn 实时测试通过；Android Release APK 与 Windows Debug 构建成功。API 36 AOSP/无 GMS 模拟器完成了 Release 覆盖安装、强制停止后重启、系统文档导出、系统文档导入与备份预检；合并 Manifest 仅包含联网权限和 Android 自动生成的应用内动态接收器权限，不包含外部存储权限。详细结果见根目录 `ANDROID_A5_AUDIT.md`。
+A5 验证结果：`flutter analyze` 无问题；122 项测试通过、1 项按既有条件跳过，另行启用的 gov.cn 实时测试通过；Android Release APK 与 Windows Debug 构建成功。API 36 AOSP/无 GMS 模拟器完成了 Release 覆盖安装、强制停止后重启、系统文档导出、系统文档导入与备份预检；合并 Manifest 仅包含联网权限和 Android 自动生成的应用内动态接收器权限，不包含外部存储权限。详细结果见 [`ANDROID_A5_AUDIT.md`](../ANDROID_A5_AUDIT.md)。
 
 ### A6：质量与真机验证
 
@@ -328,7 +328,7 @@ A5 验证结果：`flutter analyze` 无问题；122 项测试通过、1 项按�
 - [x] 至少一个 AOSP/无 GMS 环境通过核心业务验收。
 - [x] 至少一台 ARM64 真机完成完整业务验收。
 
-A6 本机验证结果：`flutter analyze` 无问题；123 项共享自动化测试通过、1 项需要显式联网开关的 gov.cn 实时测试按设计跳过；API 24、29、34、36 AOSP 核心流程集成测试均通过，API 36 另通过系统深色模式、200% 字号、北京/纽约时区、10,000 条任务性能及 gov.cn 真机网络栈测试。10,000 条任务在 API 36 模拟器上的结果为写入 378 ms、唯一搜索 442 ms、连续 70 天读取 404 ms。普通 Release 在飞行模式下完成 Compact/Medium/Expanded 代表尺寸切换、横竖屏、返回、后台恢复和强停重启，数据库文件重启后仍存在，日志未发现 Flutter 致命错误、`MissingPluginException` 或 SQLite 异常。Windows Debug 与 Android Release 构建成功。详细结果见根目录 `ANDROID_A6_AUDIT.md`。
+A6 本机验证结果：`flutter analyze` 无问题；123 项共享自动化测试通过、1 项需要显式联网开关的 gov.cn 实时测试按设计跳过；API 24、29、34、36 AOSP 核心流程集成测试均通过，API 36 另通过系统深色模式、200% 字号、北京/纽约时区、10,000 条任务性能及 gov.cn 真机网络栈测试。10,000 条任务在 API 36 模拟器上的结果为写入 378 ms、唯一搜索 442 ms、连续 70 天读取 404 ms。普通 Release 在飞行模式下完成 Compact/Medium/Expanded 代表尺寸切换、横竖屏、返回、后台恢复和强停重启，数据库文件重启后仍存在，日志未发现 Flutter 致命错误、`MissingPluginException` 或 SQLite 异常。Windows Debug 与 Android Release 构建成功。详细结果见 [`ANDROID_A6_AUDIT.md`](../ANDROID_A6_AUDIT.md)。
 
 A6 真机验证结果：小米 15 Pro（Android 15 / API 35、ARM64、系统字号 125%）完成中文输入法、物理触觉、SAF 备份恢复、节假日联网、时区、10,000 条任务性能、Release 生命周期及横竖屏验收。真机 10,000 条任务结果为写入 283 ms、唯一搜索 275 ms、连续 70 天读取 172 ms。新增的安卓沉浸式全屏、日历标题栏移除、其他页面标题保留和横屏挖孔区域延伸均已通过截图与进程检查。A6 已关闭，可以进入 A7。
 
@@ -345,17 +345,17 @@ A6 真机验证结果：小米 15 Pro（Android 15 / API 35、ARM64、系统字�
 - [ ] 根据最终分发渠道完成 Android 开发者身份验证、包名和签名证书登记，为 2027 年全球验证要求预留时间。
 - [x] 生成 SHA-256 校验文件、版本说明和已知限制。
 - [x] 确认发布产物不包含测试数据库、备份或签名秘密。
-- [ ] 完成从早期 Debug 签名测试包到正式签名包的一次性备份—卸载—安装—恢复验收。
+- [x] 经用户明确授权放弃测试数据后，完成从早期 Debug 签名测试包到正式签名包的一次性卸载—安装迁移。
 - [ ] 使用同一正式签名的两个 version code 验证后续覆盖升级时数据库保留。
 
 完成标志：
 
-- [ ] 正式签名 APK 可安装、覆盖升级和启动。
+- [x] 正式签名 APK 可清洁安装、同签名覆盖安装和启动；更高 version code 的最终升级复核仍保留为发版检查项。
 - [ ] GitHub Release 可供用户直接下载 APK。
 - [ ] 若采用 Google Play，AAB 通过其内部测试轨道。
 - [x] 发布包不包含用户数据和秘密信息。
 
-A7 本地候选结果：EchoDay 独立 RSA 4096 签名已生成，Gradle 不再回退到 Debug 签名；通用 APK 与 ARM64 APK 均通过 Android APK Signature Scheme v2/v3 校验，AAB 通过 JAR 签名校验。三个产物及 SHA-256 文件位于 `dist/android/`，发布脚本会扫描并拒绝包含数据库、备份或签名材料的归档。GitHub Actions 自动签名发布流程、隐私政策、Data Safety 基线、迁移说明和 Android v0.1.0 发布说明已加入工程。详细结果见根目录 `ANDROID_A7_AUDIT.md`。
+A7 候选结果：EchoDay 独立 RSA 4096 签名已生成，Gradle 不再回退到 Debug 签名；通用 APK 与 ARM64 APK 均通过 Android APK Signature Scheme v2/v3 校验，AAB 通过 JAR 签名校验。三个产物及 SHA-256 文件位于 `dist/android/`，发布脚本会扫描并拒绝包含数据库、备份或签名材料的归档。API 36 AOSP 模拟器完成清洁安装、创建数据、同签名覆盖安装及数据保留验证；小米 15 Pro 完成旧测试包清除、ARM64 正式包安装、启动及日志复核。GitHub Actions 自动签名发布流程、隐私政策、Data Safety 基线、迁移说明和 Android v0.1.0 发布说明已加入工程。详细结果见 [`ANDROID_A7_AUDIT.md`](../ANDROID_A7_AUDIT.md)。
 
 参考：
 

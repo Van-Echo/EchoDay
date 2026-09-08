@@ -3,8 +3,8 @@
 > 计划状态：执行中
 > 创建日期：2026-09-02  
 > 当前阶段：M3 已关闭，M4 已实现、待体验验收
-> 产品基线：[产品需求文档](docs/PRD.md)  
-> 技术基线：[技术架构与开发计划](docs/DEVELOPMENT_PLAN.md)
+> 产品基线：[产品需求文档](PRD.md)  
+> 技术基线：[技术架构与开发计划](DEVELOPMENT_PLAN.md)
 
 ## 1. 项目目标
 
@@ -87,7 +87,7 @@
 - [x] 建立单元、widget 和集成测试入口。
 - [x] 加入基础 CI 和一键本地质量检查脚本。
 
-完成记录：Flutter 3.47.2 / Dart 3.13.2、Visual Studio 2022 17.14.39 与 Windows SDK 10.0.22621.0 已通过 doctor；`flutter analyze` 无问题，4 项普通测试与 1 项 Windows 启动集成测试通过，Debug `EchoDay.exe` 构建成功。详见 `docs/M0_SETUP_REPORT.md`。
+完成记录：Flutter 3.47.2 / Dart 3.13.2、Visual Studio 2022 17.14.39 与 Windows SDK 10.0.22621.0 已通过 doctor；`flutter analyze` 无问题，4 项普通测试与 1 项 Windows 启动集成测试通过，Debug `EchoDay.exe` 构建成功。详见 [M0_SETUP_REPORT.md](M0_SETUP_REPORT.md)。
 
 验收门槛：`flutter run -d windows` 可启动；`flutter analyze` 与 `flutter test` 通过；空壳导航可进入月历、当日详情、搜索、设置和关于页。
 
@@ -102,7 +102,7 @@
 - [x] 实现纯 Dart 排序引擎与逾期判断。
 - [x] 为数据库和排序规则补齐单元/集成测试。
 
-完成记录：Drift schema v1、领域模型、Repository 接口及本地实现已完成；`flutter analyze` 无问题，26 项普通测试通过，包括真实 SQLite 文件关闭重开一致性、外键事务回滚、生命周期、搜索、排序与逾期边界。详见 `docs/M1_DATA_REPORT.md`。
+完成记录：Drift schema v1、领域模型、Repository 接口及本地实现已完成；`flutter analyze` 无问题，26 项普通测试通过，包括真实 SQLite 文件关闭重开一致性、外键事务回滚、生命周期、搜索、排序与逾期边界。详见 [M1_DATA_REPORT.md](M1_DATA_REPORT.md)。
 
 验收门槛：无 UI 条件下可完成新增、编辑、完成、恢复、删除、撤销和查询；重启数据库后数据一致；排序与逾期边界测试通过。
 
@@ -121,7 +121,7 @@
 - [x] 实现窄窗口单栏降级。
 - [x] 覆盖 1280×720、1920×1080、2560×1440、3840×2160 和窄窗口的 widget 测试，并抽测 100%～200% 显示缩放。
 
-实现记录：连续周月历、日期摘要、快速新增、全屏当日 TODO、5～10 周缩放、普通滚轮周流、可调宽侧栏和设置持久化均已接入真实 Repository；44 项普通测试与 1 项 Windows 启动集成测试通过。详见 `docs/M2_CALENDAR_REPORT.md`。
+实现记录：连续周月历、日期摘要、快速新增、全屏当日 TODO、5～10 周缩放、普通滚轮周流、可调宽侧栏和设置持久化均已接入真实 Repository；44 项普通测试与 1 项 Windows 启动集成测试通过。详见 [M2_CALENDAR_REPORT.md](M2_CALENDAR_REPORT.md)。
 
 验收记录：2026-09-04 用户确认体验无问题，M2 正式关闭。
 
@@ -139,7 +139,7 @@
 - [x] 实现逾期视觉提示和跨日刷新。
 - [x] 补齐键盘焦点、右键菜单和空状态。
 
-实现记录：侧边栏与全屏当日页已共享完整普通任务生命周期、右侧编辑抽屉、分类标签、筛选、六种排序及 Sliver 手动拖拽；47 项普通测试与 1 项 Windows 启动集成测试通过。详见 `docs/M3_TODO_WORKFLOW_REPORT.md`。
+实现记录：侧边栏与全屏当日页已共享完整普通任务生命周期、右侧编辑抽屉、分类标签、筛选、六种排序及 Sliver 手动拖拽；47 项普通测试与 1 项 Windows 启动集成测试通过。详见 [M3_TODO_WORKFLOW_REPORT.md](M3_TODO_WORKFLOW_REPORT.md)。
 
 验收记录：2026-09-04，用户确认使用无问题并要求继续开发，M3 正式关闭。
 
@@ -173,7 +173,7 @@
 - [x] 实现基于太阳黄经的二十四节气本地计算与边界测试。
 - [x] 在日期格展示节日、节气与“班/休”，控制信息密度。
 
-实现记录：重复任务采用规则与虚拟发生项展开，发生项变更时才实体化，并支持当日未完成项一键顺延；全局搜索支持四类文本与组合筛选并可直达编辑器；中国日历具备内置/缓存/官网三层数据、严格校验、缺失年份提示和设置页手动更新。详见 `docs/M4_COMPLEX_FEATURES_REPORT.md`。
+实现记录：重复任务采用规则与虚拟发生项展开，发生项变更时才实体化，并支持当日未完成项一键顺延；全局搜索支持四类文本与组合筛选并可直达编辑器；中国日历具备内置/缓存/官网三层数据、严格校验、缺失年份提示和设置页手动更新。详见 [M4_COMPLEX_FEATURES_REPORT.md](M4_COMPLEX_FEATURES_REPORT.md)。
 
 验收状态：实现、自动化验收与用户体验确认均已完成；M4 于 2026-09-05 关闭。
 
@@ -192,7 +192,7 @@
 - [x] 实现设置、节假日和关于页面。
 - [x] 完成浅色/深色视觉修整、可访问性与品牌信息。
 
-实现记录：新增 JSON v1 备份仓库与设置页文件交互；备份覆盖全部用户实体和设置并排除节假日缓存。导入先限制文件大小并校验版本、字段、UTC 时间、ID 唯一性、重复规则和引用关系；合并按稳定 ID/关系键去重，覆盖恢复需二次确认并先写入应用支持目录的安全备份。主题模式、主色、预览条数与默认排序均通过 SettingsRepository 持久化。详见 `docs/M5_SETTINGS_BACKUP_REPORT.md`。
+实现记录：新增 JSON v1 备份仓库与设置页文件交互；备份覆盖全部用户实体和设置并排除节假日缓存。导入先限制文件大小并校验版本、字段、UTC 时间、ID 唯一性、重复规则和引用关系；合并按稳定 ID/关系键去重，覆盖恢复需二次确认并先写入应用支持目录的安全备份。主题模式、主色、预览条数与默认排序均通过 SettingsRepository 持久化。详见 [M5_SETTINGS_BACKUP_REPORT.md](M5_SETTINGS_BACKUP_REPORT.md)。
 
 验收状态：实现、自动化验收与用户体验确认均已完成；M5 于 2026-09-05 关闭。
 
@@ -210,7 +210,7 @@
 - [x] 生成 Release 构建、版本说明、已知限制和备份说明。
 - [x] 形成 Android 阶段差异清单，但不在本阶段实现。
 
-实现记录：数据库升级至 v2 并增加活动任务日期/完成状态复合索引，Drift schema verifier 已验证 v1→v2 结构与真实任务/设置数据完整性。质量流水线 92 项通过、1 项真实官网测试默认跳过；Windows 原生集成启动测试 1 项通过。RC1 便携 ZIP 已在 Windows 11 x64 解压启动，并验证删除程序目录后 `Documents/echoday.sqlite` 保留。包内含 AGPL、备份指南、发布说明和应用本地 Visual C++ 运行库，且自动校验不含数据库或备份 JSON，另提供 SHA-256。详见 `docs/M6_WINDOWS_RC_REPORT.md`。
+实现记录：数据库升级至 v2 并增加活动任务日期/完成状态复合索引，Drift schema verifier 已验证 v1→v2 结构与真实任务/设置数据完整性。质量流水线 92 项通过、1 项真实官网测试默认跳过；Windows 原生集成启动测试 1 项通过。RC1 便携 ZIP 已在 Windows 11 x64 解压启动，并验证删除程序目录后 `Documents/echoday.sqlite` 保留。包内含 AGPL、备份指南、发布说明和应用本地 Visual C++ 运行库，且自动校验不含数据库或备份 JSON，另提供 SHA-256。详见 [M6_WINDOWS_RC_REPORT.md](M6_WINDOWS_RC_REPORT.md)。
 
 验收状态：RC1 已完成本机自动化和 Windows 11 体验前验证；等待用户体验确认及 Windows 10 x64 外部冒烟后关闭 M6。
 

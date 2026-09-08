@@ -7,6 +7,7 @@ import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../app/theme/theme_mode_controller.dart';
 import '../../../app/widgets/app_scaffold.dart';
+import '../../../app/widgets/echoday_color_picker.dart';
 import '../../backup/domain/backup_repository.dart';
 import '../../calendar/application/calendar_controller.dart';
 import '../../holidays/domain/holiday_year.dart';
@@ -61,6 +62,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final calendarTodoFontSize =
         ref.watch(calendarTodoFontSizeProvider).value ??
         defaultCalendarTodoFontSize;
+    final androidExpandTodayByDefault =
+        ref.watch(androidExpandTodayByDefaultProvider).value ?? false;
     final sidebarTodoFontSize =
         ref.watch(sidebarTodoFontSizeProvider).value ??
         defaultSidebarTodoFontSize;
@@ -310,6 +313,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                       ],
                     ),
+                    if (isAndroid) ...[
+                      const SizedBox(height: 8),
+                      SwitchListTile.adaptive(
+                        key: const ValueKey('android-expand-today-by-default'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(localizations.expandTodayByDefault),
+                        value: androidExpandTodayByDefault,
+                        onChanged: (value) =>
+                            setAndroidExpandTodayByDefault(ref, value),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     DropdownButtonFormField<TodoSortMode>(
                       key: const ValueKey('default-sort-field'),
@@ -351,6 +365,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       _HotkeySettingRow(
                         action: AppHotkeyAction.today,
                         label: localizations.todayHotkey,
+                      ),
+                      const Divider(height: 20),
+                      _HotkeySettingRow(
+                        action: AppHotkeyAction.addTodo,
+                        label: localizations.addTodoHotkey,
                       ),
                     ],
                   ),
@@ -816,63 +835,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _pickMottoColor(CalendarMottoStyle style) async {
-    var hsv = HSVColor.fromColor(Color(style.colorValue));
     final strings = AppLocalizations.of(context);
-    final picked = await showDialog<Color>(
+    final picked = await showEchoDayColorPicker(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final color = hsv.toColor();
-          return AlertDialog(
-            title: Text(strings.mottoColorLabel),
-            content: SizedBox(
-              width: 360,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    key: const ValueKey('motto-color-preview'),
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  _SettingsColorSlider(
-                    label: strings.hueLabel,
-                    value: hsv.hue,
-                    max: 360,
-                    onChanged: (value) =>
-                        setDialogState(() => hsv = hsv.withHue(value)),
-                  ),
-                  _SettingsColorSlider(
-                    label: strings.saturationLabel,
-                    value: hsv.saturation,
-                    onChanged: (value) =>
-                        setDialogState(() => hsv = hsv.withSaturation(value)),
-                  ),
-                  _SettingsColorSlider(
-                    label: strings.brightnessLabel,
-                    value: hsv.value,
-                    onChanged: (value) =>
-                        setDialogState(() => hsv = hsv.withValue(value)),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(strings.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, color),
-                child: Text(strings.save),
-              ),
-            ],
-          );
-        },
-      ),
+      initialColor: Color(style.colorValue),
+      title: strings.mottoColorLabel,
+      cancelLabel: strings.cancel,
+      saveLabel: strings.save,
+      hueLabel: strings.hueLabel,
+      saturationLabel: strings.saturationLabel,
+      brightnessLabel: strings.brightnessLabel,
+      previewKey: const ValueKey('motto-color-preview'),
     );
     if (picked != null && mounted) {
       await _saveMottoStyle(style.copyWith(colorValue: picked.toARGB32()));
@@ -1019,42 +992,6 @@ class _FontSizeDropdown extends StatelessWidget {
           if (selected != null) onChanged(selected);
         },
       ),
-    );
-  }
-}
-
-class _SettingsColorSlider extends StatelessWidget {
-  const _SettingsColorSlider({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    this.max = 1,
-  });
-
-  final String label;
-  final double value;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 600;
-    if (compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(label),
-          Slider(value: value, max: max, onChanged: onChanged),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        SizedBox(width: 54, child: Text(label)),
-        Expanded(
-          child: Slider(value: value, max: max, onChanged: onChanged),
-        ),
-      ],
     );
   }
 }

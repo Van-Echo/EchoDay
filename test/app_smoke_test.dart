@@ -302,10 +302,15 @@ void main() {
     expect(find.text('全局呼出「丸成」'), findsOneWidget);
     expect(find.text('打开全局搜索'), findsNothing);
     expect(find.text('回到「今天」'), findsOneWidget);
+    expect(find.text('在当前选中日期新增 TODO'), findsOneWidget);
     final summon = defaultHotkey(AppHotkeyAction.summon);
     expect(summon.key, PhysicalKeyboardKey.keyQ);
     expect(summon.modifiers, [HotKeyModifier.control]);
     expect(summon.scope, HotKeyScope.system);
+    final addTodo = defaultHotkey(AppHotkeyAction.addTodo);
+    expect(addTodo.key, PhysicalKeyboardKey.digit1);
+    expect(addTodo.modifiers, [HotKeyModifier.control]);
+    expect(addTodo.scope, HotKeyScope.inapp);
 
     await tester.tap(find.byIcon(Icons.calendar_month_outlined).first);
     await render(tester);

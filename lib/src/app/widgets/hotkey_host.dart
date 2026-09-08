@@ -60,6 +60,16 @@ class _HotkeyHostState extends ConsumerState<HotkeyHost> {
               ref.read(calendarControllerProvider.notifier).goToToday();
               context.go(AppRoutes.calendar);
             }
+          case AppHotkeyAction.addTodo:
+            if (mounted) {
+              final date = ref.read(calendarControllerProvider).selectedDate;
+              context.go(AppRoutes.calendar);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  ref.read(addTodoHotkeyRequestProvider.notifier).request(date);
+                }
+              });
+            }
         }
       });
       _registeredHotkeys[action] = hotkey;

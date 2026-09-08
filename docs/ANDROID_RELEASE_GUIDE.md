@@ -31,6 +31,8 @@
 
 脚本会验证 APK 签名、AAB JAR 签名，并扫描归档条目，阻止数据库、备份和签名材料进入发布目录。
 
+分架构 APK 会按 Flutter/Android 规则给 version code 增加 ABI 前缀。同一设备后续应持续安装 ARM64 包，或持续安装通用包；不要在相同版本内从 ARM64 包切换回 version code 更低的通用包。
+
 ## 3. 首次从旧测试版迁移
 
 早期测试 APK 使用 Flutter Debug 密钥；v0.1.0 正式候选包使用 EchoDay 独立密钥。Android 不允许不同签名的 APK 直接覆盖安装。

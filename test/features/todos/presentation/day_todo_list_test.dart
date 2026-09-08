@@ -389,9 +389,34 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('palette-add-color')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('custom-color-preview')), findsOneWidget);
-
-    await tester.drag(find.byType(Slider).first, const Offset(120, 0));
+    await tester.enterText(
+      find.byKey(const ValueKey('color-hex-input')),
+      '#123456',
+    );
     await tester.pump();
+    final preview = tester.widget<Container>(
+      find.byKey(const ValueKey('custom-color-preview')),
+    );
+    expect(
+      (preview.decoration! as BoxDecoration).color,
+      const Color(0xFF123456),
+    );
+
+    await tester.enterText(find.byKey(const ValueKey('color-red-input')), '1');
+    await tester.enterText(
+      find.byKey(const ValueKey('color-green-input')),
+      '2',
+    );
+    await tester.enterText(find.byKey(const ValueKey('color-blue-input')), '3');
+    await tester.pump();
+    final rgbPreview = tester.widget<Container>(
+      find.byKey(const ValueKey('custom-color-preview')),
+    );
+    expect(
+      (rgbPreview.decoration! as BoxDecoration).color,
+      const Color(0xFF010203),
+    );
+
     final colorDialog = find.byType(AlertDialog).last;
     await tester.tap(
       find.descendant(of: colorDialog, matching: find.text('保存')),
@@ -479,7 +504,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('todo-editor-planned-at')));
     await tester.pumpAndSettle();
-    expect(find.byType(TimePickerDialog), findsOneWidget);
+    expect(find.byKey(const ValueKey('echoday-time-picker')), findsOneWidget);
+    expect(find.byKey(const ValueKey('time-hour-dropdown')), findsOneWidget);
+    expect(find.byKey(const ValueKey('time-minute-dropdown')), findsOneWidget);
+    expect(find.byKey(const ValueKey('time-dial')), findsOneWidget);
+    expect(find.byType(TimePickerDialog), findsNothing);
     expect(find.byType(DatePickerDialog), findsNothing);
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();

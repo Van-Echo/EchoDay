@@ -14,6 +14,7 @@ import '../../../app/widgets/app_lifecycle_refresh_host.dart';
 import '../../../app/widgets/app_scaffold.dart';
 import '../../../app/widgets/echoday_date_picker.dart';
 import '../../settings/application/app_preferences.dart';
+import '../../settings/application/hotkey_preferences.dart';
 import '../../todos/application/todo_providers.dart';
 import '../../todos/domain/local_date.dart';
 import '../../todos/domain/todo_item.dart';
@@ -43,6 +44,16 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     final state = ref.watch(calendarControllerProvider);
+    ref.listen<AddTodoHotkeyRequest?>(addTodoHotkeyRequestProvider, (
+      previous,
+      request,
+    ) {
+      if (request == null) return;
+      ref.read(addTodoHotkeyRequestProvider.notifier).consume(request.revision);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showTodoEditor(context, ref, date: request.date);
+      });
+    });
     final isAndroid = ref.watch(platformCapabilitiesProvider).isAndroid;
     final today = LocalDate.fromDateTime(DateTime.now());
     final selectedIsToday = state.selectedDate == today;
@@ -103,7 +114,8 @@ class _CalendarWorkspace extends ConsumerStatefulWidget {
 }
 
 class _CalendarWorkspaceState extends ConsumerState<_CalendarWorkspace> {
-  var _androidFocusExpanded = true;
+  var _androidFocusExpanded = false;
+  var _androidFocusInitialized = false;
   LocalDate? _focusDate;
 
   void _setAndroidFocusExpanded(bool value) {
@@ -115,7 +127,16 @@ class _CalendarWorkspaceState extends ConsumerState<_CalendarWorkspace> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(calendarControllerProvider);
-    if (_focusDate != state.selectedDate) {
+    final expandTodayPreference = ref.watch(
+      androidExpandTodayByDefaultProvider,
+    );
+    if (!_androidFocusInitialized && expandTodayPreference.hasValue) {
+      _androidFocusInitialized = true;
+      _focusDate = state.selectedDate;
+      final today = LocalDate.fromDateTime(DateTime.now());
+      _androidFocusExpanded =
+          state.selectedDate == today && (expandTodayPreference.value ?? false);
+    } else if (_focusDate != state.selectedDate) {
       _focusDate = state.selectedDate;
       _androidFocusExpanded = true;
     }
@@ -1113,6 +1134,19 @@ class _ExpandedDayCard extends ConsumerWidget {
                     height: 32,
                     child: Row(
                       children: [
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              dateLabel,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Container(
                           width: 28,
                           height: 28,
@@ -1133,18 +1167,6 @@ class _ExpandedDayCard extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              dateLabel,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                          ),
-                        ),
                         IconButton(
                           tooltip: localizations.addTask,
                           visualDensity: VisualDensity.compact,

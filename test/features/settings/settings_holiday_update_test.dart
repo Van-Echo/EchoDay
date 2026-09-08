@@ -186,7 +186,7 @@ void main() {
     final mottoStyle = jsonDecode(
       (await settings.get(AppPreferenceKeys.mottoStyle))!.value,
     ) as Map<String, dynamic>;
-    expect(mottoStyle['bold'], isTrue);
+    expect(mottoStyle['bold'], isFalse);
     expect(mottoStyle['fontSize'], 18.0);
 
     await tester.tap(find.byKey(const ValueKey('motto-color-button')));
@@ -265,6 +265,22 @@ void main() {
     expect(
       find.byKey(const ValueKey('calendar-preview-slider')),
       findsOneWidget,
+    );
+    final expandTodaySwitch = find.byKey(
+      const ValueKey('android-expand-today-by-default'),
+    );
+    expect(expandTodaySwitch, findsOneWidget);
+    expect(tester.widget<SwitchListTile>(expandTodaySwitch).value, isFalse);
+    await tester.ensureVisible(expandTodaySwitch);
+    await tester.pumpAndSettle();
+    await tester.tap(expandTodaySwitch);
+    await tester.pumpAndSettle();
+    expect(
+      (await (ProviderScope.containerOf(tester.element(expandTodaySwitch))
+              .read(settingsRepositoryProvider)
+              .get(AppPreferenceKeys.androidExpandTodayByDefault)))
+          ?.value,
+      'true',
     );
     expect(tester.takeException(), isNull);
   });

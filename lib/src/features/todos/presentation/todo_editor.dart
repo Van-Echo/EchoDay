@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
+import '../../../app/widgets/echoday_color_picker.dart';
+import '../../../app/widgets/echoday_time_picker.dart';
 import '../../../core/ids/id_generator.dart';
 import '../../settings/application/app_preferences.dart';
 import '../application/recurrence_actions.dart';
@@ -545,7 +547,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     final initialLocal =
         current?.toLocal() ??
         DateTime(_date.year, _date.month, _date.day, isDeadline ? 18 : 9);
-    final selectedTime = await showTimePicker(
+    final selectedTime = await showEchoDayTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(initialLocal),
     );
@@ -926,65 +928,17 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
   }
 
   Future<Color?> _pickCustomColor(Color initial) {
-    var hsv = HSVColor.fromColor(initial);
     final strings = AppLocalizations.of(context);
-    return showDialog<Color>(
+    return showEchoDayColorPicker(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setPickerState) {
-          final color = hsv.toColor();
-          return AlertDialog(
-            title: Text(strings.addCustomColor),
-            content: SingleChildScrollView(
-              child: SizedBox(
-                width: 360,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      key: const ValueKey('custom-color-preview'),
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    _ColorSlider(
-                      label: strings.hueLabel,
-                      value: hsv.hue,
-                      max: 360,
-                      onChanged: (value) =>
-                          setPickerState(() => hsv = hsv.withHue(value)),
-                    ),
-                    _ColorSlider(
-                      label: strings.saturationLabel,
-                      value: hsv.saturation,
-                      onChanged: (value) =>
-                          setPickerState(() => hsv = hsv.withSaturation(value)),
-                    ),
-                    _ColorSlider(
-                      label: strings.brightnessLabel,
-                      value: hsv.value,
-                      onChanged: (value) =>
-                          setPickerState(() => hsv = hsv.withValue(value)),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(strings.cancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, color),
-                child: Text(strings.save),
-              ),
-            ],
-          );
-        },
-      ),
+      initialColor: initial,
+      title: strings.addCustomColor,
+      cancelLabel: strings.cancel,
+      saveLabel: strings.save,
+      hueLabel: strings.hueLabel,
+      saturationLabel: strings.saturationLabel,
+      brightnessLabel: strings.brightnessLabel,
+      previewKey: const ValueKey('custom-color-preview'),
     );
   }
 
@@ -1131,41 +1085,6 @@ final class _CategoryPickerResult {
 
   final String? categoryId;
   final Category? category;
-}
-
-class _ColorSlider extends StatelessWidget {
-  const _ColorSlider({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    this.max = 1,
-  });
-
-  final String label;
-  final double value;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width < 600) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(label),
-          Slider(value: value, max: max, onChanged: onChanged),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        SizedBox(width: 56, child: Text(label)),
-        Expanded(
-          child: Slider(value: value, max: max, onChanged: onChanged),
-        ),
-      ],
-    );
-  }
 }
 
 class _EditorHeader extends StatelessWidget {

@@ -998,6 +998,12 @@ abstract class AppLocalizations {
   /// **'日历格 TODO 字体大小'**
   String get calendarTodoFontSizeLabel;
 
+  /// No description provided for @expandTodayByDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认放大当日日历格'**
+  String get expandTodayByDefault;
+
   /// No description provided for @sidebarTodoFontSizeLabel.
   ///
   /// In zh, this message translates to:
@@ -1081,6 +1087,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'回到「今天」'**
   String get todayHotkey;
+
+  /// No description provided for @addTodoHotkey.
+  ///
+  /// In zh, this message translates to:
+  /// **'在当前选中日期新增 TODO'**
+  String get addTodoHotkey;
 
   /// No description provided for @editHotkey.
   ///

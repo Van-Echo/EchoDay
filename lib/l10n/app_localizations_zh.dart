@@ -484,6 +484,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarTodoFontSizeLabel => '日历格 TODO 字体大小';
 
   @override
+  String get expandTodayByDefault => '默认放大当日日历格';
+
+  @override
   String get sidebarTodoFontSizeLabel => '右侧 TODOList 字体大小';
 
   @override
@@ -526,6 +529,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get todayHotkey => '回到「今天」';
+
+  @override
+  String get addTodoHotkey => '在当前选中日期新增 TODO';
 
   @override
   String get editHotkey => '修改快捷键';

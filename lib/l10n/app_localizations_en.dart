@@ -488,6 +488,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarTodoFontSizeLabel => 'Calendar-cell TODO font size';
 
   @override
+  String get expandTodayByDefault => 'Expand today\'s cell by default';
+
+  @override
   String get sidebarTodoFontSizeLabel => 'Sidebar TODOList font size';
 
   @override
@@ -530,6 +533,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todayHotkey => 'Go to “Today”';
+
+  @override
+  String get addTodoHotkey => 'Add TODO on the selected date';
 
   @override
   String get editHotkey => 'Edit shortcut';
