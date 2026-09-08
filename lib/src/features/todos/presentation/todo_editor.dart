@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../core/ids/id_generator.dart';
 import '../../settings/application/app_preferences.dart';
@@ -24,19 +25,28 @@ Future<TodoItem?> showTodoEditor(
   required LocalDate date,
   TodoItem? todo,
 }) {
+  final isAndroid = ref.read(platformCapabilitiesProvider).isAndroid;
   return showGeneralDialog<TodoItem>(
     context: context,
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Colors.black38,
     transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (context, animation, secondaryAnimation) => Align(
-      alignment: Alignment.centerRight,
-      child: _TodoEditor(date: date, todo: todo),
-    ),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      final viewInsets = MediaQuery.viewInsetsOf(context);
+      return Align(
+        alignment: isAndroid ? Alignment.bottomCenter : Alignment.centerRight,
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          padding: EdgeInsets.only(bottom: isAndroid ? viewInsets.bottom : 0),
+          child: _TodoEditor(date: date, todo: todo, mobile: isAndroid),
+        ),
+      );
+    },
     transitionBuilder: (context, animation, secondaryAnimation, child) {
       final offset = Tween<Offset>(
-        begin: const Offset(1, 0),
+        begin: isAndroid ? const Offset(0, 1) : const Offset(1, 0),
         end: Offset.zero,
       ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
       return SlideTransition(position: offset, child: child);
@@ -45,9 +55,10 @@ Future<TodoItem?> showTodoEditor(
 }
 
 class _TodoEditor extends ConsumerStatefulWidget {
-  const _TodoEditor({required this.date, this.todo});
+  const _TodoEditor({required this.date, required this.mobile, this.todo});
 
   final LocalDate date;
+  final bool mobile;
   final TodoItem? todo;
 
   @override
@@ -134,14 +145,25 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     final selectedCategory = categories
         .where((item) => item.id == _categoryId)
         .firstOrNull;
-    final width = math.min(MediaQuery.sizeOf(context).width * 0.94, 520.0);
+    final media = MediaQuery.of(context);
+    final width = widget.mobile
+        ? media.size.width
+        : math.min(media.size.width * 0.94, 520.0);
+    final height = widget.mobile ? media.size.height : double.infinity;
     return Material(
+      key: ValueKey(
+        widget.mobile ? 'todo-editor-mobile' : 'todo-editor-desktop',
+      ),
       color: Theme.of(context).colorScheme.surface,
       elevation: 16,
+      borderRadius: widget.mobile
+          ? const BorderRadius.vertical(top: Radius.circular(20))
+          : null,
+      clipBehavior: Clip.antiAlias,
       child: SafeArea(
         child: SizedBox(
           width: width,
-          height: double.infinity,
+          height: height,
           child: Form(
             key: _formKey,
             child: Column(
@@ -153,11 +175,17 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                   saving: _saving,
                   onClose: () => Navigator.of(context).pop(),
                   onSave: _save,
+                  compact: widget.mobile,
                 ),
                 const Divider(height: 1),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.fromLTRB(
+                      widget.mobile ? 16 : 20,
+                      widget.mobile ? 16 : 20,
+                      widget.mobile ? 16 : 20,
+                      24,
+                    ),
                     children: [
                       TextFormField(
                         key: const ValueKey('todo-editor-title'),
@@ -259,6 +287,9 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                                     : _tagIds.remove(tag.id);
                               }),
                               onDoubleTap: () => _editTag(tag),
+                              onLongPress: widget.mobile
+                                  ? () => _editTag(tag)
+                                  : null,
                             ),
                           ActionChip(
                             avatar: const Icon(Icons.add_rounded, size: 18),
@@ -375,42 +406,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
         ],
         if (_frequency == RecurrenceFrequency.custom) ...[
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _intervalController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: strings.repeatInterval,
-                  ),
-                  validator: (value) {
-                    if (_frequency != RecurrenceFrequency.custom) return null;
-                    final interval = int.tryParse(value ?? '');
-                    return interval == null || interval < 1
-                        ? strings.repeatInterval
-                        : null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<RecurrenceUnit>(
-                  initialValue: _customUnit,
-                  items: [
-                    for (final unit in RecurrenceUnit.values)
-                      DropdownMenuItem(
-                        value: unit,
-                        child: Text(_unitName(strings, unit)),
-                      ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _customUnit = value);
-                  },
-                ),
-              ),
-            ],
-          ),
+          _buildCustomRecurrence(strings),
         ],
         if (_frequency != null) ...[
           const SizedBox(height: 12),
@@ -444,6 +440,49 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     );
   }
 
+  Widget _buildCustomRecurrence(AppLocalizations strings) {
+    final interval = TextFormField(
+      controller: _intervalController,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: strings.repeatInterval),
+      validator: (value) {
+        if (_frequency != RecurrenceFrequency.custom) return null;
+        final parsed = int.tryParse(value ?? '');
+        return parsed == null || parsed < 1 ? strings.repeatInterval : null;
+      },
+    );
+    final unit = DropdownButtonFormField<RecurrenceUnit>(
+      initialValue: _customUnit,
+      isExpanded: widget.mobile,
+      items: [
+        for (final candidate in RecurrenceUnit.values)
+          DropdownMenuItem(
+            value: candidate,
+            child: Text(
+              _unitName(strings, candidate),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: (value) {
+        if (value != null) setState(() => _customUnit = value);
+      },
+    );
+    if (widget.mobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [interval, const SizedBox(height: 12), unit],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: interval),
+        const SizedBox(width: 12),
+        Expanded(child: unit),
+      ],
+    );
+  }
+
   Future<void> _pickUntilDate() async {
     final initial = _untilDate ?? _date;
     final selected = await showDatePicker(
@@ -458,9 +497,12 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
   }
 
   String _formatDate(LocalDate date) {
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    return DateFormat.yMMMMd(locale)
-        .format(DateTime(date.year, date.month, date.day));
+    final activeLocale = Localizations.localeOf(context);
+    final locale = activeLocale.toLanguageTag();
+    final value = DateTime(date.year, date.month, date.day);
+    return activeLocale.languageCode == 'en'
+        ? DateFormat.yMMMd(locale).format(value)
+        : DateFormat.yMMMMd(locale).format(value);
   }
 
   String _formatDateTime(DateTime? value) {
@@ -604,6 +646,12 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                           dialogContext,
                           _CategoryPickerResult.edit(category),
                         ),
+                        onLongPress: widget.mobile
+                            ? () => Navigator.pop(
+                                dialogContext,
+                                _CategoryPickerResult.edit(category),
+                              )
+                            : null,
                       ),
                   ],
                 ),
@@ -735,107 +783,109 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                key: const ValueKey('catalog-name-field'),
-                controller: controller,
-                autofocus: true,
-                decoration: InputDecoration(hintText: strings.nameHint),
-                onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    Navigator.pop(
-                      context,
-                      _CatalogDialogResult.save(
-                        _CatalogDraft(value.trim(), selectedColor),
-                      ),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: 18),
-              Text(
-                strings.colorLabel,
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 8,
-                children: [
-                  for (final colorValue in palette)
-                    InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () =>
-                          setDialogState(() => selectedColor = colorValue),
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: Color(colorValue),
-                          shape: BoxShape.circle,
-                          border: selectedColor == colorValue
-                              ? Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface,
-                                  width: 2,
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  key: const ValueKey('catalog-name-field'),
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(hintText: strings.nameHint),
+                  onSubmitted: (value) {
+                    if (value.trim().isNotEmpty) {
+                      Navigator.pop(
+                        context,
+                        _CatalogDialogResult.save(
+                          _CatalogDraft(value.trim(), selectedColor),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  strings.colorLabel,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    for (final colorValue in palette)
+                      InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () =>
+                            setDialogState(() => selectedColor = colorValue),
+                        child: Container(
+                          width: widget.mobile ? 44 : 30,
+                          height: widget.mobile ? 44 : 30,
+                          decoration: BoxDecoration(
+                            color: Color(colorValue),
+                            shape: BoxShape.circle,
+                            border: selectedColor == colorValue
+                                ? Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
+                                    width: 2,
+                                  )
+                                : null,
+                          ),
+                          child: selectedColor == colorValue
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  color: Colors.white,
+                                  size: 18,
                                 )
                               : null,
                         ),
-                        child: selectedColor == colorValue
-                            ? const Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              )
-                            : null,
                       ),
+                    IconButton.outlined(
+                      key: const ValueKey('palette-add-color'),
+                      tooltip: strings.addCustomColor,
+                      onPressed: () async {
+                        final picked = await _pickCustomColor(
+                          Color(selectedColor),
+                        );
+                        if (picked == null || !context.mounted) return;
+                        final value = picked.toARGB32();
+                        if (!palette.contains(value)) palette.add(value);
+                        selectedColor = value;
+                        setDialogState(() {});
+                        await ref
+                            .read(settingsRepositoryProvider)
+                            .set(
+                              AppPreferenceKeys.catalogPalette,
+                              jsonEncode(palette),
+                            );
+                      },
+                      icon: const Icon(Icons.colorize_rounded, size: 18),
                     ),
-                  IconButton.outlined(
-                    key: const ValueKey('palette-add-color'),
-                    tooltip: strings.addCustomColor,
-                    onPressed: () async {
-                      final picked = await _pickCustomColor(
-                        Color(selectedColor),
-                      );
-                      if (picked == null || !context.mounted) return;
-                      final value = picked.toARGB32();
-                      if (!palette.contains(value)) palette.add(value);
-                      selectedColor = value;
-                      setDialogState(() {});
-                      await ref
-                          .read(settingsRepositoryProvider)
-                          .set(
-                            AppPreferenceKeys.catalogPalette,
-                            jsonEncode(palette),
-                          );
-                    },
-                    icon: const Icon(Icons.colorize_rounded, size: 18),
-                  ),
-                  IconButton.outlined(
-                    key: const ValueKey('palette-remove-color'),
-                    tooltip: strings.removeSelectedColor,
-                    onPressed: palette.length <= 1
-                        ? null
-                        : () async {
-                            palette.remove(selectedColor);
-                            selectedColor = palette.first;
-                            setDialogState(() {});
-                            await ref
-                                .read(settingsRepositoryProvider)
-                                .set(
-                                  AppPreferenceKeys.catalogPalette,
-                                  jsonEncode(palette),
-                                );
-                          },
-                    icon: const Icon(Icons.remove_rounded, size: 18),
-                  ),
-                ],
-              ),
-            ],
+                    IconButton.outlined(
+                      key: const ValueKey('palette-remove-color'),
+                      tooltip: strings.removeSelectedColor,
+                      onPressed: palette.length <= 1
+                          ? null
+                          : () async {
+                              palette.remove(selectedColor);
+                              selectedColor = palette.first;
+                              setDialogState(() {});
+                              await ref
+                                  .read(settingsRepositoryProvider)
+                                  .set(
+                                    AppPreferenceKeys.catalogPalette,
+                                    jsonEncode(palette),
+                                  );
+                            },
+                      icon: const Icon(Icons.remove_rounded, size: 18),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           actions: [
             if (deleteLabel != null)
@@ -885,39 +935,41 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
           final color = hsv.toColor();
           return AlertDialog(
             title: Text(strings.addCustomColor),
-            content: SizedBox(
-              width: 360,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    key: const ValueKey('custom-color-preview'),
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(10),
+            content: SingleChildScrollView(
+              child: SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      key: const ValueKey('custom-color-preview'),
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  ),
-                  _ColorSlider(
-                    label: strings.hueLabel,
-                    value: hsv.hue,
-                    max: 360,
-                    onChanged: (value) =>
-                        setPickerState(() => hsv = hsv.withHue(value)),
-                  ),
-                  _ColorSlider(
-                    label: strings.saturationLabel,
-                    value: hsv.saturation,
-                    onChanged: (value) =>
-                        setPickerState(() => hsv = hsv.withSaturation(value)),
-                  ),
-                  _ColorSlider(
-                    label: strings.brightnessLabel,
-                    value: hsv.value,
-                    onChanged: (value) =>
-                        setPickerState(() => hsv = hsv.withValue(value)),
-                  ),
-                ],
+                    _ColorSlider(
+                      label: strings.hueLabel,
+                      value: hsv.hue,
+                      max: 360,
+                      onChanged: (value) =>
+                          setPickerState(() => hsv = hsv.withHue(value)),
+                    ),
+                    _ColorSlider(
+                      label: strings.saturationLabel,
+                      value: hsv.saturation,
+                      onChanged: (value) =>
+                          setPickerState(() => hsv = hsv.withSaturation(value)),
+                    ),
+                    _ColorSlider(
+                      label: strings.brightnessLabel,
+                      value: hsv.value,
+                      onChanged: (value) =>
+                          setPickerState(() => hsv = hsv.withValue(value)),
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -1096,6 +1148,15 @@ class _ColorSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).width < 600) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(label),
+          Slider(value: value, max: max, onChanged: onChanged),
+        ],
+      );
+    }
     return Row(
       children: [
         SizedBox(width: 56, child: Text(label)),
@@ -1113,12 +1174,14 @@ class _EditorHeader extends StatelessWidget {
     required this.saving,
     required this.onClose,
     required this.onSave,
+    required this.compact,
   });
 
   final String title;
   final bool saving;
   final VoidCallback onClose;
   final VoidCallback onSave;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1137,16 +1200,30 @@ class _EditorHeader extends StatelessWidget {
             Expanded(
               child: Text(title, style: Theme.of(context).textTheme.titleLarge),
             ),
-            FilledButton.icon(
-              onPressed: saving ? null : onSave,
-              icon: saving
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_rounded),
-              label: Text(strings.save),
-            ),
+            if (compact)
+              IconButton.filled(
+                key: const ValueKey('todo-editor-save'),
+                tooltip: strings.save,
+                onPressed: saving ? null : onSave,
+                icon: saving
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_rounded),
+              )
+            else
+              FilledButton.icon(
+                key: const ValueKey('todo-editor-save'),
+                onPressed: saving ? null : onSave,
+                icon: saving
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: Text(strings.save),
+              ),
           ],
         ),
       ),
@@ -1255,6 +1332,7 @@ class _CategoryPickerRow extends StatelessWidget {
     required this.onTap,
     this.colorValue,
     this.onDoubleTap,
+    this.onLongPress,
     super.key,
   });
 
@@ -1263,6 +1341,7 @@ class _CategoryPickerRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -1274,6 +1353,7 @@ class _CategoryPickerRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         onDoubleTap: onDoubleTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
@@ -1302,6 +1382,7 @@ class _EditableTagChip extends StatelessWidget {
     required this.editHint,
     required this.onTap,
     required this.onDoubleTap,
+    this.onLongPress,
     super.key,
   });
 
@@ -1311,6 +1392,7 @@ class _EditableTagChip extends StatelessWidget {
   final String editHint;
   final VoidCallback onTap;
   final VoidCallback onDoubleTap;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -1324,6 +1406,7 @@ class _EditableTagChip extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           onDoubleTap: onDoubleTap,
+          onLongPress: onLongPress,
           child: Chip(
             avatar: CircleAvatar(backgroundColor: color),
             label: Text(name),

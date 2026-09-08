@@ -1,9 +1,9 @@
 # 丸成 EchoDay
 
-一个以连续周日历为主体的本地优先 TODO 规划应用。第一阶段面向 Windows，工程同时保留 Android 平台入口。
+一个以连续周日历为主体的本地优先 TODO 规划应用，支持 Windows 与 Android。
 
 # For 普通用户
-请前往 https://github.com/Van-Echo/EchoDay/releases 下载 EchoDay-v0.1.0-windows-x64-portable.zip，解压后即可使用
+请前往 https://github.com/Van-Echo/EchoDay/releases 下载 Windows 便携包。Android 正式候选包已经完成本机构建与签名，待上传到同一发布页后，可直接下载 ARM64 或通用 APK 安装；运行应用不需要 Flutter、Android Studio 或开发工具。
 
 
 # For 开发者
@@ -18,6 +18,8 @@
 - M4：重复任务、全局搜索、中国节假日/调休更新、二十四节气与可配置多日顺延已通过体验验收并关闭。
 - M5：主题与主色持久化、日期格预览和默认排序设置、版本化 JSON 导出、预检、合并导入、覆盖恢复与自动安全备份已通过体验验收并关闭。
 - M6：v0.1.0 Windows x64 便携版 RC1 已生成并通过 Windows 11 本机验收；等待用户体验确认及 Windows 10 实机冒烟。
+- A0～A6：Android 工程基线、响应式界面、完整业务、备份恢复、兼容性矩阵和小米 15 Pro 真机验收已完成。
+- A7：v0.1.0 正式签名通用 APK、ARM64 APK 和 AAB 已生成并通过本地签名/内容检查；等待正式签名包的首次迁移验收和 GitHub Release 上传。
 - 体验增强：丸/成双 Logo、智能月份标题、年/月日期选择器、可双击编辑删除的分类/标签、自定义色板、`Ctrl+Q` 全局显示/最小化、可直接点击编辑的日历“碎碎念~”和完整关于页已实现。
 - Flutter：3.47.2 stable / Dart 3.13.2。
 - 应用标识：`com.vanecho.echoday`。
@@ -29,6 +31,13 @@ flutter pub get
 flutter gen-l10n
 dart run build_runner build
 flutter run -d windows
+```
+
+Android 调试可使用：
+
+```powershell
+flutter devices
+flutter run -d <设备ID>
 ```
 
 如果 `flutter doctor -v` 报告 Visual Studio 组件缺失，请在 Visual Studio Installer 的“使用 C++ 的桌面开发”工作负载中补齐：
@@ -79,6 +88,22 @@ tool/              本地质量脚本
 - 发布说明：`docs/RELEASE_NOTES_v0.1.0.md`
 - 生成命令：`.\tool\package_windows.ps1`
 - 解压/启动/数据保留验收：`.\tool\test_windows_portable.ps1`
+
+## Android 候选包
+
+- 通用 APK：`dist/android/EchoDay-v0.1.0-android-universal.apk`
+- ARM64 APK：`dist/android/EchoDay-v0.1.0-android-arm64-v8a.apk`
+- 应用商店 AAB：`dist/android/EchoDay-v0.1.0-android.aab`
+- SHA-256：`dist/android/EchoDay-v0.1.0-android.sha256`
+- 发布说明：`docs/RELEASE_NOTES_ANDROID_v0.1.0.md`
+- 发布指南：`docs/ANDROID_RELEASE_GUIDE.md`
+- 生成命令：`.\tool\package_android.ps1 -BuildAppBundle`
+
+首次生成正式签名配置前执行 `.\tool\setup_android_signing.ps1`。签名文件必须长期安全保管且不能提交 Git。早期 Debug 签名测试包不能直接覆盖正式签名包，迁移前请先导出 JSON 备份；详见发布指南。
+
+## 隐私
+
+EchoDay v0.1.0 不提供账号、云同步、广告或分析统计，用户内容默认只保存在设备本地。完整说明见 [PRIVACY.md](PRIVACY.md)。
 
 ## 许可
 

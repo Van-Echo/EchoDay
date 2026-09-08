@@ -21,7 +21,7 @@ void main() {
 
   setUp(() => settings = InMemorySettingsRepository());
 
-  Widget app() => ProviderScope(
+  Widget app({Locale? locale = const Locale('zh')}) => ProviderScope(
     overrides: [
       settingsRepositoryProvider.overrideWithValue(settings),
       todosByDateProvider.overrideWith(
@@ -34,7 +34,7 @@ void main() {
       holidayYearProvider.overrideWith((ref, year) async => null),
       holidayAvailableYearsProvider.overrideWith((ref) async => const {}),
     ],
-    child: const EchoDayApp(locale: Locale('zh')),
+    child: EchoDayApp(locale: locale),
   );
 
   Future<void> render(WidgetTester tester) async {
@@ -88,6 +88,30 @@ void main() {
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(materialApp.themeMode, ThemeMode.dark);
     expect(materialApp.theme?.colorScheme.primary, const Color(0xFF667E8C));
+  });
+
+  testWidgets('persists the selected app language and updates the UI', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(app(locale: null));
+    await render(tester);
+    expect(find.text('月历工作台'), findsWidgets);
+
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await render(tester);
+    await tester.tap(find.text('语言'));
+    await render(tester);
+    await tester.tap(find.text('English'));
+    await render(tester);
+
+    expect((await settings.get(AppPreferenceKeys.language))?.value, 'en');
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.locale, const Locale('en'));
+    expect(find.text('Settings'), findsWidgets);
+    expect(find.text('Language'), findsOneWidget);
   });
 
   testWidgets('opens every M0 destination', (tester) async {
@@ -144,6 +168,84 @@ void main() {
     );
     expect(aboutCenter.dx, closeTo(contentCenter.dx, 1));
     expect(aboutCenter.dy, closeTo(contentCenter.dy, 1));
+  });
+
+  testWidgets('adaptive shell preserves the search route and query on resize', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(app());
+    await render(tester);
+
+    expect(
+      find.byKey(const ValueKey('compact-bottom-navigation')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byIcon(Icons.search_outlined));
+    await render(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('global-search-field')),
+      '保留筛选状态',
+    );
+
+    await tester.binding.setSurfaceSize(const Size(700, 915));
+    await render(tester);
+    expect(
+      find.byKey(const ValueKey('medium-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(find.text('保留筛选状态'), findsOneWidget);
+
+    await tester.binding.setSurfaceSize(const Size(1000, 700));
+    await render(tester);
+    expect(
+      find.byKey(const ValueKey('expanded-navigation-rail')),
+      findsOneWidget,
+    );
+    expect(find.text('保留筛选状态'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('system back returns from a destination to the calendar', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(app());
+    await render(tester);
+
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await render(tester);
+    expect(find.text('设置'), findsWidgets);
+
+    expect(await tester.binding.handlePopRoute(), isTrue);
+    await render(tester);
+    expect(find.byKey(const ValueKey('calendar-week-grid')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compact navigation yields its space to the soft keyboard', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(app());
+    await render(tester);
+
+    expect(
+      find.byKey(const ValueKey('compact-bottom-navigation')),
+      findsOneWidget,
+    );
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    await render(tester);
+
+    expect(
+      find.byKey(const ValueKey('compact-bottom-navigation')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('switches the navigation rail between its two persisted widths', (

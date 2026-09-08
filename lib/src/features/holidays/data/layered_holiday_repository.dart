@@ -36,7 +36,15 @@ final class LayeredHolidayRepository implements HolidayRepository {
   @override
   Future<HolidayRefreshResult> refresh(int year) async {
     final local = await _cached.getYear(year) ?? await _loadBundled(year);
-    final payload = await _remote.fetchYear(year);
+    String? payload;
+    try {
+      payload = await _remote.fetchYear(year);
+    } on Object {
+      // A network client, DNS resolver or platform transport can fail before a
+      // remote source has a chance to translate the error to a null result.
+      // Keep the cached/bundled year usable in every failure mode.
+      payload = null;
+    }
     if (payload == null) {
       return HolidayRefreshResult(
         HolidayRefreshStatus.unavailable,

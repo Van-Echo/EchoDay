@@ -1,0 +1,48 @@
+{
+  "formatVersion": 1,
+  "exportedAt": "2026-09-06T21:50:41.919240Z",
+  "appVersion": "0.1.0",
+  "data": {
+    "categories": [],
+    "tags": [],
+    "recurrenceSeries": [],
+    "todos": [
+      {
+        "id": "01a07677-8af1-798b-9d8b-f5089fe3aae6",
+        "title": "A3drag",
+        "localDate": "2026-09-15",
+        "isCompleted": false,
+        "createdAt": "2026-09-06T11:25:40.000Z",
+        "updatedAt": "2026-09-06T11:26:05.000Z",
+        "plannedAt": null,
+        "priority": 3,
+        "categoryId": null,
+        "notes": null,
+        "deadlineAt": null,
+        "timeZoneId": null,
+        "completedAt": null,
+        "deletedAt": null,
+        "manualOrder": 0.0,
+        "revision": 2,
+        "recurrenceSeriesId": null,
+        "occurrenceDate": null
+      }
+    ],
+    "todoTags": [],
+    "recurrenceExceptions": []
+  },
+  "settings": [
+    {
+      "key": "appearance.primaryColor",
+      "value": "4287266719",
+      "updatedAt": "2026-09-05T12:05:52.000Z",
+      "revision": 1
+    },
+    {
+      "key": "appearance.language",
+      "value": "zh",
+      "updatedAt": "2026-09-05T14:35:54.000Z",
+      "revision": 2
+    }
+  ]
+}

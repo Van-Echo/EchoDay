@@ -1,9 +1,9 @@
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../app/theme/theme_mode_controller.dart';
 import '../../../app/widgets/app_scaffold.dart';
@@ -48,6 +48,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
+    final language =
+        ref.watch(appLanguageProvider).value ?? AppLanguage.chinese;
+    final capabilities = ref.watch(platformCapabilitiesProvider);
+    final isAndroid = capabilities.isAndroid;
+    final compact = MediaQuery.sizeOf(context).width < 600;
     final primaryColorValue =
         ref.watch(primaryColorProvider).value ?? defaultPrimaryColorValue;
     final calendarState = ref.watch(calendarControllerProvider);
@@ -85,7 +90,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(compact ? 12 : 24),
             children: [
               _ExpandableSettingsCard(
                 key: const ValueKey('theme-settings'),
@@ -96,31 +101,58 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   children: [
                     Semantics(
                       label: localizations.themeModeLabel,
-                      child: SegmentedButton<ThemeMode>(
-                        segments: [
-                          ButtonSegment(
-                            value: ThemeMode.system,
-                            label: Text(localizations.themeSystem),
-                            icon: const Icon(Icons.brightness_auto_rounded),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.light,
-                            label: Text(localizations.themeLight),
-                            icon: const Icon(Icons.light_mode_outlined),
-                          ),
-                          ButtonSegment(
-                            value: ThemeMode.dark,
-                            label: Text(localizations.themeDark),
-                            icon: const Icon(Icons.dark_mode_outlined),
-                          ),
-                        ],
-                        selected: {themeMode},
-                        onSelectionChanged: (selection) {
-                          ref
-                              .read(themeModeProvider.notifier)
-                              .setMode(selection.single);
-                        },
-                      ),
+                      child: compact
+                          ? Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _ThemeChoice(
+                                  value: ThemeMode.system,
+                                  selected: themeMode,
+                                  icon: Icons.brightness_auto_rounded,
+                                  label: localizations.themeSystem,
+                                ),
+                                _ThemeChoice(
+                                  value: ThemeMode.light,
+                                  selected: themeMode,
+                                  icon: Icons.light_mode_outlined,
+                                  label: localizations.themeLight,
+                                ),
+                                _ThemeChoice(
+                                  value: ThemeMode.dark,
+                                  selected: themeMode,
+                                  icon: Icons.dark_mode_outlined,
+                                  label: localizations.themeDark,
+                                ),
+                              ],
+                            )
+                          : SegmentedButton<ThemeMode>(
+                              segments: [
+                                ButtonSegment(
+                                  value: ThemeMode.system,
+                                  label: Text(localizations.themeSystem),
+                                  icon: const Icon(
+                                    Icons.brightness_auto_rounded,
+                                  ),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.light,
+                                  label: Text(localizations.themeLight),
+                                  icon: const Icon(Icons.light_mode_outlined),
+                                ),
+                                ButtonSegment(
+                                  value: ThemeMode.dark,
+                                  label: Text(localizations.themeDark),
+                                  icon: const Icon(Icons.dark_mode_outlined),
+                                ),
+                              ],
+                              selected: {themeMode},
+                              onSelectionChanged: (selection) {
+                                ref
+                                    .read(themeModeProvider.notifier)
+                                    .setMode(selection.single);
+                              },
+                            ),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -149,24 +181,82 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               const SizedBox(height: 16),
               _ExpandableSettingsCard(
+                key: const ValueKey('language-settings'),
+                icon: Icons.language_rounded,
+                title: localizations.languageLabel,
+                child: Semantics(
+                  label: localizations.languageLabel,
+                  child: compact
+                      ? Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ChoiceChip(
+                              label: Text(localizations.languageChinese),
+                              selected: language == AppLanguage.chinese,
+                              onSelected: (_) =>
+                                  setAppLanguage(ref, AppLanguage.chinese),
+                            ),
+                            ChoiceChip(
+                              label: Text(localizations.languageEnglish),
+                              selected: language == AppLanguage.english,
+                              onSelected: (_) =>
+                                  setAppLanguage(ref, AppLanguage.english),
+                            ),
+                          ],
+                        )
+                      : SegmentedButton<AppLanguage>(
+                          segments: [
+                            ButtonSegment(
+                              value: AppLanguage.chinese,
+                              label: Text(localizations.languageChinese),
+                            ),
+                            ButtonSegment(
+                              value: AppLanguage.english,
+                              label: Text(localizations.languageEnglish),
+                            ),
+                          ],
+                          selected: {language},
+                          onSelectionChanged: (selection) =>
+                              setAppLanguage(ref, selection.single),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _ExpandableSettingsCard(
                 key: const ValueKey('calendar-task-settings'),
                 icon: Icons.view_week_outlined,
                 title: localizations.calendarTaskSettingsTitle,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(localizations.calendarPreviewLabel),
-                        ),
-                        Text(
-                          localizations.calendarPreviewValue(
-                            calendarState.previewLimit,
+                    if (compact)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(localizations.calendarPreviewLabel),
+                          const SizedBox(height: 4),
+                          Text(
+                            localizations.calendarPreviewValue(
+                              calendarState.previewLimit,
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(localizations.calendarPreviewLabel),
+                          ),
+                          Text(
+                            localizations.calendarPreviewValue(
+                              calendarState.previewLimit,
+                            ),
+                          ),
+                        ],
+                      ),
                     Slider(
                       key: const ValueKey('calendar-preview-slider'),
                       value: calendarState.previewLimit.toDouble(),
@@ -187,7 +277,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           key: const ValueKey('calendar-todo-font-size'),
                           label: localizations.calendarTodoFontSizeLabel,
                           value: calendarTodoFontSize,
-                          values: const [9, 10, 11, 12, 13, 14, 15, 16],
+                          values: const [
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                          ],
                           onChanged: (value) => setTodoFontSize(
                             ref,
                             AppPreferenceKeys.calendarTodoFontSize,
@@ -211,6 +314,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     DropdownButtonFormField<TodoSortMode>(
                       key: const ValueKey('default-sort-field'),
                       initialValue: sortMode,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: localizations.defaultSortLabel,
                       ),
@@ -218,7 +322,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         for (final mode in TodoSortMode.values)
                           DropdownMenuItem(
                             value: mode,
-                            child: Text(_sortName(localizations, mode)),
+                            child: Text(
+                              _sortName(localizations, mode),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (value) {
@@ -228,25 +335,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              _ExpandableSettingsCard(
-                key: const ValueKey('hotkey-settings'),
-                icon: Icons.keyboard_outlined,
-                title: localizations.hotkeysTitle,
-                child: Column(
-                  children: [
-                    _HotkeySettingRow(
-                      action: AppHotkeyAction.summon,
-                      label: localizations.summonHotkey,
-                    ),
-                    const Divider(height: 20),
-                    _HotkeySettingRow(
-                      action: AppHotkeyAction.today,
-                      label: localizations.todayHotkey,
-                    ),
-                  ],
+              if (capabilities.supportsGlobalHotkeys) ...[
+                const SizedBox(height: 16),
+                _ExpandableSettingsCard(
+                  key: const ValueKey('hotkey-settings'),
+                  icon: Icons.keyboard_outlined,
+                  title: localizations.hotkeysTitle,
+                  child: Column(
+                    children: [
+                      _HotkeySettingRow(
+                        action: AppHotkeyAction.summon,
+                        label: localizations.summonHotkey,
+                      ),
+                      const Divider(height: 20),
+                      _HotkeySettingRow(
+                        action: AppHotkeyAction.today,
+                        label: localizations.todayHotkey,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
               _ExpandableSettingsCard(
                 key: const ValueKey('backup-settings'),
@@ -297,109 +406,115 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              _ExpandableSettingsCard(
-                key: const ValueKey('motto-settings'),
-                icon: Icons.chat_bubble_outline_rounded,
-                title: localizations.mottoTitle,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            key: const ValueKey('motto-field'),
-                            controller: _mottoController,
-                            maxLength: 80,
-                            minLines: 2,
-                            maxLines: 3,
-                            decoration: InputDecoration(
-                              labelText: localizations.mottoLabel,
-                              alignLabelWithHint: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 18,
+              if (!isAndroid) ...[
+                const SizedBox(height: 16),
+                _ExpandableSettingsCard(
+                  key: const ValueKey('motto-settings'),
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: localizations.mottoTitle,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              key: const ValueKey('motto-field'),
+                              controller: _mottoController,
+                              maxLength: 80,
+                              minLines: 2,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                labelText: localizations.mottoLabel,
+                                alignLabelWithHint: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 18,
+                                ),
                               ),
+                              onSubmitted: (_) => _saveMotto(),
                             ),
-                            onSubmitted: (_) => _saveMotto(),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        FilledButton.icon(
-                          onPressed: _saveMotto,
-                          icon: const Icon(Icons.save_outlined),
-                          label: Text(localizations.save),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _FontSizeDropdown(
-                          key: const ValueKey('motto-font-size'),
-                          label: localizations.mottoFontSizeLabel,
-                          value: mottoStyle.fontSize,
-                          values: const [
-                            10,
-                            12,
-                            14,
-                            16,
-                            18,
-                            20,
-                            22,
-                            24,
-                            26,
-                            28,
-                          ],
-                          onChanged: (value) => _saveMottoStyle(
-                            mottoStyle.copyWith(fontSize: value),
+                          const SizedBox(width: 12),
+                          FilledButton.icon(
+                            onPressed: _saveMotto,
+                            icon: const Icon(Icons.save_outlined),
+                            label: Text(localizations.save),
                           ),
-                        ),
-                        OutlinedButton.icon(
-                          key: const ValueKey('motto-color-button'),
-                          onPressed: () => _pickMottoColor(mottoStyle),
-                          icon: CircleAvatar(
-                            radius: 8,
-                            backgroundColor: Color(mottoStyle.colorValue),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          _FontSizeDropdown(
+                            key: const ValueKey('motto-font-size'),
+                            label: localizations.mottoFontSizeLabel,
+                            value: mottoStyle.fontSize,
+                            values: const [
+                              10,
+                              12,
+                              14,
+                              16,
+                              18,
+                              20,
+                              22,
+                              24,
+                              26,
+                              28,
+                            ],
+                            onChanged: (value) => _saveMottoStyle(
+                              mottoStyle.copyWith(fontSize: value),
+                            ),
                           ),
-                          label: Text(localizations.mottoColorLabel),
-                        ),
-                        FilterChip(
-                          key: const ValueKey('motto-bold-toggle'),
-                          selected: mottoStyle.bold,
-                          onSelected: (value) =>
-                              _saveMottoStyle(mottoStyle.copyWith(bold: value)),
-                          avatar: const Icon(Icons.format_bold, size: 18),
-                          label: Text(localizations.mottoBoldLabel),
-                        ),
-                        FilterChip(
-                          key: const ValueKey('motto-italic-toggle'),
-                          selected: mottoStyle.italic,
-                          onSelected: (value) => _saveMottoStyle(
-                            mottoStyle.copyWith(italic: value),
+                          OutlinedButton.icon(
+                            key: const ValueKey('motto-color-button'),
+                            onPressed: () => _pickMottoColor(mottoStyle),
+                            icon: CircleAvatar(
+                              radius: 8,
+                              backgroundColor: Color(mottoStyle.colorValue),
+                            ),
+                            label: Text(localizations.mottoColorLabel),
                           ),
-                          avatar: const Icon(Icons.format_italic, size: 18),
-                          label: Text(localizations.mottoItalicLabel),
-                        ),
-                        FilterChip(
-                          key: const ValueKey('motto-underline-toggle'),
-                          selected: mottoStyle.underline,
-                          onSelected: (value) => _saveMottoStyle(
-                            mottoStyle.copyWith(underline: value),
+                          FilterChip(
+                            key: const ValueKey('motto-bold-toggle'),
+                            selected: mottoStyle.bold,
+                            onSelected: (value) => _saveMottoStyle(
+                              mottoStyle.copyWith(bold: value),
+                            ),
+                            avatar: const Icon(Icons.format_bold, size: 18),
+                            label: Text(localizations.mottoBoldLabel),
                           ),
-                          avatar: const Icon(Icons.format_underlined, size: 18),
-                          label: Text(localizations.mottoUnderlineLabel),
-                        ),
-                      ],
-                    ),
-                  ],
+                          FilterChip(
+                            key: const ValueKey('motto-italic-toggle'),
+                            selected: mottoStyle.italic,
+                            onSelected: (value) => _saveMottoStyle(
+                              mottoStyle.copyWith(italic: value),
+                            ),
+                            avatar: const Icon(Icons.format_italic, size: 18),
+                            label: Text(localizations.mottoItalicLabel),
+                          ),
+                          FilterChip(
+                            key: const ValueKey('motto-underline-toggle'),
+                            selected: mottoStyle.underline,
+                            onSelected: (value) => _saveMottoStyle(
+                              mottoStyle.copyWith(underline: value),
+                            ),
+                            avatar: const Icon(
+                              Icons.format_underlined,
+                              size: 18,
+                            ),
+                            label: Text(localizations.mottoUnderlineLabel),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 16),
               _ExpandableSettingsCard(
                 key: const ValueKey('holiday-settings'),
@@ -477,18 +592,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _exportBackup() async {
-    const typeGroup = XTypeGroup(
-      label: 'EchoDay JSON backup',
-      extensions: ['json'],
-    );
-    final location = await getSaveLocation(
+    final gateway = ref.read(backupFileGatewayProvider);
+    final target = await gateway.chooseExportTarget(
       suggestedName: standardBackupFileName(DateTime.now()),
-      acceptedTypeGroups: const [typeGroup],
     );
-    if (location == null || !mounted) return;
+    if (target == null || !mounted) return;
     setState(() => _backupBusy = true);
     try {
-      await ref.read(backupRepositoryProvider).exportTo(location.path);
+      await ref.read(backupRepositoryProvider).exportTo(target.path);
+      await gateway.commitExport(target);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context).backupExported)),
@@ -496,21 +608,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     } on Object catch (error) {
       _showBackupError(error);
     } finally {
+      await gateway.cleanupExport(target);
       if (mounted) setState(() => _backupBusy = false);
     }
   }
 
   Future<void> _importBackup() async {
-    const typeGroup = XTypeGroup(
-      label: 'EchoDay JSON backup',
-      extensions: ['json'],
-    );
-    final file = await openFile(acceptedTypeGroups: const [typeGroup]);
-    if (file == null || !mounted) return;
+    final path = await ref.read(backupFileGatewayProvider).chooseImportPath();
+    if (path == null || !mounted) return;
     setState(() => _backupBusy = true);
     try {
       final repository = ref.read(backupRepositoryProvider);
-      final preview = await repository.inspect(file.path);
+      final preview = await repository.inspect(path);
       if (!mounted) return;
       if (!preview.isValid) {
         final strings = AppLocalizations.of(context);
@@ -525,8 +634,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (choice == null || !mounted) return;
       if (choice == _ImportChoice.replace && !await _confirmReplace()) return;
       final result = switch (choice) {
-        _ImportChoice.merge => await repository.merge(file.path),
-        _ImportChoice.replace => await repository.replace(file.path),
+        _ImportChoice.merge => await repository.merge(path),
+        _ImportChoice.replace => await repository.replace(path),
       };
       if (!mounted) return;
       _refreshPreferences();
@@ -608,6 +717,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _refreshPreferences() {
     ref.invalidate(calendarControllerProvider);
     ref.invalidate(themeModeProvider);
+    ref.invalidate(appLanguageProvider);
     ref.invalidate(primaryColorProvider);
     ref.invalidate(todoSortModeProvider);
     ref.invalidate(calendarMottoProvider);
@@ -819,6 +929,30 @@ String _sortName(AppLocalizations strings, TodoSortMode mode) {
   };
 }
 
+class _ThemeChoice extends ConsumerWidget {
+  const _ThemeChoice({
+    required this.value,
+    required this.selected,
+    required this.icon,
+    required this.label,
+  });
+
+  final ThemeMode value;
+  final ThemeMode selected;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ChoiceChip(
+      avatar: Icon(icon, size: 18),
+      label: Text(label),
+      selected: value == selected,
+      onSelected: (_) => ref.read(themeModeProvider.notifier).setMode(value),
+    );
+  }
+}
+
 class _ExpandableSettingsCard extends StatelessWidget {
   const _ExpandableSettingsCard({
     required this.icon,
@@ -833,6 +967,7 @@ class _ExpandableSettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return Card(
       elevation: 0,
       color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -840,7 +975,12 @@ class _ExpandableSettingsCard extends StatelessWidget {
       child: ExpansionTile(
         leading: Icon(icon),
         title: Text(title, style: Theme.of(context).textTheme.titleMedium),
-        childrenPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        childrenPadding: EdgeInsets.fromLTRB(
+          compact ? 12 : 20,
+          12,
+          compact ? 12 : 20,
+          compact ? 16 : 20,
+        ),
         children: [child],
       ),
     );
@@ -864,7 +1004,7 @@ class _FontSizeDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 220,
+      width: MediaQuery.sizeOf(context).width < 600 ? double.infinity : 220,
       child: DropdownButtonFormField<double>(
         initialValue: values.contains(value) ? value : values.first,
         decoration: InputDecoration(labelText: label),
@@ -898,6 +1038,16 @@ class _SettingsColorSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(label),
+          Slider(value: value, max: max, onChanged: onChanged),
+        ],
+      );
+    }
     return Row(
       children: [
         SizedBox(width: 54, child: Text(label)),

@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/app_database.dart';
+import '../../features/backup/data/android_document_backup_file_gateway.dart';
+import '../../features/backup/data/file_selector_backup_file_gateway.dart';
 import '../../features/backup/data/local_backup_repository.dart';
+import '../../features/backup/domain/backup_file_gateway.dart';
 import '../../features/backup/domain/backup_repository.dart';
 import '../../features/holidays/data/gov_cn_holiday_source.dart';
 import '../../features/holidays/data/holiday_sources.dart';
@@ -21,6 +24,7 @@ import '../../features/todos/domain/repositories/category_repository.dart';
 import '../../features/todos/domain/repositories/recurrence_repository.dart';
 import '../../features/todos/domain/repositories/tag_repository.dart';
 import '../../features/todos/domain/repositories/todo_repository.dart';
+import '../platform/platform_capabilities.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final database = AppDatabase();
@@ -50,6 +54,13 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 
 final backupRepositoryProvider = Provider<BackupRepository>((ref) {
   return LocalBackupRepository(ref.watch(appDatabaseProvider));
+});
+
+final backupFileGatewayProvider = Provider<BackupFileGateway>((ref) {
+  if (ref.watch(platformCapabilitiesProvider).isAndroid) {
+    return AndroidDocumentBackupFileGateway();
+  }
+  return const FileSelectorBackupFileGateway();
 });
 
 final holidayRepositoryProvider = Provider<HolidayRepository>((ref) {

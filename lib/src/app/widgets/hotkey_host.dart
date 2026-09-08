@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../../features/calendar/application/calendar_controller.dart';
 import '../../features/settings/application/hotkey_preferences.dart';
+import '../platform/platform_capabilities.dart';
+import '../platform/windows_desktop_runtime.dart';
 import '../router/app_routes.dart';
 
 class HotkeyHost extends ConsumerStatefulWidget {
@@ -24,11 +23,11 @@ class HotkeyHost extends ConsumerStatefulWidget {
 class _HotkeyHostState extends ConsumerState<HotkeyHost> {
   final Map<AppHotkeyAction, String> _registered = {};
   final Map<AppHotkeyAction, HotKey> _registeredHotkeys = {};
-  var _restoreMaximized = false;
-  var _togglingWindow = false;
 
   @override
   Widget build(BuildContext context) {
+    final capabilities = ref.watch(platformCapabilitiesProvider);
+    if (!capabilities.supportsGlobalHotkeys) return widget.child;
     for (final action in AppHotkeyAction.values) {
       final hotkey = ref.watch(hotkeyPreferenceProvider(action)).value;
       if (hotkey != null) _scheduleRegistration(action, hotkey);
@@ -46,49 +45,26 @@ class _HotkeyHostState extends ConsumerState<HotkeyHost> {
   }
 
   Future<void> _register(AppHotkeyAction action, HotKey hotkey) async {
-    if (kIsWeb || !Platform.isWindows) return;
+    if (!ref.read(platformCapabilitiesProvider).supportsGlobalHotkeys) return;
+    final runtime = ref.read(desktopRuntimeProvider);
     try {
       if (_registeredHotkeys[action] case final previous?) {
-        await hotKeyManager.unregister(previous);
+        await runtime.unregisterHotkey(previous);
       }
-      await hotKeyManager.register(
-        hotkey,
-        keyDownHandler: (_) async {
-          switch (action) {
-            case AppHotkeyAction.summon:
-              await _toggleWindowVisibility();
-            case AppHotkeyAction.today:
-              if (mounted) {
-                ref.read(calendarControllerProvider.notifier).goToToday();
-                context.go(AppRoutes.calendar);
-              }
-          }
-        },
-      );
+      await runtime.registerHotkey(hotkey, () async {
+        switch (action) {
+          case AppHotkeyAction.summon:
+            await runtime.toggleWindowVisibility();
+          case AppHotkeyAction.today:
+            if (mounted) {
+              ref.read(calendarControllerProvider.notifier).goToToday();
+              context.go(AppRoutes.calendar);
+            }
+        }
+      });
       _registeredHotkeys[action] = hotkey;
     } on Object {
       // Widget tests and unsupported desktop sessions may not expose plugins.
-    }
-  }
-
-  Future<void> _toggleWindowVisibility() async {
-    if (_togglingWindow) return;
-    _togglingWindow = true;
-    try {
-      final minimized = await windowManager.isMinimized();
-      final visible = await windowManager.isVisible();
-      final focused = await windowManager.isFocused();
-      if (visible && !minimized && focused) {
-        _restoreMaximized = await windowManager.isMaximized();
-        await windowManager.minimize();
-        return;
-      }
-      if (minimized) await windowManager.restore();
-      await windowManager.show();
-      if (_restoreMaximized) await windowManager.maximize();
-      await windowManager.focus();
-    } finally {
-      _togglingWindow = false;
     }
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:echoday/src/data/database/app_database.dart';
@@ -185,6 +186,23 @@ void main() {
     },
   );
 
+  test('refresh keeps bundled cache when the network source throws', () async {
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final cached = CachedHolidaySource(database);
+    final repository = LayeredHolidayRepository(
+      cached,
+      const BundledHolidaySource(),
+      const _ThrowingRemote(),
+    );
+
+    final result = await repository.refresh(2026);
+
+    expect(result.status, HolidayRefreshStatus.unavailable);
+    expect(result.year?.year, 2026);
+    expect(await cached.getYear(2026), isNotNull);
+  });
+
   test('solar terms match the 2026 HKO calendar and guard boundaries', () {
     const service = SolarTermService();
     final dates = service
@@ -222,4 +240,13 @@ void main() {
     expect(service.forYear(1900), hasLength(24));
     expect(service.forYear(2100), hasLength(24));
   });
+}
+
+final class _ThrowingRemote implements RemoteHolidaySource {
+  const _ThrowingRemote();
+
+  @override
+  Future<String?> fetchYear(int year) {
+    throw const SocketException('offline');
+  }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:echoday/l10n/app_localizations.dart';
+import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/features/calendar/application/calendar_controller.dart';
 import 'package:echoday/src/features/holidays/domain/holiday_repository.dart';
@@ -120,6 +121,14 @@ void main() {
       (await settings.get(AppPreferenceKeys.calendarTodoFontSize))?.value,
       '16.0',
     );
+    await tester.tap(find.byKey(const ValueKey('calendar-todo-font-size')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('5 px').last);
+    await tester.pumpAndSettle();
+    expect(
+      (await settings.get(AppPreferenceKeys.calendarTodoFontSize))?.value,
+      '5.0',
+    );
 
     await tester.tap(find.byKey(const ValueKey('sidebar-todo-font-size')));
     await tester.pumpAndSettle();
@@ -189,5 +198,74 @@ void main() {
       (preview.decoration! as BoxDecoration).color,
       const Color(defaultCalendarMottoColorValue),
     );
+  });
+
+  testWidgets('Android settings remain scrollable at 360dp and 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          settingsRepositoryProvider.overrideWithValue(
+            InMemorySettingsRepository(),
+          ),
+          holidayRepositoryProvider.overrideWithValue(_HolidayRepository()),
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities(isAndroid: true, isWindows: false),
+          ),
+        ],
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: const SettingsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('hotkey-settings')), findsNothing);
+    expect(find.byKey(const ValueKey('motto-settings')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('theme-settings')));
+    await tester.pumpAndSettle();
+    expect(find.text('跟随系统'), findsOneWidget);
+    expect(find.text('浅色'), findsOneWidget);
+    expect(find.text('深色'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('language-settings')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('language-settings')));
+    await tester.pumpAndSettle();
+    expect(find.text('English'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('calendar-task-settings')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('calendar-task-settings')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('calendar-preview-slider')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 }

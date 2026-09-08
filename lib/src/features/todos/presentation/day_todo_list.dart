@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../settings/application/app_preferences.dart';
 import '../application/recurrence_actions.dart';
@@ -28,16 +31,16 @@ Future<void> showQuickAddTodoDialog(
   LocalDate date,
 ) async {
   final localizations = AppLocalizations.of(context);
-  final controller = TextEditingController();
+  var draftTitle = '';
   final title = await showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(
       title: Text(localizations.quickAddTitle),
       content: TextField(
-        controller: controller,
         autofocus: true,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(hintText: localizations.todoTitleHint),
+        onChanged: (value) => draftTitle = value,
         onSubmitted: (value) {
           if (value.trim().isNotEmpty) Navigator.of(context).pop(value.trim());
         },
@@ -49,7 +52,7 @@ Future<void> showQuickAddTodoDialog(
         ),
         FilledButton(
           onPressed: () {
-            final value = controller.text.trim();
+            final value = draftTitle.trim();
             if (value.isNotEmpty) Navigator.of(context).pop(value);
           },
           child: Text(localizations.addTask),
@@ -57,7 +60,6 @@ Future<void> showQuickAddTodoDialog(
       ],
     ),
   );
-  controller.dispose();
   if (title == null || title.isEmpty) return;
   await ref
       .read(todoRepositoryProvider)
@@ -65,10 +67,16 @@ Future<void> showQuickAddTodoDialog(
 }
 
 class DayTodoList extends ConsumerStatefulWidget {
-  const DayTodoList({required this.date, this.compact = false, super.key});
+  const DayTodoList({
+    required this.date,
+    this.compact = false,
+    this.onTaskDragStarted,
+    super.key,
+  });
 
   final LocalDate date;
   final bool compact;
+  final VoidCallback? onTaskDragStarted;
 
   @override
   ConsumerState<DayTodoList> createState() => _DayTodoListState();
@@ -247,33 +255,42 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
   ) {
     final strings = AppLocalizations.of(context);
     if (items.isEmpty) {
-      return Center(
-        child: Padding(
+      return LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.event_note_rounded,
-                size: 40,
-                color: Theme.of(context).colorScheme.outlineVariant,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight > 32
+                  ? constraints.maxHeight - 32
+                  : 0,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.event_note_rounded,
+                    size: 40,
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    strings.noTasksForDate,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        showTodoEditor(context, ref, date: widget.date),
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text(strings.addTask),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                strings.noTasksForDate,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    showTodoEditor(context, ref, date: widget.date),
-                icon: const Icon(Icons.add_rounded),
-                label: Text(strings.addTask),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -358,6 +375,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
             categories: categories,
             tags: tags,
             todoFontSize: todoFontSize,
+            onTaskDragStarted: widget.onTaskDragStarted,
           ),
         if (completed.isNotEmpty) ...[
           const SizedBox(height: 10),
@@ -376,6 +394,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
               categories: categories,
               tags: tags,
               todoFontSize: todoFontSize,
+              onTaskDragStarted: widget.onTaskDragStarted,
             ),
         ],
       ],
@@ -417,6 +436,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
             categories: categories,
             tags: tags,
             todoFontSize: todoFontSize,
+            onTaskDragStarted: widget.onTaskDragStarted,
             dragHandle: ReorderableDragStartListener(
               index: index,
               child: Tooltip(
@@ -490,6 +510,7 @@ class _SortToolbar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppLocalizations.of(context);
+    final capabilities = ref.watch(platformCapabilitiesProvider);
     final compactIconStyle = compact
         ? IconButton.styleFrom(
             minimumSize: const Size.square(36),
@@ -521,8 +542,12 @@ class _SortToolbar extends ConsumerWidget {
             ] else
               const Spacer(),
             GestureDetector(
-              onSecondaryTapDown: canPostpone
+              onSecondaryTapDown:
+                  canPostpone && capabilities.supportsPointerContextMenu
                   ? (_) => onConfigurePostpone()
+                  : null,
+              onLongPress: canPostpone && capabilities.isAndroid
+                  ? onConfigurePostpone
                   : null,
               child: IconButton(
                 key: const ValueKey('postpone-incomplete-todos'),
@@ -738,6 +763,7 @@ class _TodoSection extends StatelessWidget {
     required this.categories,
     required this.tags,
     required this.todoFontSize,
+    this.onTaskDragStarted,
   });
 
   final List<TodoItem> todos;
@@ -746,6 +772,7 @@ class _TodoSection extends StatelessWidget {
   final List<Category> categories;
   final List<Tag> tags;
   final double todoFontSize;
+  final VoidCallback? onTaskDragStarted;
 
   @override
   Widget build(BuildContext context) {
@@ -761,6 +788,7 @@ class _TodoSection extends StatelessWidget {
             categories: categories,
             tags: tags,
             todoFontSize: todoFontSize,
+            onTaskDragStarted: onTaskDragStarted,
           ),
         ],
       ],
@@ -768,7 +796,7 @@ class _TodoSection extends StatelessWidget {
   }
 }
 
-enum _TodoAction { edit, toggle, postpone, delete }
+enum _TodoAction { edit, toggle, move, postpone, delete }
 
 class _TodoListTile extends ConsumerWidget {
   const _TodoListTile({
@@ -778,6 +806,7 @@ class _TodoListTile extends ConsumerWidget {
     required this.categories,
     required this.tags,
     required this.todoFontSize,
+    this.onTaskDragStarted,
     this.dragHandle,
     super.key,
   });
@@ -788,6 +817,7 @@ class _TodoListTile extends ConsumerWidget {
   final List<Category> categories;
   final List<Tag> tags;
   final double todoFontSize;
+  final VoidCallback? onTaskDragStarted;
   final Widget? dragHandle;
 
   @override
@@ -804,11 +834,35 @@ class _TodoListTile extends ConsumerWidget {
     final metadata = _metadata(context, overdue);
     final postponeDays = ref.watch(postponeDaysProvider).value ?? 1;
     final notes = todo.notes?.trim();
+    final capabilities = ref.watch(platformCapabilitiesProvider);
+    final useTouchActions = capabilities.isAndroid;
+    final useTouchDrag = compact && capabilities.supportsTouchDrag;
+    final touchDragHandle = useTouchDrag && dragHandle == null
+        ? LongPressDraggable<TodoDragPayload>(
+            key: ValueKey('todo-long-press-drag-${todo.id}'),
+            data: TodoDragPayload(todo),
+            delay: const Duration(milliseconds: 350),
+            dragAnchorStrategy: pointerDragAnchorStrategy,
+            rootOverlay: true,
+            hapticFeedbackOnStart: true,
+            onDragStarted: onTaskDragStarted,
+            feedback: _TodoDragFeedback(todo: todo, fontSize: todoFontSize),
+            child: Tooltip(
+              message: strings.dragTodoToDate,
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Icon(Icons.drag_indicator_rounded, size: 20),
+              ),
+            ),
+          )
+        : null;
 
     Widget buildTile() => GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onSecondaryTapDown: (details) =>
-          _showContextMenu(context, ref, details.globalPosition),
+      onSecondaryTapDown: capabilities.supportsPointerContextMenu
+          ? (details) => _showContextMenu(context, ref, details.globalPosition)
+          : null,
+      onLongPress: useTouchActions ? () => _showTouchMenu(context, ref) : null,
       child: Material(
         color: todo.isCompleted
             ? colors.surfaceContainerLow.withValues(alpha: 0.65)
@@ -943,6 +997,7 @@ class _TodoListTile extends ConsumerWidget {
                     ),
                   ),
                 ?dragHandle,
+                ?touchDragHandle,
                 PopupMenuButton<_TodoAction>(
                   tooltip: strings.editTask,
                   padding: EdgeInsets.zero,
@@ -957,13 +1012,16 @@ class _TodoListTile extends ConsumerWidget {
         ),
       ),
     );
-    if (!compact) return buildTile();
+    if (!compact || useTouchDrag) return buildTile();
+    final feedback = _TodoDragFeedback(todo: todo, fontSize: todoFontSize);
+    final childWhenDragging = Opacity(opacity: 0.35, child: buildTile());
     return Draggable<TodoDragPayload>(
       data: TodoDragPayload(todo),
       dragAnchorStrategy: pointerDragAnchorStrategy,
       rootOverlay: true,
-      feedback: _TodoDragFeedback(todo: todo, fontSize: todoFontSize),
-      childWhenDragging: Opacity(opacity: 0.35, child: buildTile()),
+      feedback: feedback,
+      onDragStarted: onTaskDragStarted,
+      childWhenDragging: childWhenDragging,
       child: Tooltip(
         message: strings.dragTodoToDate,
         child: MouseRegion(cursor: SystemMouseCursors.grab, child: buildTile()),
@@ -998,6 +1056,14 @@ class _TodoListTile extends ConsumerWidget {
       child: ListTile(
         leading: const Icon(Icons.edit_outlined),
         title: Text(strings.editTask),
+        contentPadding: EdgeInsets.zero,
+      ),
+    ),
+    PopupMenuItem(
+      value: _TodoAction.move,
+      child: ListTile(
+        leading: const Icon(Icons.event_repeat_outlined),
+        title: Text(strings.moveToDate),
         contentPadding: EdgeInsets.zero,
       ),
     ),
@@ -1062,6 +1128,76 @@ class _TodoListTile extends ConsumerWidget {
     }
   }
 
+  Future<void> _showTouchMenu(BuildContext context, WidgetRef ref) async {
+    unawaited(HapticFeedback.selectionClick());
+    final strings = AppLocalizations.of(context);
+    final postponeDays = ref.read(postponeDaysProvider).value ?? 1;
+    final action = await showModalBottomSheet<_TodoAction>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheetContext) => ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: SingleChildScrollView(
+          child: Column(
+            key: ValueKey('mobile-todo-actions-${todo.id}'),
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+                child: Text(
+                  strings.taskActions,
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+              ),
+              _TouchActionTile(
+                key: const ValueKey('mobile-action-edit'),
+                icon: Icons.edit_outlined,
+                label: strings.editTask,
+                action: _TodoAction.edit,
+              ),
+              _TouchActionTile(
+                key: const ValueKey('mobile-action-toggle'),
+                icon: todo.isCompleted
+                    ? Icons.replay_rounded
+                    : Icons.check_circle_outline_rounded,
+                label: todo.isCompleted
+                    ? strings.restoreTask
+                    : strings.markComplete,
+                action: _TodoAction.toggle,
+              ),
+              _TouchActionTile(
+                key: const ValueKey('mobile-action-move'),
+                icon: Icons.event_repeat_outlined,
+                label: strings.moveToDate,
+                action: _TodoAction.move,
+              ),
+              if (!todo.isCompleted)
+                _TouchActionTile(
+                  key: const ValueKey('mobile-action-postpone'),
+                  icon: Icons.next_plan_outlined,
+                  label: strings.postponeOneTaskDays(postponeDays),
+                  action: _TodoAction.postpone,
+                ),
+              _TouchActionTile(
+                key: const ValueKey('mobile-action-delete'),
+                icon: Icons.delete_outline_rounded,
+                label: strings.deleteTask,
+                action: _TodoAction.delete,
+                destructive: true,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (action != null && context.mounted) {
+      await _runAction(context, ref, action, postponeDays);
+    }
+  }
+
   Future<void> _runAction(
     BuildContext context,
     WidgetRef ref,
@@ -1073,10 +1209,45 @@ class _TodoListTile extends ConsumerWidget {
         await showTodoEditor(context, ref, date: todo.localDate, todo: todo);
       case _TodoAction.toggle:
         await _toggle(context, ref);
+      case _TodoAction.move:
+        await _moveToDate(context, ref);
       case _TodoAction.postpone:
         await _postpone(context, ref, postponeDays);
       case _TodoAction.delete:
         await _delete(context, ref);
+    }
+  }
+
+  Future<void> _moveToDate(BuildContext context, WidgetRef ref) async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: DateTime(
+        todo.localDate.year,
+        todo.localDate.month,
+        todo.localDate.day,
+      ),
+      firstDate: DateTime(1970),
+      lastDate: DateTime(2200),
+    );
+    if (selected == null || !context.mounted) return;
+    final target = LocalDate.fromDateTime(selected);
+    try {
+      await ref.read(moveTodoToDateProvider).call(todo, target);
+      if (!context.mounted) return;
+      final locale = Localizations.localeOf(context).toLanguageTag();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)
+                .taskMovedToDate(DateFormat.yMMMd(locale).format(selected)),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
+      );
     }
   }
 
@@ -1166,6 +1337,32 @@ class _TodoListTile extends ConsumerWidget {
         SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
       );
     }
+  }
+}
+
+class _TouchActionTile extends StatelessWidget {
+  const _TouchActionTile({
+    required this.icon,
+    required this.label,
+    required this.action,
+    this.destructive = false,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final _TodoAction action;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? Theme.of(context).colorScheme.error : null;
+    return ListTile(
+      minTileHeight: 52,
+      leading: Icon(icon, color: color),
+      title: Text(label, style: TextStyle(color: color)),
+      onTap: () => Navigator.pop(context, action),
+    );
   }
 }
 

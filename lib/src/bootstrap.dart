@@ -1,13 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hotkey_manager/hotkey_manager.dart';
-import 'package:window_manager/window_manager.dart';
 
 import 'app/echoday_app.dart';
+import 'app/platform/platform_capabilities.dart';
+import 'app/platform/windows_desktop_runtime.dart';
 import 'core/errors/app_error_view.dart';
 import 'core/logging/app_logger.dart';
 
@@ -15,9 +15,19 @@ void bootstrap() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      if (Platform.isWindows) {
-        await windowManager.ensureInitialized();
-        await hotKeyManager.unregisterAll();
+      final capabilities = PlatformCapabilities.current();
+      if (capabilities.isAndroid) {
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+        SystemChrome.setSystemUIOverlayStyle(
+          const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarDividerColor: Colors.transparent,
+          ),
+        );
+      }
+      if (capabilities.supportsWindowManagement) {
+        await WindowsDesktopRuntime().initialize();
       }
       configureLogging();
 

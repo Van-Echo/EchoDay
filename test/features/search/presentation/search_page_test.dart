@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:echoday/src/app/echoday_app.dart';
+import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/data/database/app_database.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
@@ -83,6 +84,82 @@ void main() {
 
     expect(find.byKey(const ValueKey('todo-editor-title')), findsOneWidget);
     expect(find.text('准备发布说明'), findsWidgets);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await database.close();
+  });
+
+  testWidgets('Android search filters stack at 360dp and 200% text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.binding.platformDispatcher.clearTextScaleFactorTestValue();
+    });
+    final database = AppDatabase.forTesting(NativeDatabase.memory());
+    final repository = LocalTodoRepository(database);
+    final settings = InMemorySettingsRepository();
+    final date = LocalDate(2026, 9, 4);
+    final todo = await repository.create(
+      TodoDraft(title: '移动搜索结果', localDate: date),
+    );
+    final category = Category(
+      id: 'work',
+      name: '工作',
+      colorValue: 0xFF476C5E,
+      createdAt: DateTime.utc(2026, 9, 4),
+      updatedAt: DateTime.utc(2026, 9, 4),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          todoRepositoryProvider.overrideWithValue(repository),
+          settingsRepositoryProvider.overrideWithValue(settings),
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities(isAndroid: true, isWindows: false),
+          ),
+          categoriesProvider.overrideWith((ref) => Stream.value([category])),
+          tagsProvider.overrideWith((ref) => Stream.value(const <Tag>[])),
+          holidayYearProvider.overrideWith((ref, year) async => null),
+          todosByDateProvider.overrideWith(
+            (ref, selectedDate) => Stream.value(
+              selectedDate == date ? [todo] : const <TodoItem>[],
+            ),
+          ),
+        ],
+        child: const EchoDayApp(locale: Locale('zh')),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(find.byIcon(Icons.search_outlined));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final categoryFilter = find.byKey(const ValueKey('search-category-filter'));
+    expect(categoryFilter, findsOneWidget);
+    expect(tester.getSize(categoryFilter).width, greaterThan(160));
+    expect(tester.getSize(categoryFilter).height, greaterThanOrEqualTo(48));
+    expect(
+      tester.getTopLeft(categoryFilter).dy,
+      greaterThan(tester.getTopLeft(find.byType(OutlinedButton).first).dy),
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('global-search-field')),
+      '移动搜索',
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+    expect(find.text('移动搜索结果'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

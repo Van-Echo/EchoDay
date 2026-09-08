@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers/data_providers.dart';
 
 abstract final class AppPreferenceKeys {
+  static const language = 'appearance.language';
   static const themeMode = 'appearance.themeMode';
   static const primaryColor = 'appearance.primaryColor';
   static const motto = 'calendar.motto';
@@ -15,6 +16,27 @@ abstract final class AppPreferenceKeys {
   static const postponeDays = 'todo.postponeDays';
   static const catalogPalette = 'catalog.colorPalette';
 }
+
+enum AppLanguage {
+  chinese('zh'),
+  english('en');
+
+  const AppLanguage(this.languageCode);
+
+  final String languageCode;
+}
+
+final appLanguageProvider = StreamProvider<AppLanguage>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watch(AppPreferenceKeys.language)
+      .map(
+        (setting) => AppLanguage.values.firstWhere(
+          (language) => language.languageCode == setting?.value,
+          orElse: () => AppLanguage.chinese,
+        ),
+      );
+});
 
 const defaultPrimaryColorValue = 0xFF788C77;
 
@@ -131,7 +153,7 @@ final calendarTodoFontSizeProvider = StreamProvider<double>((ref) {
         (setting) => _fontSize(
           setting?.value,
           fallback: defaultCalendarTodoFontSize,
-          minimum: 9,
+          minimum: 5,
           maximum: 16,
         ),
       );
@@ -195,6 +217,12 @@ Future<void> setCalendarMotto(Ref ref, String value) {
   return ref
       .read(settingsRepositoryProvider)
       .set(AppPreferenceKeys.motto, value.trim());
+}
+
+Future<void> setAppLanguage(WidgetRef ref, AppLanguage language) {
+  return ref
+      .read(settingsRepositoryProvider)
+      .set(AppPreferenceKeys.language, language.languageCode);
 }
 
 Future<void> setCalendarMottoStyle(WidgetRef ref, CalendarMottoStyle style) {

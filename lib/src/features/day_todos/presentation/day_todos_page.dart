@@ -35,65 +35,80 @@ class _DayTodosPageState extends ConsumerState<DayTodosPage> {
       parsedDate = LocalDate.fromDateTime(DateTime.now());
     }
     _scheduleRequestedTask(parsedDate);
-    final locale = Localizations.localeOf(context).toLanguageTag();
-    final title = DateFormat.yMMMMEEEEd(locale)
-        .format(DateTime(parsedDate.year, parsedDate.month, parsedDate.day));
+    final activeLocale = Localizations.localeOf(context);
+    final locale = activeLocale.toLanguageTag();
+    final date = DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+    final title = activeLocale.languageCode == 'en'
+        ? DateFormat.yMMMEd(locale).format(date)
+        : DateFormat.yMMMMEEEEd(locale).format(date);
     final todoFontSize =
         ref.watch(dayTodoFontSizeProvider).value ?? defaultDayTodoFontSize;
-    void goBack() => context.go(AppRoutes.calendar);
+    void goBack() =>
+        context.canPop() ? context.pop() : context.go(AppRoutes.calendar);
 
-    return CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.escape): goBack},
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              tooltip: localizations.backToCalendar,
-              onPressed: goBack,
-              icon: const Icon(Icons.arrow_back_rounded),
-            ),
-            title: Text(title),
-            actions: [
-              PopupMenuButton<double>(
-                key: const ValueKey('day-todo-font-size-menu'),
-                tooltip: localizations.dayTodoFontSizeLabel,
-                icon: const Icon(Icons.format_size_rounded),
-                initialValue: todoFontSize,
-                onSelected: (value) => setTodoFontSize(
-                  ref,
-                  AppPreferenceKeys.dayTodoFontSize,
-                  value,
+    final canPop = context.canPop();
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) context.go(AppRoutes.calendar);
+      },
+      child: CallbackShortcuts(
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): goBack},
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                tooltip: localizations.backToCalendar,
+                onPressed: goBack,
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+              title: Text(title),
+              actions: [
+                PopupMenuButton<double>(
+                  key: const ValueKey('day-todo-font-size-menu'),
+                  tooltip: localizations.dayTodoFontSizeLabel,
+                  icon: const Icon(Icons.format_size_rounded),
+                  initialValue: todoFontSize,
+                  onSelected: (value) => setTodoFontSize(
+                    ref,
+                    AppPreferenceKeys.dayTodoFontSize,
+                    value,
+                  ),
+                  itemBuilder: (context) => [
+                    for (final value in const <double>[
+                      12,
+                      14,
+                      16,
+                      18,
+                      20,
+                      22,
+                      24,
+                    ])
+                      CheckedPopupMenuItem(
+                        value: value,
+                        checked: value == todoFontSize,
+                        child: Text('${value.toInt()} px'),
+                      ),
+                  ],
                 ),
-                itemBuilder: (context) => [
-                  for (final value in const <double>[
-                    12,
-                    14,
-                    16,
-                    18,
-                    20,
-                    22,
-                    24,
-                  ])
-                    CheckedPopupMenuItem(
-                      value: value,
-                      checked: value == todoFontSize,
-                      child: Text('${value.toInt()} px'),
-                    ),
-                ],
+                IconButton(
+                  tooltip: localizations.addTask,
+                  onPressed: () =>
+                      showTodoEditor(context, ref, date: parsedDate),
+                  icon: const Icon(Icons.add_rounded),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+            body: SafeArea(
+              top: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 920),
+                  child: DayTodoList(date: parsedDate),
+                ),
               ),
-              IconButton(
-                tooltip: localizations.addTask,
-                onPressed: () => showTodoEditor(context, ref, date: parsedDate),
-                icon: const Icon(Icons.add_rounded),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 920),
-              child: DayTodoList(date: parsedDate),
             ),
           ),
         ),

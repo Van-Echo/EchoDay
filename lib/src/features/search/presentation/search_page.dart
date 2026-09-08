@@ -55,7 +55,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final categories =
         ref.watch(categoriesProvider).value ?? const <Category>[];
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
-    final categoryWidth = _categoryFilterWidth(context, strings, categories);
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final categoryWidth = compact
+        ? (MediaQuery.sizeOf(context).width - 24).clamp(0.0, 600.0)
+        : _categoryFilterWidth(context, strings, categories);
     return AppScaffold(
       selectedIndex: 2,
       title: strings.searchTitle,
@@ -64,7 +67,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           Material(
             color: Theme.of(context).colorScheme.surface,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+              padding: EdgeInsets.fromLTRB(
+                compact ? 12 : 20,
+                compact ? 12 : 16,
+                compact ? 12 : 20,
+                compact ? 12 : 14,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -99,8 +107,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       for (final filter in CompletionFilter.values)
-                        SizedBox(
-                          height: 40,
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: compact ? 48 : 40,
+                            maxHeight: compact ? double.infinity : 40,
+                          ),
                           child: ChoiceChip(
                             label: Text(_completionName(strings, filter)),
                             selected: _completion == filter,
@@ -111,7 +122,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           ),
                         ),
                       SizedBox(
-                        height: 40,
+                        width: compact ? categoryWidth : null,
+                        height: compact ? null : 40,
                         child: OutlinedButton.icon(
                           onPressed: _pickDateRange,
                           icon: const Icon(Icons.date_range_rounded),
@@ -120,16 +132,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ),
                       SizedBox(
                         width: categoryWidth,
-                        height: 40,
+                        height: compact ? null : 40,
                         child: DropdownButtonFormField<String?>(
                           key: const ValueKey('search-category-filter'),
                           initialValue: _categoryId,
-                          isDense: true,
-                          decoration: const InputDecoration(
-                            isDense: true,
+                          isDense: !compact,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            isDense: !compact,
                             contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                              horizontal: compact ? 16 : 12,
+                              vertical: compact ? 16 : 10,
                             ),
                           ),
                           items: [
@@ -239,7 +252,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 4),
+            padding: EdgeInsets.fromLTRB(
+              MediaQuery.sizeOf(context).width < 600 ? 14 : 22,
+              12,
+              MediaQuery.sizeOf(context).width < 600 ? 14 : 22,
+              4,
+            ),
             child: Text(
               strings.resultCount(value.items.length),
               style: Theme.of(context).textTheme.labelLarge,
@@ -247,7 +265,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              padding: EdgeInsets.fromLTRB(
+                MediaQuery.sizeOf(context).width < 600 ? 12 : 20,
+                8,
+                MediaQuery.sizeOf(context).width < 600 ? 12 : 20,
+                20,
+              ),
               itemCount: value.items.length,
               separatorBuilder: (context, index) => const SizedBox(height: 6),
               itemBuilder: (context, index) => _SearchResultTile(

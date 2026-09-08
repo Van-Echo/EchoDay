@@ -49,6 +49,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nextMonth => '下个月';
 
   @override
+  String get previousWeek => '上一周';
+
+  @override
+  String get nextWeek => '下一周';
+
+  @override
   String get today => '今天';
 
   @override
@@ -502,6 +508,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dragTodoToDate => '拖动到其他日期';
 
   @override
+  String get moveToDate => '移动到日期';
+
+  @override
+  String get taskActions => '任务操作';
+
+  @override
   String taskMovedToDate(String date) {
     return '已将任务移动到 $date';
   }
@@ -627,6 +639,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get themeModeLabel => '主题模式';
+
+  @override
+  String get languageLabel => '语言';
+
+  @override
+  String get languageChinese => '中文';
+
+  @override
+  String get languageEnglish => 'English';
 
   @override
   String get themeSystem => '跟随系统';

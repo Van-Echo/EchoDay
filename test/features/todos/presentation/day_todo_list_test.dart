@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:echoday/l10n/app_localizations.dart';
+import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/features/settings/application/app_preferences.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
@@ -43,6 +44,9 @@ void main() {
     List<Category> categories = const <Category>[],
     List<Tag> tags = const <Tag>[],
     bool compact = false,
+    PlatformCapabilities? capabilities,
+    TextScaler textScaler = TextScaler.noScaling,
+    ValueNotifier<EdgeInsets>? viewInsets,
   }) => ProviderScope(
     overrides: [
       todoRepositoryProvider.overrideWithValue(todos),
@@ -52,6 +56,8 @@ void main() {
       categoriesProvider.overrideWith((ref) => Stream.value(categories)),
       tagsProvider.overrideWith((ref) => Stream.value(tags)),
       currentTimeProvider.overrideWith((ref) => Stream.value(now)),
+      if (capabilities != null)
+        platformCapabilitiesProvider.overrideWithValue(capabilities),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -62,6 +68,20 @@ void main() {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) {
+        Widget wrap(EdgeInsets insets) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: textScaler, viewInsets: insets),
+          child: child!,
+        );
+        final notifier = viewInsets;
+        return notifier == null
+            ? wrap(MediaQuery.viewInsetsOf(context))
+            : ValueListenableBuilder<EdgeInsets>(
+                valueListenable: notifier,
+                builder: (context, value, child) => wrap(value),
+              );
+      },
       home: Scaffold(
         body: DayTodoList(date: date, compact: compact),
       ),
@@ -468,6 +488,98 @@ void main() {
 
     final plannedAt = (await todos.getById(todo.id))!.plannedAt!.toLocal();
     expect(LocalDate(plannedAt.year, plannedAt.month, plannedAt.day), date);
+  });
+
+  testWidgets('Android long-press actions move a task to a chosen date', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final todo = await todos.create(
+      TodoDraft(
+        title: '触控移动任务',
+        localDate: date,
+        plannedAt: DateTime(2026, 9, 4, 9).toUtc(),
+        deadlineAt: DateTime(2026, 9, 4, 18).toUtc(),
+      ),
+    );
+    await tester.pumpWidget(
+      app(
+        compact: true,
+        capabilities: const PlatformCapabilities(
+          isAndroid: true,
+          isWindows: false,
+        ),
+      ),
+    );
+    await settle(tester);
+
+    expect(
+      find.byKey(ValueKey('todo-long-press-drag-${todo.id}')),
+      findsOneWidget,
+    );
+    await tester.longPress(find.text('触控移动任务'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(ValueKey('mobile-todo-actions-${todo.id}')),
+      findsOneWidget,
+    );
+    expect(find.text('移动到日期'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('mobile-action-move')));
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+    await tester.tap(find.text('10'));
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    final moved = await todos.getById(todo.id);
+    expect(moved?.localDate, LocalDate(2026, 9, 10));
+    expect(moved?.plannedAt, DateTime(2026, 9, 10, 9).toUtc());
+    expect(moved?.deadlineAt, DateTime(2026, 9, 10, 18).toUtc());
+  });
+
+  testWidgets('Android editor stays operable at 360dp and 200% text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final viewInsets = ValueNotifier(EdgeInsets.zero);
+    addTearDown(viewInsets.dispose);
+    await todos.create(TodoDraft(title: '移动端编辑', localDate: date));
+    await tester.pumpWidget(
+      app(
+        capabilities: const PlatformCapabilities(
+          isAndroid: true,
+          isWindows: false,
+        ),
+        textScaler: const TextScaler.linear(2),
+        viewInsets: viewInsets,
+      ),
+    );
+    await settle(tester);
+
+    await tester.tap(find.text('移动端编辑'));
+    await tester.pumpAndSettle();
+    final editor = find.byKey(const ValueKey('todo-editor-mobile'));
+    expect(editor, findsOneWidget);
+    expect(tester.getSize(editor).width, closeTo(360, 0.1));
+    expect(find.byKey(const ValueKey('todo-editor-save')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    viewInsets.value = const EdgeInsets.only(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(editor).height, closeTo(500, 0.1));
+    expect(find.byKey(const ValueKey('todo-editor-save')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final title = find.byKey(const ValueKey('todo-editor-title'));
+    await tester.enterText(title, '移动端完整编辑');
+    await tester.ensureVisible(find.byKey(const ValueKey('todo-editor-save')));
+    await tester.tap(find.byKey(const ValueKey('todo-editor-save')));
+    await tester.pumpAndSettle();
+    expect((await todos.getById('todo-1'))?.title, '移动端完整编辑');
+    expect(tester.takeException(), isNull);
   });
 }
 

@@ -1,7 +1,8 @@
 # 丸成 / EchoDay — Android 开发计划
 
-> 状态：待确认并执行  
-> 制定日期：2026-09-05  
+> 状态：A7 本地发布候选已生成；待正式签名首次迁移验收与 GitHub Release 上传
+> 制定日期：2026-09-05
+> 最近核验：2026-09-08
 > 现有基线：Windows v0.1.0，Flutter 3.47.2 / Dart 3.13.2
 
 ## 1. 开发原则
@@ -32,9 +33,10 @@ Android 开发重点是移动端布局、触控交互、平台能力隔离、文
 - 未完成任务顺延和任务跨日期移动。
 - 中国法定节假日、调休和节气。
 - 浅色、深色、跟随系统、主色和现有视觉设置。
+- 中文 / English 界面语言切换，设置随 JSON 备份同步。
 - 与 Windows 完全兼容的 JSON 备份与恢复。
 - 手机、平板、折叠屏、横屏和分屏适配。
-- 签名 APK 和 Android App Bundle（AAB）。
+- 正式签名 APK；选择 Google Play 作为发布渠道时同时提供 Android App Bundle（AAB）。
 
 ### 2.2 暂不纳入首版
 
@@ -53,8 +55,9 @@ Android 开发重点是移动端布局、触控交互、平台能力隔离、文
 - 目标版本：Android 16 / API 36。
 - 主要真机架构：ARM64。
 - 包名：`com.vanecho.echoday`。
-- GitHub：提供正式签名 APK。
-- Google Play：提供正式签名 AAB。
+- GitHub、其他应用商店和直接分发：提供正式签名 APK，作为首要发布产物。
+- Google Play：可选发布渠道；采用时提供正式签名 AAB。
+- 运行时不依赖 Google Play、Google Play Services、GMS 或 Firebase。
 - Android 与 Windows 共用备份格式，不建立 Android 专属数据格式。
 
 Flutter 3.47.2 支持 Android API 24～37，并持续测试 API 24～36。自 2026 年 8 月 31 日起，Google Play 新应用和更新需要面向 API 36，因此 Android 首版直接以 API 36 为目标。
@@ -65,13 +68,31 @@ Flutter 3.47.2 支持 Android API 24～37，并持续测试 API 24～36。自 20
 - [Google Play Target API 要求](https://developer.android.com/google/play/requirements/target-sdk)
 - [Flutter Android 发布指南](https://docs.flutter.dev/deployment/android)
 
+### 3.1 已验证的本机工具链
+
+- 操作系统：Windows 11 25H2 x64。
+- Flutter 3.47.2，Dart 3.13.2。
+- Android SDK Platforms：API 35、API 36、API 37。
+- Android Build Tools 36.0.0，Platform Tools 和 Emulator 37.1.11。
+- Gradle 9.3.1，Android Gradle Plugin 9.1.0，Kotlin 2.4.0。
+- Android Studio 内置 OpenJDK 25.0.2；项目 Java/Kotlin 字节码目标为 Java 17。
+- NDK 28.2.13676358；本项目构建使用 CMake 3.22.1。
+- 已建立 Pixel 9 / API 36 / x86_64 / Google APIs 模拟设备。
+- 已成功生成 Debug APK：`build/app/outputs/flutter-apk/app-debug.apk`。
+
+项目位于 E 盘，而 Pub Cache 位于 C 盘。Kotlin 增量缓存无法可靠处理该跨盘路径，因此 `android/gradle.properties` 必须保留 `kotlin.incremental=false`。该设置只影响构建速度，不影响应用功能或运行性能。
+
+当前新版 Android CLI 已不再要求 `flutter doctor --android-licenses` 的旧式交互。`flutter doctor` 仍可能显示许可证状态未知，但实际构建已确认 Android Platform 35 和 CMake 3.22.1 的许可证均已接受。后续以 SDK 组件能否安装及 APK 能否成功构建为准。
+
+包名不等同于公司名；当前 `com.vanecho.echoday` 可以继续作为技术标识，但必须在生成正式签名密钥、注册包名或公开发布前完成最终确认。发布后不再随意更改。
+
 ## 4. 自适应布局方案
 
 布局只根据应用当前获得的逻辑宽高切换，不根据设备名称判断手机或平板，以兼容横屏、分屏、折叠屏和 ChromeOS 窗口。
 
 | 可用宽度 | 导航 | 日历与 TODO 布局 |
 | --- | --- | --- |
-| `<600dp` | 底部导航栏 | 单栏日历；选中日期后通过底部摘要条进入当日 TODO |
+| `<600dp` | 底部导航栏 | 上方 2 周连续日历；下方当日 TODO，占用约 3/5 工作区高度 |
 | `600～839dp` | NavigationRail | 单栏内容，日历与当日 TODO 独立切换 |
 | `≥840dp` | NavigationRail | 日历与右侧 TODO 双栏 |
 | `≥960dp` | 展开 NavigationRail | 完整桌面/大平板工作台 |
@@ -83,12 +104,13 @@ Flutter 3.47.2 支持 Android API 24～37，并持续测试 API 24～36。自 20
 
 ## 5. 手机端日历交互
 
-- 保持星期一开始、固定 7 列和默认 5 周。
-- 日期格根据扣除系统安全区、应用栏、星期栏和底部导航后的剩余高度均分。
-- 手机日期格最多显示 1～2 条任务摘要；平板根据实际空间恢复用户配置的预览条数。
+- 保持星期一开始和固定 7 列；Android 手机日历页默认显示 2 周，Windows 保持默认 5 周。
+- Android 手机日历与下方当日 TODO 按 2:3 分配工作区高度，日期格在日历区域内均分。
+- 手机日期格根据实际高度显示任务摘要；平板根据实际空间恢复用户配置的预览条数。
+- Android 不显示碎碎念及其设置入口；Windows 继续保留该功能。
 - 垂直滑动按周浏览连续日历。
 - “今天”和当前选中日期按钮继续保留。
-- 单击日期选中；再次点击已选日期或点击底部任务摘要条进入当日 TODO 页面。
+- 单击日期选中，并立即刷新下方当日 TODO；全屏按钮进入完整当日 TODO 页面。
 - 长按日期格空白区域快速新增任务。
 - 日历格中的任务使用长按拖动，放到其他日期格后修改所属日期。
 - 拖动任务时同步迁移计划执行日期和计划 DDL 日期，并保留原时分。
@@ -157,18 +179,30 @@ Android 采用 Storage Access Framework：
 
 ### A0：环境与构建基线
 
-工作内容：
+已完成：
 
-- 安装 Android Studio、Android SDK 36、Platform Tools 和模拟器。
-- 准备 API 24 与 API 36 模拟设备。
-- 执行 `flutter doctor -v` 和 `flutter devices`。
-- 构建并安装现有 Debug APK。
-- 记录当前 Android 编译错误、插件兼容问题和页面截图。
-- 最终确认包名、最低 API、目标 API 和首发渠道。
+- [x] 安装 Android Studio、Android SDK 36、Platform Tools、Build Tools、NDK、CMake 和模拟器。
+- [x] 执行 `flutter doctor -v`、检查代理和 SDK 目录。
+- [x] 配置 Pixel 9 / API 36 / x86_64 / Google APIs 模拟设备。
+- [x] 验证 APK 的 `minSdk 24`、`compileSdk 36`、`targetSdk 36` 和三种 ABI。
+- [x] 完成首次 Debug APK 构建。
+- [x] 处理 Windows 跨盘 Kotlin 增量缓存错误。
+- [x] 确认新版 Android CLI 的许可证提示不阻断构建。
+
+A0 收尾：
+
+- [x] 在 API 36 Google APIs 与 API 36 AOSP 模拟器安装并启动现有 Debug APK。
+- [x] 建立并运行 API 24 AOSP 模拟设备。
+- [x] 在不带 Google APIs/Play 的 AOSP 环境验证无 GMS 运行。
+- [x] 验证 Drift 数据库创建、初始化写入、完整性检查、进程关闭和重新打开。
+- [x] 记录现有页面在手机视口下的截图、编译问题和插件差异清单。
+- [x] 开发阶段继续使用 `com.vanecho.echoday`；首发以签名 APK 直接分发，Google Play 为可选渠道。正式发布前再做最终包名复核。
+
+详细结果见根目录 `ANDROID_A0_AUDIT.md`。
 
 完成标志：
 
-- 当前工程能在 API 24 与 API 36 启动。
+- 当前工程能在 API 24、API 36 和无 GMS 环境启动。
 - Drift 数据库可以创建并重新打开。
 - 当前 Android 差异形成明确的问题清单。
 
@@ -176,137 +210,158 @@ Android 采用 Storage Access Framework：
 
 工作内容：
 
-- 建立 `PlatformCapabilities` 或等价平台服务。
-- 隔离 Windows 窗口管理和全局热键。
-- Android 隐藏无意义的热键设置。
-- 建立 `BackupFileGateway` 接口。
-- 增加应用生命周期监听，为恢复前台后的日期和逾期状态刷新做准备。
+- [x] 建立 `PlatformCapabilities` 平台能力服务。
+- [x] 通过 `DesktopRuntime` 隔离 Windows 窗口管理和全局热键调用。
+- [x] Android 不订阅热键偏好，并隐藏无意义的热键设置。
+- [x] 建立 `BackupFileGateway` 接口，将文件选择从设置页面解耦。
+- [x] 增加应用生命周期监听，恢复前台时立即刷新日期和逾期时钟。
 
 完成标志：
 
-- Android 不加载或调用 Windows 专属能力。
-- Windows 全部现有测试继续通过。
-- Android Debug 构建与启动稳定。
+- [x] Android 原生插件表不注册 Windows 插件，Dart 层不调用 Windows 专属运行时。
+- [x] Windows 全部现有测试和 Debug 构建通过。
+- [x] Android Debug 构建、API 36 AOSP 安装、启动及后台恢复稳定。
+
+A1 验证结果：`flutter analyze` 无问题；102 项测试通过、1 项按既有条件跳过；Windows 与 Android Debug 构建成功。Android 无 GMS 模拟器未出现 `MissingPluginException`、Flutter 致命错误或 SQLite 异常。
 
 ### A2：移动端应用壳
 
 工作内容：
 
-- 实现 Compact、Medium、Expanded 三档布局。
-- Compact 使用底部导航栏。
-- Medium 使用收起的 NavigationRail。
-- Expanded 使用 NavigationRail 与双栏工作台。
-- 适配 SafeArea、系统状态栏、导航栏、软键盘和 edge-to-edge。
-- 校验 Android 返回键与返回手势。
-- 保留页面路由、选中日期和筛选状态。
+- [x] 实现 Compact、Medium、Expanded 三档布局。
+- [x] Compact 使用底部导航栏。
+- [x] Medium 使用收起的 NavigationRail。
+- [x] Expanded 使用 NavigationRail 与双栏工作台。
+- [x] 适配 SafeArea、系统状态栏、导航栏、软键盘和 edge-to-edge。
+- [x] 校验 Android 返回键与返回手势。
+- [x] 保留页面路由、选中日期和筛选状态。
 
 完成标志：
 
-- 日历、当日 TODO、搜索、设置和关于五个页面均可正常导航。
-- 横竖屏、分屏和尺寸变化时没有布局溢出或状态丢失。
+- [x] 日历、当日 TODO、搜索、设置和关于五个页面均可正常导航。
+- [x] 横竖屏、分屏和尺寸变化时没有布局溢出或状态丢失。
+
+A2 验证结果：`flutter analyze` 无问题；109 项测试通过、1 项按既有条件跳过；Windows 与 Android Debug 构建成功。API 36 模拟器原生横竖屏旋转、Android 返回键、软键盘避让及 AOSP/无 GMS 运行均通过，未发现 Flutter 布局溢出、`MissingPluginException` 或 SQLite 异常。
 
 ### A3：移动端日历
 
 工作内容：
 
-- 重做紧凑型手机日历工具栏。
-- 保持 7 列连续周流与日期格高度均分。
-- 根据宽度和高度计算任务摘要容量。
-- 实现触控按周浏览、日期选择和快速回到今天。
-- 实现手机底部任务摘要条。
-- 实现长按快速新增和长按拖动任务。
-- 平板继续支持日历与右侧 TODO 双栏拖动。
-- 处理节假日、节气、月份水印和碎碎念在窄屏的显示。
+- [x] 重做紧凑型手机日历工具栏。
+- [x] 保持 7 列连续周流与日期格高度均分。
+- [x] 根据宽度和高度计算任务摘要容量。
+- [x] 实现触控按周浏览、日期选择和快速回到今天。
+- [x] 实现手机上方 2 周日历与下方 3/5 高度的当日 TODO 面板。
+- [x] 实现长按快速新增和长按拖动任务。
+- [x] 平板继续支持日历与右侧 TODO 双栏拖动。
+- [x] 处理节假日、节气和月份水印在窄屏的显示；Android 不显示碎碎念。
 
 完成标志：
 
-- 360dp 宽度下无溢出。
-- 可完成选日、新增、进入当日页和移动任务。
-- 旋转和分屏后日期格重新铺满有效区域。
+- [x] 360dp 宽度下无溢出。
+- [x] 可完成选日、新增、进入当日页和移动任务。
+- [x] 旋转和分屏后日期格重新铺满有效区域。
+
+A3 验证结果：`flutter analyze` 无问题；112 项测试通过、1 项按既有条件跳过；Windows 与 Android Debug 构建成功。API 36 AOSP/无 GMS 模拟器验证了手机竖屏两周布局、触控按周浏览、长按快速新增、任务长按跨日期拖动及横屏双栏重排，未发现 Flutter 布局溢出、`MissingPluginException`、SQLite 异常或运行崩溃。
 
 ### A4：TODO、搜索与设置
 
 工作内容：
 
-- 将完整编辑器适配为全屏页面或移动端底部面板。
-- 使用长按菜单替代右键菜单。
-- 增加“移动到日期”操作。
-- 保持完成、恢复、删除、撤销、顺延和重复任务操作。
-- 优化日期、时间、颜色、分类和标签选择器的触控尺寸。
-- 调整搜索筛选栏在窄屏上的纵向布局。
-- 调整设置页展开栏目、滑块和颜色面板。
-- 隐藏 Android 不支持的热键设置。
-- 保持“已完成”默认展开。
+- [x] 将完整编辑器适配为全屏页面或移动端底部面板。
+- [x] 使用长按菜单替代右键菜单。
+- [x] 增加“移动到日期”操作。
+- [x] 保持完成、恢复、删除、撤销、顺延和重复任务操作。
+- [x] 优化日期、时间、颜色、分类和标签选择器的触控尺寸。
+- [x] 调整搜索筛选栏在窄屏上的纵向布局。
+- [x] 调整设置页展开栏目、滑块和颜色面板。
+- [x] 提供中文 / English 语言设置并持久化；英文日期使用星期与月份缩写。
+- [x] 隐藏 Android 不支持的热键设置。
+- [x] 保持“已完成”默认展开。
 
 完成标志：
 
-- Windows 版现有核心业务流程均能在手机上完成。
-- 软键盘不会遮挡编辑字段和保存按钮。
-- 200% 字体缩放仍可操作。
+- [x] Windows 版现有核心业务流程均能在手机上完成。
+- [x] 软键盘不会遮挡编辑字段和保存按钮。
+- [x] 200% 字体缩放仍可操作。
+
+A4 验证结果：`flutter analyze` 无问题；116 项测试通过、1 项按既有条件跳过；Windows 与 Android Debug 构建成功。自动化覆盖 Android 长按任务操作、移动到指定日期并同步迁移计划时间与 DDL、360dp 全屏编辑器、300dp 软键盘避让，以及搜索和设置在 200% 字体下的触控布局。API 36 AOSP 模拟器实际确认了竖屏全屏编辑器；后续模拟器系统进程出现 `System UI isn't responding` 并自行退出，应用日志中未发现 Flutter 崩溃或布局溢出。
 
 ### A5：数据、节假日与备份
 
 工作内容：
 
-- 验证 Drift 数据库路径、升级和卸载语义。
-- 实现 Android 文档导入与导出适配器。
-- 完成 Windows ↔ Android JSON 往返测试。
-- 把 `INTERNET` 权限加入 Android 主 Manifest，确保 Release 可更新节假日。
-- 验证联网失败、本地缓存和内置数据回退。
-- 验证清空数据和安全备份行为。
+- [x] 验证 Drift 数据库路径、升级和卸载语义。
+- [x] 实现 Android 文档导入与导出适配器。
+- [x] 完成 Windows ↔ Android JSON 往返测试。
+- [x] 把 `INTERNET` 权限加入 Android 主 Manifest，确保 Release 可更新节假日。
+- [x] 验证联网失败、本地缓存和内置数据回退。
+- [x] 验证清空数据和安全备份行为。
 
 完成标志：
 
-- 应用重启后数据完整。
-- JSON 跨端导入导出一致。
-- Release 构建可以更新法定节假日。
-- 应用不要求不必要的存储权限。
+- [x] 应用重启后数据完整。
+- [x] JSON 跨端导入导出一致。
+- [x] Release 构建可以更新法定节假日。
+- [x] 应用不要求不必要的存储权限。
+
+A5 验证结果：`flutter analyze` 无问题；122 项测试通过、1 项按既有条件跳过，另行启用的 gov.cn 实时测试通过；Android Release APK 与 Windows Debug 构建成功。API 36 AOSP/无 GMS 模拟器完成了 Release 覆盖安装、强制停止后重启、系统文档导出、系统文档导入与备份预检；合并 Manifest 仅包含联网权限和 Android 自动生成的应用内动态接收器权限，不包含外部存储权限。详细结果见根目录 `ANDROID_A5_AUDIT.md`。
 
 ### A6：质量与真机验证
 
 工作内容：
 
-- 扩展共享单元测试和 Widget 测试。
-- 增加 Android 真机/模拟器集成测试。
-- 验证中文输入法、软键盘、返回手势和触觉反馈。
-- 验证浅色、深色、系统主题和字体缩放。
-- 验证北京时区与一个有夏令时的时区。
-- 验证后台恢复、强制终止、重启、旋转、分屏和折叠状态变化。
-- 使用 10,000 条任务测试搜索、日历滚动和数据库响应。
-- 验证 Windows 版本没有功能回归。
+- [x] 扩展共享单元测试和 Widget 测试。
+- [x] 增加 Android 模拟器集成测试，并在 ARM64 真机执行核心集成验收。
+- [x] 验证中文文本输入、软键盘、返回路由、真实中文输入法和物理触觉。
+- [x] 验证浅色、深色、系统主题和 100%～200% 字体缩放。
+- [x] 验证北京时区与纽约夏令时时区。
+- [x] 验证后台恢复、强制终止、重启、旋转及 Compact/Medium/Expanded 尺寸变化；非折叠真机完成横竖屏复核。
+- [x] 在 AOSP/无 GMS 模拟器验证离线启动、核心业务和节假日网络更新。
+- [x] 使用 10,000 条任务测试搜索、连续日期读取和数据库响应。
+- [x] 验证 Windows 版本没有功能回归。
 
 完成标志：
 
-- 自动化测试全部通过。
-- API 24、29、34、36 测试矩阵通过。
-- 至少一台 ARM64 真机完成完整业务验收。
+- [x] 自动化测试全部通过。
+- [x] API 24、29、34、36 测试矩阵通过。
+- [x] 至少一个 AOSP/无 GMS 环境通过核心业务验收。
+- [x] 至少一台 ARM64 真机完成完整业务验收。
+
+A6 本机验证结果：`flutter analyze` 无问题；123 项共享自动化测试通过、1 项需要显式联网开关的 gov.cn 实时测试按设计跳过；API 24、29、34、36 AOSP 核心流程集成测试均通过，API 36 另通过系统深色模式、200% 字号、北京/纽约时区、10,000 条任务性能及 gov.cn 真机网络栈测试。10,000 条任务在 API 36 模拟器上的结果为写入 378 ms、唯一搜索 442 ms、连续 70 天读取 404 ms。普通 Release 在飞行模式下完成 Compact/Medium/Expanded 代表尺寸切换、横竖屏、返回、后台恢复和强停重启，数据库文件重启后仍存在，日志未发现 Flutter 致命错误、`MissingPluginException` 或 SQLite 异常。Windows Debug 与 Android Release 构建成功。详细结果见根目录 `ANDROID_A6_AUDIT.md`。
+
+A6 真机验证结果：小米 15 Pro（Android 15 / API 35、ARM64、系统字号 125%）完成中文输入法、物理触觉、SAF 备份恢复、节假日联网、时区、10,000 条任务性能、Release 生命周期及横竖屏验收。真机 10,000 条任务结果为写入 283 ms、唯一搜索 275 ms、连续 70 天读取 172 ms。新增的安卓沉浸式全屏、日历标题栏移除、其他页面标题保留和横屏挖孔区域延伸均已通过截图与进程检查。A6 已关闭，可以进入 A7。
 
 ### A7：Android 发布候选
 
 工作内容：
 
-- 生成独立上传密钥和正式签名配置。
-- 密钥与密码只通过本地安全文件或 CI Secret 注入，不提交 Git。
-- 移除 Release 使用 Debug 签名的配置。
-- 构建正式 AAB 和分架构 APK。
-- 使用 Play App Signing 和内部测试轨道验证 AAB。
-- 准备应用名称、图标、截图、简介、隐私政策、Data Safety 和 AGPLv3 说明。
-- 完成 Android 开发者身份验证与包名登记。
-- 生成 SHA-256 校验文件、版本说明和已知限制。
-- 确认发布产物不包含测试数据库、备份或签名秘密。
-- 验证旧版本覆盖安装后数据库仍可升级和保留。
+- [x] 生成独立上传密钥和正式签名配置。
+- [x] 密钥与密码只通过本地安全文件或 CI Secret 注入，不提交 Git。
+- [x] 移除 Release 使用 Debug 签名的配置；缺少正式签名时 Release 构建直接失败。
+- [x] 构建正式通用 APK、ARM64 APK 和 AAB。
+- [ ] 若选择 Google Play 渠道，使用 Play App Signing 和内部测试轨道验证 AAB。
+- [x] 准备应用名称、图标、简介、隐私政策、Data Safety 和 AGPLv3 说明；商店截图待最终上架时选取。
+- [ ] 根据最终分发渠道完成 Android 开发者身份验证、包名和签名证书登记，为 2027 年全球验证要求预留时间。
+- [x] 生成 SHA-256 校验文件、版本说明和已知限制。
+- [x] 确认发布产物不包含测试数据库、备份或签名秘密。
+- [ ] 完成从早期 Debug 签名测试包到正式签名包的一次性备份—卸载—安装—恢复验收。
+- [ ] 使用同一正式签名的两个 version code 验证后续覆盖升级时数据库保留。
 
 完成标志：
 
-- 正式签名 APK 可安装、覆盖升级和启动。
-- AAB 通过 Google Play 内部测试。
-- GitHub Release 可供用户直接下载 APK。
-- 发布包不包含用户数据和秘密信息。
+- [ ] 正式签名 APK 可安装、覆盖升级和启动。
+- [ ] GitHub Release 可供用户直接下载 APK。
+- [ ] 若采用 Google Play，AAB 通过其内部测试轨道。
+- [x] 发布包不包含用户数据和秘密信息。
+
+A7 本地候选结果：EchoDay 独立 RSA 4096 签名已生成，Gradle 不再回退到 Debug 签名；通用 APK 与 ARM64 APK 均通过 Android APK Signature Scheme v2/v3 校验，AAB 通过 JAR 签名校验。三个产物及 SHA-256 文件位于 `dist/android/`，发布脚本会扫描并拒绝包含数据库、备份或签名材料的归档。GitHub Actions 自动签名发布流程、隐私政策、Data Safety 基线、迁移说明和 Android v0.1.0 发布说明已加入工程。详细结果见根目录 `ANDROID_A7_AUDIT.md`。
 
 参考：
 
 - [Android 应用签名](https://developer.android.com/studio/publish/app-signing)
 - [Android 应用发布](https://developer.android.com/studio/publish)
+- [Android 开发者验证](https://developer.android.com/developer-verification)
 
 ## 9. 测试矩阵
 
@@ -325,7 +380,13 @@ Android 采用 Storage Access Framework：
 - API 34：常见存量系统。
 - API 36：目标和发布系统。
 
-### 9.3 必测状态
+### 9.3 Android 运行环境
+
+- Google APIs 模拟器：用于常规开发、调试和工具兼容验证。
+- AOSP/无 GMS 模拟器或真机：验证应用不依赖 Google Play Services。
+- ARM64 真机：验证实际性能、触控、输入法、文件选择和安装升级。
+
+### 9.4 必测状态
 
 - 中文和英文。
 - 浅色、深色、跟随系统。
@@ -350,6 +411,8 @@ Flutter 集成测试应在 Android 模拟器、至少一台真实 ARM64 设备�
 | Android 文件系统没有普通桌面路径语义 | 通过 `BackupFileGateway` 使用 SAF 和内容 URI |
 | Android Release 无法更新节假日 | 把 `INTERNET` 权限加入主 Manifest，并用 Release 真机测试 |
 | Windows 插件影响 Android | 平台能力隔离、条件渲染和双平台 CI |
+| 项目与 Pub Cache 跨盘导致 Kotlin 缓存失败 | 保留 `kotlin.incremental=false`，CI 使用干净构建验证 |
+| 无 Google Play 的设备出现功能缺失 | 不引入不必要的 GMS 依赖，并在 AOSP/无 GMS 环境完成验收 |
 | 横屏、折叠或分屏导致状态丢失 | 按当前窗口尺寸布局，状态保存在 Riverpod 控制器和数据库中 |
 | API 36 edge-to-edge 遮挡控件 | 使用 SafeArea、系统 Insets 和多设备截图测试 |
 | 签名文件泄露或丢失 | 密钥离线备份，密码使用 Secret，仓库仅保留模板 |
@@ -382,9 +445,10 @@ A7 签名与发布候选
 若无额外修改，开发按以下决定启动：
 
 1. 最低 Android 版本为 API 24，目标 API 36。
-2. 保留包名 `com.vanecho.echoday`。
-3. 手机采用“日历单栏 + 当日 TODO 独立页面”。
+2. 暂时保留包名 `com.vanecho.echoday`，在正式签名和公开发布前完成最终确认。
+3. 手机采用“上方 2 周日历 + 下方 3/5 高度当日 TODO”，并保留完整当日 TODO 独立页面。
 4. 平板采用日历与右侧 TODO 双栏。
-5. GitHub 发布签名 APK，同时准备 Google Play AAB。
+5. GitHub、其他应用商店和直接分发以签名 APK 为主；Google Play 为可选渠道，采用时再准备 AAB。
 6. 通知提醒、桌面小组件和云同步放到 Android v1.1。
-7. 下一步从 A0 开始，先完成工具链检查、首次 Debug APK 构建和现有页面手机截图审计。
+7. 应用不得依赖 Google Play Services；API 36 常规模拟器之外必须增加 AOSP/无 GMS 验证。
+8. A6 的本机自动化、AOSP 模拟器矩阵与小米 15 Pro ARM64 真机验收均已完成；下一阶段进入 A7。

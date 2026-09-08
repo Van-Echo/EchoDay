@@ -4,9 +4,14 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: flutter-quality-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -16,8 +21,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter gen-l10n
-      - run: dart run build_runner build
-      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test
       - run: flutter analyze
       - run: flutter test
       - run: flutter build windows --debug

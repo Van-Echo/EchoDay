@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../layout/adaptive_window.dart';
+import '../platform/platform_capabilities.dart';
 import '../providers/data_providers.dart';
 import '../router/app_routes.dart';
+import 'app_lifecycle_refresh_host.dart';
 
 abstract final class AppScaffoldSettingKeys {
   static const navigationRailExtended = 'shell.navigationRailExtended';
@@ -33,6 +36,7 @@ class AppScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appRefreshRevisionProvider);
     final localizations = AppLocalizations.of(context);
     final destinations = [
       _Destination(
@@ -78,111 +82,155 @@ class AppScaffold extends ConsumerWidget {
     final extendedRailWidth = (widestLabel + 96).clamp(144.0, 196.0);
 
     void navigate(int index) {
-      context.go(destinations[index].location);
+      if (index == selectedIndex) return;
+      if (index == 0) {
+        context.go(destinations[index].location);
+      } else {
+        context.push(destinations[index].location);
+      }
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useRail = constraints.maxWidth >= 840;
+        final windowClass = AdaptiveWindow.classify(constraints.maxWidth);
+        final useRail = !windowClass.isCompact;
+        final canExtendRail =
+            constraints.maxWidth >= AdaptiveWindow.extendedNavigationBreakpoint;
         final savedExtended = ref.watch(navigationRailExtendedProvider).value;
-        final railExtended = savedExtended ?? constraints.maxWidth >= 1160;
-        final content = ColoredBox(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: body,
-        );
-
-        return Scaffold(
-          floatingActionButton: floatingActionButton,
-          appBar: AppBar(
-            title: Row(
-              children: [
-                Text(localizations.appTitle),
-                const SizedBox(width: 8),
-                Text(
-                  localizations.appSubtitle,
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(width: 24),
-                Flexible(
-                  child: Text(
-                    title,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ],
-            ),
+        final railExtended = canExtendRail && (savedExtended ?? canExtendRail);
+        final isAndroid = ref.watch(platformCapabilitiesProvider).isAndroid;
+        final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final content = AdaptiveWindowScope(
+          windowClass: windowClass,
+          child: ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: body,
           ),
-          body: useRail
-              ? Row(
-                  children: [
-                    NavigationRail(
+        );
+        final shellBody = useRail
+            ? Row(
+                children: [
+                  NavigationRail(
+                    key: ValueKey(
+                      windowClass.isMedium
+                          ? 'medium-navigation-rail'
+                          : 'expanded-navigation-rail',
+                    ),
+                    selectedIndex: selectedIndex,
+                    extended: railExtended,
+                    minExtendedWidth: extendedRailWidth,
+                    onDestinationSelected: navigate,
+                    destinations: [
+                      for (final destination in destinations)
+                        NavigationRailDestination(
+                          icon: Icon(destination.icon),
+                          selectedIcon: Icon(destination.selectedIcon),
+                          label: Text(destination.label),
+                        ),
+                    ],
+                    trailing: canExtendRail
+                        ? Expanded(
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: IconButton(
+                                  key: const ValueKey(
+                                    'navigation-rail-width-toggle',
+                                  ),
+                                  tooltip: railExtended
+                                      ? localizations.collapseNavigation
+                                      : localizations.expandNavigation,
+                                  onPressed: () async {
+                                    await ref
+                                        .read(settingsRepositoryProvider)
+                                        .set(
+                                          AppScaffoldSettingKeys
+                                              .navigationRailExtended,
+                                          '${!railExtended}',
+                                        );
+                                  },
+                                  icon: Icon(
+                                    railExtended
+                                        ? Icons
+                                              .keyboard_double_arrow_left_rounded
+                                        : Icons
+                                              .keyboard_double_arrow_right_rounded,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : null,
+                  ),
+                  VerticalDivider(
+                    thickness: 1,
+                    width: 1,
+                    color: Theme.of(context).dividerColor,
+                  ),
+                  Expanded(child: content),
+                ],
+              )
+            : content;
+        final protectedBody = isAndroid
+            ? SafeArea(top: false, child: shellBody)
+            : shellBody;
+        final canPop = GoRouter.maybeOf(context)?.canPop() ?? false;
+
+        return PopScope(
+          canPop: selectedIndex == 0 || canPop,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop && selectedIndex != 0) context.go(AppRoutes.calendar);
+          },
+          child: Scaffold(
+            resizeToAvoidBottomInset: true,
+            floatingActionButton: keyboardVisible ? null : floatingActionButton,
+            appBar: isAndroid && selectedIndex == 0
+                ? null
+                : AppBar(
+                    title: windowClass.isCompact
+                        ? Text(title, overflow: TextOverflow.ellipsis)
+                        : Row(
+                            children: [
+                              Text(localizations.appTitle),
+                              const SizedBox(width: 8),
+                              Text(
+                                localizations.appSubtitle,
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                              const SizedBox(width: 24),
+                              Flexible(
+                                child: Text(
+                                  title,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+            body: protectedBody,
+            bottomNavigationBar: useRail || keyboardVisible
+                ? null
+                : SafeArea(
+                    top: false,
+                    child: NavigationBar(
+                      key: const ValueKey('compact-bottom-navigation'),
                       selectedIndex: selectedIndex,
-                      extended: railExtended,
-                      minExtendedWidth: extendedRailWidth,
                       onDestinationSelected: navigate,
                       destinations: [
                         for (final destination in destinations)
-                          NavigationRailDestination(
+                          NavigationDestination(
                             icon: Icon(destination.icon),
                             selectedIcon: Icon(destination.selectedIcon),
-                            label: Text(destination.label),
+                            label: destination.label,
                           ),
                       ],
-                      trailing: Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: IconButton(
-                              key: const ValueKey(
-                                'navigation-rail-width-toggle',
-                              ),
-                              tooltip: railExtended
-                                  ? localizations.collapseNavigation
-                                  : localizations.expandNavigation,
-                              onPressed: () async {
-                                await ref
-                                    .read(settingsRepositoryProvider)
-                                    .set(
-                                      AppScaffoldSettingKeys
-                                          .navigationRailExtended,
-                                      '${!railExtended}',
-                                    );
-                              },
-                              icon: Icon(
-                                railExtended
-                                    ? Icons.keyboard_double_arrow_left_rounded
-                                    : Icons.keyboard_double_arrow_right_rounded,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                     ),
-                    VerticalDivider(
-                      thickness: 1,
-                      width: 1,
-                      color: Theme.of(context).dividerColor,
-                    ),
-                    Expanded(child: content),
-                  ],
-                )
-              : content,
-          bottomNavigationBar: useRail
-              ? null
-              : NavigationBar(
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: navigate,
-                  destinations: [
-                    for (final destination in destinations)
-                      NavigationDestination(
-                        icon: Icon(destination.icon),
-                        selectedIcon: Icon(destination.selectedIcon),
-                        label: destination.label,
-                      ),
-                  ],
-                ),
+                  ),
+          ),
         );
       },
     );

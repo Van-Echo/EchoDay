@@ -176,6 +176,18 @@ abstract class AppLocalizations {
   /// **'下个月'**
   String get nextMonth;
 
+  /// No description provided for @previousWeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'上一周'**
+  String get previousWeek;
+
+  /// No description provided for @nextWeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一周'**
+  String get nextWeek;
+
   /// No description provided for @today.
   ///
   /// In zh, this message translates to:
@@ -1034,6 +1046,18 @@ abstract class AppLocalizations {
   /// **'拖动到其他日期'**
   String get dragTodoToDate;
 
+  /// No description provided for @moveToDate.
+  ///
+  /// In zh, this message translates to:
+  /// **'移动到日期'**
+  String get moveToDate;
+
+  /// No description provided for @taskActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务操作'**
+  String get taskActions;
+
   /// No description provided for @taskMovedToDate.
   ///
   /// In zh, this message translates to:
@@ -1267,6 +1291,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'主题模式'**
   String get themeModeLabel;
+
+  /// No description provided for @languageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'语言'**
+  String get languageLabel;
+
+  /// No description provided for @languageChinese.
+  ///
+  /// In zh, this message translates to:
+  /// **'中文'**
+  String get languageChinese;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In zh, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
 
   /// No description provided for @themeSystem.
   ///

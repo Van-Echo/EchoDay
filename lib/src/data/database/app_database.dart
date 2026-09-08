@@ -168,9 +168,14 @@ class Settings extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-    : super(executor ?? driftDatabase(name: 'echoday'));
+    : super(executor ?? driftDatabase(name: databaseName));
 
   AppDatabase.forTesting(super.executor);
+
+  /// Resolves to `echoday.sqlite` inside the platform application-documents
+  /// directory. On Android this is app-private, survives process restarts and
+  /// upgrades, and is removed by Android when the app is uninstalled.
+  static const databaseName = 'echoday';
 
   @override
   int get schemaVersion => 2;

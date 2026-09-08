@@ -46,6 +46,31 @@ void main() {
     expect(layout.capacityFor(8).hiddenTodoCount, 5);
   });
 
+  test(
+    'narrow day cells reduce preview rows before text becomes unreadable',
+    () {
+      final compact = CalendarLayout.calculate(
+        viewportHeight: 300,
+        visibleWeekCount: 2,
+        userPreviewLimit: 6,
+        dayCellWidth: 51,
+        minimumVisibleWeekCount: 2,
+      );
+      final unusable = CalendarLayout.calculate(
+        viewportHeight: 300,
+        visibleWeekCount: 2,
+        userPreviewLimit: 6,
+        dayCellWidth: 40,
+        minimumVisibleWeekCount: 2,
+      );
+
+      expect(compact.physicalTodoCapacity, 2);
+      expect(unusable.physicalTodoCapacity, 0);
+      expect(unusable.capacityFor(4).visibleTodoCount, 0);
+      expect(unusable.capacityFor(4).hiddenTodoCount, 0);
+    },
+  );
+
   test('sidebar ratio is strictly limited to 12.5 through 50 percent', () {
     expect(clampSidebarRatio(-1), 0.125);
     expect(clampSidebarRatio(0.3), 0.3);

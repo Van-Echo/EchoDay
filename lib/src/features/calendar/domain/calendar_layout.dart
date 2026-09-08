@@ -22,8 +22,11 @@ final class CalendarLayout {
     required int visibleWeekCount,
     required int userPreviewLimit,
     double textScaleFactor = 1,
+    double? dayCellWidth,
+    int minimumVisibleWeekCount = minimumWeeks,
   }) {
-    final weeks = visibleWeekCount.clamp(minimumWeeks, maximumWeeks);
+    final minimum = minimumVisibleWeekCount.clamp(1, maximumWeeks);
+    final weeks = visibleWeekCount.clamp(minimum, maximumWeeks);
     final preview = userPreviewLimit.clamp(
       minimumPreviewLimit,
       maximumPreviewLimit,
@@ -33,9 +36,19 @@ final class CalendarLayout {
         : 0.0;
     final cellHeight = safeHeight / weeks;
     final scaledRow = todoRowExtent * textScaleFactor.clamp(1, 2);
-    final capacity = ((cellHeight - cellHeaderExtent) / scaledRow)
+    final heightCapacity = ((cellHeight - cellHeaderExtent) / scaledRow)
         .floor()
         .clamp(0, maximumPreviewLimit);
+    final widthCapacity = switch (dayCellWidth) {
+      final width? when width < 44 => 0,
+      final width? when width < 56 => 2,
+      final width? when width < 72 => 3,
+      final width? when width < 96 => 5,
+      _ => maximumPreviewLimit,
+    };
+    final capacity = heightCapacity < widthCapacity
+        ? heightCapacity
+        : widthCapacity;
     return CalendarLayout(
       viewportHeight: safeHeight,
       visibleWeekCount: weeks,
@@ -60,10 +73,7 @@ final class CalendarLayout {
 
   DayCellCapacity capacityFor(int totalTodoCount) {
     if (totalTodoCount <= 0 || physicalTodoCapacity == 0) {
-      return DayCellCapacity(
-        visibleTodoCount: 0,
-        hiddenTodoCount: totalTodoCount.clamp(0, totalTodoCount),
-      );
+      return DayCellCapacity(visibleTodoCount: 0, hiddenTodoCount: 0);
     }
     final directLimit = userPreviewLimit < physicalTodoCapacity
         ? userPreviewLimit

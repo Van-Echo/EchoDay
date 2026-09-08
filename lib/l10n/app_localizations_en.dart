@@ -50,6 +50,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextMonth => 'Next month';
 
   @override
+  String get previousWeek => 'Previous week';
+
+  @override
+  String get nextWeek => 'Next week';
+
+  @override
   String get today => 'Today';
 
   @override
@@ -506,6 +512,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dragTodoToDate => 'Drag to another date';
 
   @override
+  String get moveToDate => 'Move to date';
+
+  @override
+  String get taskActions => 'Task actions';
+
+  @override
   String taskMovedToDate(String date) {
     return 'Moved task to $date';
   }
@@ -639,6 +651,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themeModeLabel => 'Theme mode';
+
+  @override
+  String get languageLabel => 'Language';
+
+  @override
+  String get languageChinese => '中文';
+
+  @override
+  String get languageEnglish => 'English';
 
   @override
   String get themeSystem => 'System';
