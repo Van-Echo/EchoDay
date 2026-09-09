@@ -1,4 +1,4 @@
-丸成 | EchoDay v1.0.1 Windows x64 便携版
+丸成 | EchoDay v1.0.2 Windows x64 便携版
 
 运行：解压全部文件后双击 EchoDay.exe。请勿只复制 exe，data 目录和 DLL 均为运行必需文件。
 环境：无需安装 Flutter、Visual Studio 或 C++ 开发工具；Visual C++ 运行库已随包携带。
