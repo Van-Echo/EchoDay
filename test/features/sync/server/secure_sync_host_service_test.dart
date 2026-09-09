@@ -23,7 +23,7 @@ void main() {
     () async {
       final database = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(database.close);
-      final now = DateTime.utc(2026, 9, 9, 10);
+      var now = DateTime.utc(2026, 9, 9, 10);
       final hostIdentity = await DeviceIdentityStore(MemoryDeviceSecretStore())
           .loadOrCreate(() => 'host-device');
       final sync = LocalSyncRepository(database, clock: () => now);
@@ -275,6 +275,7 @@ void main() {
           'x-echoday-timestamp': timestamp,
           'x-echoday-nonce': freshNonce,
           'x-echoday-signature': signature,
+          'x-echoday-app-version': '1.0.2',
         };
       }
 
@@ -323,11 +324,13 @@ void main() {
       );
       expect(ack.status, 200);
       expect(service.requestedSyncDeviceIds, isEmpty);
+      expect(service.onlineDeviceIds, contains(clientIdentity.deviceId));
       final syncedDevice =
           await (database.select(database.syncDevices)
                 ..where((row) => row.deviceId.equals(clientIdentity.deviceId)))
               .getSingle();
       expect(syncedDevice.lastSeenAt?.toUtc(), now);
+      expect(syncedDevice.appVersion, '1.0.2');
 
       await service.revokeDevice(clientIdentity.deviceId);
       final revokedNonce = SyncCrypto.randomToken(bytes: 16);
@@ -362,6 +365,12 @@ void main() {
       expect(safeAuditText, isNot(contains('private-group-id')));
       expect(safeAuditText, isNot(contains(sessionToken)));
       expect(safeAuditText, isNot(contains(clientIdentity.deviceId)));
+
+      now = now.add(
+        SecureSyncHostService.deviceOnlineGracePeriod +
+            const Duration(seconds: 1),
+      );
+      expect(service.onlineDeviceIds, isNot(contains(clientIdentity.deviceId)));
 
       final unpinnedClient = HttpClient()
         ..badCertificateCallback = (_, _, _) => false;

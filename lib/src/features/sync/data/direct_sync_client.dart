@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
+import '../../../core/config/app_config.dart';
 import '../domain/sync_client_models.dart';
 import '../domain/sync_protocol.dart';
 import '../domain/sync_repository.dart';
@@ -305,6 +306,7 @@ final class DirectSyncClient implements SyncClientTransport {
         'x-echoday-timestamp': timestamp,
         'x-echoday-nonce': nonce,
         'x-echoday-signature': signature,
+        'x-echoday-app-version': AppConfig.version,
       },
     );
     final json = _decodeObject(response.body);

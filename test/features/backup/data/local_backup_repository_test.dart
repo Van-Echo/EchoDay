@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:echoday/src/core/config/app_config.dart';
 import 'package:echoday/src/data/database/app_database.dart';
 import 'package:echoday/src/features/backup/data/local_backup_repository.dart';
 import 'package:echoday/src/features/backup/domain/backup_preferences.dart';
@@ -53,7 +54,7 @@ void main() {
     expect(preview.isValid, isTrue);
     expect(preview.todoCount, 1);
     expect(preview.totalRecordCount, 7);
-    expect(json['appVersion'], '1.0.1');
+    expect(json['appVersion'], AppConfig.version);
     expect(data.keys, isNot(contains('holidayYears')));
     expect(jsonEncode(json), isNot(contains('holiday.example')));
   });

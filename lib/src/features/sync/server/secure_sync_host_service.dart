@@ -74,6 +74,8 @@ final class SecureSyncHostService {
   static const _timestampHeader = 'x-echoday-timestamp';
   static const _nonceHeader = 'x-echoday-nonce';
   static const _signatureHeader = 'x-echoday-signature';
+  static const _appVersionHeader = 'x-echoday-app-version';
+  static const deviceOnlineGracePeriod = Duration(minutes: 5);
 
   final AppDatabase _database;
   final SyncRepository _syncRepository;
@@ -93,17 +95,29 @@ final class SecureSyncHostService {
   SyncHostStartFailureCode? _lastStartFailure;
   int _activeRequests = 0;
   final Map<String, int> _activeDeviceRequests = {};
+  final Map<String, DateTime> _lastDeviceActivity = {};
   final Set<String> _requestedSyncDevices = {};
 
   SyncHostLifecycle get lifecycle => _lifecycle;
   SyncHostStartFailureCode? get lastStartFailure => _lastStartFailure;
   SyncHostBinding? get binding => _binding;
   SyncPairingService? get pairing => _pairing;
-  Set<String> get onlineDeviceIds => Set.unmodifiable(
-    _activeDeviceRequests.entries
-        .where((entry) => entry.value > 0)
-        .map((entry) => entry.key),
-  );
+  Set<String> get onlineDeviceIds {
+    final now = requireUtc(_clock(), 'clock');
+    return Set.unmodifiable({
+      ..._activeDeviceRequests.entries
+          .where((entry) => entry.value > 0)
+          .map((entry) => entry.key),
+      ..._lastDeviceActivity.entries
+          .where(
+            (entry) =>
+                !now.isBefore(entry.value) &&
+                now.difference(entry.value) <= deviceOnlineGracePeriod,
+          )
+          .map((entry) => entry.key),
+    });
+  }
+
   Set<String> get requestedSyncDeviceIds =>
       Set.unmodifiable(_requestedSyncDevices);
 
@@ -188,6 +202,7 @@ final class SecureSyncHostService {
     if (server == null) {
       _lifecycle = SyncHostLifecycle.stopped;
       _sessions.clear();
+      _lastDeviceActivity.clear();
       _pairing?.clearEphemeralState();
       return;
     }
@@ -195,6 +210,7 @@ final class SecureSyncHostService {
     _pairing?.clearEphemeralState();
     _sessions.clear();
     _activeDeviceRequests.clear();
+    _lastDeviceActivity.clear();
     _requestedSyncDevices.clear();
     _server = null;
     _binding = null;
@@ -247,6 +263,7 @@ final class SecureSyncHostService {
             );
     if (updated == 0) throw StateError('Device is missing or already revoked.');
     _sessions.revokeDevice(deviceId);
+    _lastDeviceActivity.remove(deviceId);
     _requestedSyncDevices.remove(deviceId);
   }
 
@@ -383,6 +400,13 @@ final class SecureSyncHostService {
         authenticatedDevice,
         (count) => count + 1,
         ifAbsent: () => 1,
+      );
+      final activityAt = requireUtc(_clock(), 'clock');
+      _lastDeviceActivity[authenticatedDevice] = activityAt;
+      await _refreshAuthenticatedDeviceVersion(
+        authenticatedDevice,
+        request.headers.value(_appVersionHeader),
+        activityAt,
       );
       if (request.method == 'POST' && path == '/v1/sync/devices') {
         final identity = await _syncRepository.activeIdentity();
@@ -539,6 +563,29 @@ final class SecureSyncHostService {
       path: request.uri.path,
       bodyBytes: body,
     );
+  }
+
+  Future<void> _refreshAuthenticatedDeviceVersion(
+    String deviceId,
+    String? reportedVersion,
+    DateTime now,
+  ) async {
+    if (reportedVersion == null) return;
+    final version = reportedVersion.trim();
+    if (version.isEmpty ||
+        version.length > 64 ||
+        version.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f)) {
+      throw const FormatException('Invalid application version header.');
+    }
+    await (_database.update(_database.syncDevices)..where(
+          (row) => row.deviceId.equals(deviceId) & row.revokedAt.isNull(),
+        ))
+        .write(
+          SyncDevicesCompanion(
+            appVersion: Value(version),
+            updatedAt: Value(now),
+          ),
+        );
   }
 
   Future<({SyncCursor cursor, bool syncRequested})> _waitForChanges(

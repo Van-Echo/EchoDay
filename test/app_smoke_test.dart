@@ -2,6 +2,7 @@ import 'package:echoday/src/app/echoday_app.dart';
 import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/app/widgets/app_scaffold.dart';
+import 'package:echoday/src/core/config/app_config.dart';
 import 'package:echoday/src/features/settings/application/app_preferences.dart';
 import 'package:echoday/src/features/settings/application/hotkey_preferences.dart';
 import 'package:echoday/src/features/todos/application/todo_providers.dart';
@@ -147,7 +148,10 @@ void main() {
     expect(find.text('GNU Affero General Public License v3.0'), findsOneWidget);
     expect(find.text('个人、企业及商业使用均被允许'), findsOneWidget);
     expect(find.textContaining('计算机软件著作权登记号'), findsNothing);
-    expect(find.text('v1.0.1 | 2026/9/9'), findsOneWidget);
+    expect(
+      find.text('v${AppConfig.version} | ${AppConfig.releaseDate}'),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('about-license-link')));
     await tester.pumpAndSettle();
     expect(

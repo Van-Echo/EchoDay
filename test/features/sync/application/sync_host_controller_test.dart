@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
+import 'package:echoday/src/core/config/app_config.dart';
 import 'package:echoday/src/data/database/app_database.dart';
 import 'package:echoday/src/features/backup/application/backup_maintenance_service.dart';
 import 'package:echoday/src/features/backup/data/backup_directory_resolver.dart';
@@ -71,6 +72,9 @@ void main() {
       expect(running.binding, isNotNull);
       expect(running.devices, hasLength(1));
       expect(running.devices.single.isLocal, isTrue);
+      expect(running.devices.single.isOnline, isTrue);
+      expect(running.devices.single.lastSyncAt, isNotNull);
+      expect(running.devices.single.appVersion, AppConfig.version);
       expect(
         (await settings.get(SyncHostPreferenceKeys.mode))?.value,
         SyncOperatingMode.host.name,

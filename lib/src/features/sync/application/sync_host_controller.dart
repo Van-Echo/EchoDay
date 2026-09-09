@@ -462,27 +462,29 @@ class SyncHostController extends Notifier<SyncHostViewState> {
     final online = service.onlineDeviceIds;
     final requested = service.requestedSyncDeviceIds;
     final devices =
-        rows
-            .map(
-              (row) => ManagedSyncDevice(
-                id: row.deviceId,
-                displayName: row.displayName,
-                note: row.note,
-                platform: row.platform,
-                appVersion: row.appVersion,
-                lastSyncAt: row.lastSeenAt?.toLocal(),
-                revokedAt: row.revokedAt?.toLocal(),
-                isLocal: row.deviceId == identity.localDeviceId,
-                isOnline: online.contains(row.deviceId),
-                syncRequested: requested.contains(row.deviceId),
-                protocolVersion: row.protocolVersion,
-              ),
-            )
-            .toList()
-          ..sort((left, right) {
-            if (left.isLocal != right.isLocal) return left.isLocal ? -1 : 1;
-            return left.displayName.compareTo(right.displayName);
-          });
+        rows.map((row) {
+          final isLocal = row.deviceId == identity.localDeviceId;
+          final localHostOnline =
+              isLocal && service.lifecycle == SyncHostLifecycle.running;
+          return ManagedSyncDevice(
+            id: row.deviceId,
+            displayName: row.displayName,
+            note: row.note,
+            platform: row.platform,
+            appVersion: row.appVersion,
+            lastSyncAt: localHostOnline
+                ? DateTime.now()
+                : row.lastSeenAt?.toLocal(),
+            revokedAt: row.revokedAt?.toLocal(),
+            isLocal: isLocal,
+            isOnline: localHostOnline || online.contains(row.deviceId),
+            syncRequested: requested.contains(row.deviceId),
+            protocolVersion: row.protocolVersion,
+          );
+        }).toList()..sort((left, right) {
+          if (left.isLocal != right.isLocal) return left.isLocal ? -1 : 1;
+          return left.displayName.compareTo(right.displayName);
+        });
     final conflicts = await repository.unresolvedConflicts();
     if (!ref.mounted) return;
     state = state.copyWith(
@@ -595,6 +597,21 @@ class SyncHostController extends Notifier<SyncHostViewState> {
       if (existing.role != SyncGroupRole.host) {
         throw StateError('This database belongs to a client sync group.');
       }
+      final device = await ref
+          .read(deviceIdentityStoreProvider)
+          .loadOrCreate(const UuidV7Generator().next);
+      if (device.deviceId != existing.localDeviceId) {
+        throw StateError('The host device identity does not match its group.');
+      }
+      await repository.registerDevice(
+        SyncDeviceRegistration(
+          deviceId: device.deviceId,
+          displayName: _hostName(),
+          platform: 'windows',
+          appVersion: AppConfig.version,
+          publicKey: device.publicKeyBase64Url,
+        ),
+      );
       return;
     }
     await ref.read(backupMaintenanceServiceProvider).createDefaultBackup();
