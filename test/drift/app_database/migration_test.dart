@@ -9,6 +9,7 @@ import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -155,4 +156,72 @@ void main() {
       },
     );
   });
+
+  test(
+    'migration from v2 to v3 preserves data and keeps sync disabled',
+    () async {
+      const oldTodos = <v2.TodosData>[
+        v2.TodosData(
+          id: 'v2-to-v3-todo',
+          title: 'Preserved task',
+          localDate: '2026-09-09',
+          isCompleted: 0,
+          createdAt: 1788915600000,
+          updatedAt: 1788919200000,
+          priority: 3,
+          manualOrder: 1,
+          revision: 7,
+        ),
+      ];
+      const expectedTodos = <v3.TodosData>[
+        v3.TodosData(
+          id: 'v2-to-v3-todo',
+          title: 'Preserved task',
+          localDate: '2026-09-09',
+          isCompleted: 0,
+          createdAt: 1788915600000,
+          updatedAt: 1788919200000,
+          priority: 3,
+          manualOrder: 1,
+          revision: 7,
+        ),
+      ];
+      const oldSettings = <v2.SettingsData>[
+        v2.SettingsData(
+          key: 'appearance.themeMode',
+          value: 'dark',
+          updatedAt: 1788919200000,
+          revision: 4,
+        ),
+      ];
+      const expectedSettings = <v3.SettingsData>[
+        v3.SettingsData(
+          key: 'appearance.themeMode',
+          value: 'dark',
+          updatedAt: 1788919200000,
+          revision: 4,
+        ),
+      ];
+
+      await verifier.testWithDataIntegrity(
+        oldVersion: 2,
+        newVersion: 3,
+        createOld: v2.DatabaseAtV2.new,
+        createNew: v3.DatabaseAtV3.new,
+        openTestedDatabase: AppDatabase.new,
+        createItems: (batch, oldDb) {
+          batch.insertAll(oldDb.todos, oldTodos);
+          batch.insertAll(oldDb.settings, oldSettings);
+        },
+        validateItems: (newDb) async {
+          expect(await newDb.select(newDb.todos).get(), expectedTodos);
+          expect(await newDb.select(newDb.settings).get(), expectedSettings);
+          expect(await newDb.select(newDb.syncGroups).get(), isEmpty);
+          expect(await newDb.select(newDb.syncDevices).get(), isEmpty);
+          expect(await newDb.select(newDb.syncChanges).get(), isEmpty);
+          expect(await newDb.select(newDb.syncRuntimeStates).get(), isEmpty);
+        },
+      );
+    },
+  );
 }

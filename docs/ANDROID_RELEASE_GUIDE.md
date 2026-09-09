@@ -22,12 +22,12 @@
 .\tool\package_android.ps1 -BuildAppBundle
 ```
 
-输出位于 `dist/android/`：
+文件名根据 `pubspec.yaml` 中的版本自动生成。V1.0.1 输出位于 `dist/android/`：
 
-- `EchoDay-v0.1.0-android-universal.apk`：GitHub 直接下载，兼容 ARMv7、ARM64 和 x86_64。
-- `EchoDay-v0.1.0-android-arm64-v8a.apk`：现代 ARM64 手机，文件更小。
-- `EchoDay-v0.1.0-android.aab`：应用商店上传包，不能直接安装。
-- `EchoDay-v0.1.0-android.sha256`：前三个文件的 SHA-256。
+- `EchoDay-v1.0.1-android-universal.apk`：GitHub 直接下载，兼容 ARMv7、ARM64 和 x86_64。
+- `EchoDay-v1.0.1-android-arm64-v8a.apk`：现代 ARM64 手机，文件更小。
+- `EchoDay-v1.0.1-android.aab`：应用商店上传包，不能直接安装。
+- `EchoDay-v1.0.1-android.sha256`：前三个文件的 SHA-256。
 
 脚本会验证 APK 签名、AAB JAR 签名，并扫描归档条目，阻止数据库、备份和签名材料进入发布目录。
 
@@ -74,3 +74,21 @@
 - 验证中英文、深浅主题、横竖屏、备份恢复和节假日更新。
 - 核对 `PRIVACY.md`、Data Safety、AGPLv3 和发布说明。
 - 上传 APK 时同时上传 `.sha256`；AAB 仅用于支持它的应用商店。
+
+## 6. Android API 矩阵
+
+发布前执行：
+
+```powershell
+.\tool\test_android_matrix.ps1
+```
+
+正式发布前可在隔离的 API 36 模拟器中验证当前正式签名的覆盖升级链。脚本使用当前 `pubspec.yaml` 的 `1.0.1+2` 候选包，不会复制测试数据到 `dist`：
+
+```powershell
+.\tool\test_android_signed_upgrade.ps1
+```
+
+通过条件包括：`0.1.0+1` 基线包可安装、候选包可使用 `adb install -r` 原地覆盖、`firstInstallTime` 不变，以及升级后应用正常启动。
+
+脚本会依次启动 `EchoDay_API24_AOSP`、`EchoDay_API29_AOSP`、`EchoDay_API34_AOSP` 和 `EchoDay_API36_AOSP`，在每个模拟器上运行 Android 核心交互集成测试，并在测试后关闭对应模拟器。执行期间可以保持 Android 真机连接；脚本只操作 `emulator-5554`。

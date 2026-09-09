@@ -8,9 +8,13 @@ import '../../../app/providers/data_providers.dart';
 import '../../../app/theme/theme_mode_controller.dart';
 import '../../../app/widgets/app_scaffold.dart';
 import '../../../app/widgets/echoday_color_picker.dart';
+import '../../backup/application/backup_preferences.dart';
+import '../../backup/domain/backup_preferences.dart';
 import '../../backup/domain/backup_repository.dart';
 import '../../calendar/application/calendar_controller.dart';
 import '../../holidays/domain/holiday_year.dart';
+import '../../sync/presentation/sync_client_settings_section.dart';
+import '../../sync/presentation/sync_host_settings_section.dart';
 import '../../todos/application/todo_providers.dart';
 import '../../todos/domain/todo_sort.dart';
 import '../application/app_preferences.dart';
@@ -54,6 +58,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final capabilities = ref.watch(platformCapabilitiesProvider);
     final isAndroid = capabilities.isAndroid;
     final compact = MediaQuery.sizeOf(context).width < 600;
+    final backupDirectory = ref.watch(backupDirectoryPreferenceProvider).value;
+    final backupDirectoryResolution = ref
+        .watch(backupDirectoryResolutionProvider)
+        .value;
+    final automaticBackupEnabled =
+        ref.watch(automaticBackupEnabledProvider).value ??
+        defaultAutomaticBackupEnabled;
+    final automaticBackupRetention =
+        ref.watch(automaticBackupRetentionCountProvider).value ??
+        defaultAutomaticBackupRetentionCount;
     final primaryColorValue =
         ref.watch(primaryColorProvider).value ?? defaultPrimaryColorValue;
     final calendarState = ref.watch(calendarControllerProvider);
@@ -384,6 +398,128 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(localizations.dataSafetyDescription),
+                    if (!isAndroid) ...[
+                      const SizedBox(height: 18),
+                      Text(
+                        localizations.defaultBackupDirectoryTitle,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 6),
+                      SelectableText(
+                        backupDirectory ??
+                            backupDirectoryResolution?.effectiveRoot.path ??
+                            localizations.backupDirectorySystemDefault,
+                        key: const ValueKey('backup-directory-path'),
+                      ),
+                      if (backupDirectoryResolution?.usesFallback ?? false) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          localizations.backupDirectoryFallback(
+                            backupDirectoryResolution!.effectiveRoot.path,
+                          ),
+                          key: const ValueKey('backup-directory-fallback'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          OutlinedButton.icon(
+                            key: const ValueKey('choose-backup-directory'),
+                            onPressed: _backupBusy
+                                ? null
+                                : _chooseBackupDirectory,
+                            icon: const Icon(Icons.folder_outlined),
+                            label: Text(localizations.chooseBackupDirectory),
+                          ),
+                          OutlinedButton.icon(
+                            key: const ValueKey('open-backup-directory'),
+                            onPressed: _backupBusy
+                                ? null
+                                : _openBackupDirectory,
+                            icon: const Icon(Icons.folder_open_outlined),
+                            label: Text(localizations.openBackupDirectory),
+                          ),
+                          OutlinedButton.icon(
+                            key: const ValueKey('test-backup-directory'),
+                            onPressed: _backupBusy
+                                ? null
+                                : _testBackupDirectory,
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: Text(localizations.testBackupDirectory),
+                          ),
+                          if (backupDirectory != null)
+                            TextButton(
+                              key: const ValueKey('reset-backup-directory'),
+                              onPressed: _backupBusy
+                                  ? null
+                                  : _resetBackupDirectory,
+                              child: Text(localizations.resetBackupDirectory),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SwitchListTile.adaptive(
+                        key: const ValueKey('automatic-backup-toggle'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(localizations.automaticBackupTitle),
+                        subtitle: Text(
+                          localizations.automaticBackupDescription,
+                        ),
+                        value: automaticBackupEnabled,
+                        onChanged: _backupBusy
+                            ? null
+                            : (value) => setAutomaticBackupEnabled(ref, value),
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 240,
+                        child: DropdownButtonFormField<int>(
+                          key: const ValueKey('automatic-backup-retention'),
+                          initialValue: automaticBackupRetention,
+                          decoration: InputDecoration(
+                            labelText: localizations.automaticBackupRetention,
+                          ),
+                          items: [
+                            for (
+                              var count = minimumAutomaticBackupRetentionCount;
+                              count <= maximumAutomaticBackupRetentionCount;
+                              count++
+                            )
+                              DropdownMenuItem(
+                                value: count,
+                                child: Text(
+                                  localizations.automaticBackupRetentionValue(
+                                    count,
+                                  ),
+                                ),
+                              ),
+                          ],
+                          onChanged: _backupBusy
+                              ? null
+                              : (value) {
+                                  if (value != null) {
+                                    setAutomaticBackupRetentionCount(
+                                      ref,
+                                      value,
+                                    );
+                                  }
+                                },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        key: const ValueKey('backup-now-default-directory'),
+                        onPressed: _backupBusy ? null : _backupNowToDefault,
+                        icon: const Icon(Icons.backup_outlined),
+                        label: Text(localizations.backupNow),
+                      ),
+                      const Divider(height: 32),
+                    ],
                     const SizedBox(height: 16),
                     Wrap(
                       spacing: 12,
@@ -603,6 +739,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
                 ),
               ),
+              if (capabilities.isWindows) ...[
+                const SizedBox(height: 16),
+                const SyncHostSettingsSection(),
+              ],
+              if (capabilities.isAndroid) ...[
+                const SizedBox(height: 16),
+                const SyncClientSettingsSection(),
+              ],
             ],
           ),
         ),
@@ -628,6 +772,111 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       _showBackupError(error);
     } finally {
       await gateway.cleanupExport(target);
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Future<void> _chooseBackupDirectory() async {
+    final gateway = ref.read(backupDirectoryGatewayProvider);
+    final path = await gateway.chooseDirectory();
+    if (path == null || !mounted) return;
+    setState(() => _backupBusy = true);
+    try {
+      await gateway.verifyWritable(path);
+      await setBackupDirectory(ref, path);
+      ref.invalidate(backupDirectoryResolutionProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).backupDirectorySaved),
+        ),
+      );
+    } on Object catch (error) {
+      _showBackupError(error);
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Future<void> _openBackupDirectory() async {
+    setState(() => _backupBusy = true);
+    try {
+      final resolution = await ref
+          .read(backupDirectoryResolverProvider)
+          .resolve();
+      await ref
+          .read(backupDirectoryGatewayProvider)
+          .openDirectory(resolution.effectiveRoot.path);
+    } on Object catch (error) {
+      _showBackupError(error);
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Future<void> _testBackupDirectory() async {
+    setState(() => _backupBusy = true);
+    try {
+      final configured = await ref
+          .read(settingsRepositoryProvider)
+          .get(BackupPreferenceKeys.directory);
+      final path = configured?.value.trim();
+      final effectivePath = path == null || path.isEmpty
+          ? (await ref.read(backupDirectoryResolverProvider).resolve())
+                .effectiveRoot
+                .path
+          : path;
+      await ref
+          .read(backupDirectoryGatewayProvider)
+          .verifyWritable(effectivePath);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).backupDirectoryTestPassed),
+        ),
+      );
+    } on Object catch (error) {
+      _showBackupError(error);
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Future<void> _resetBackupDirectory() async {
+    setState(() => _backupBusy = true);
+    try {
+      await setBackupDirectory(ref, null);
+      ref.invalidate(backupDirectoryResolutionProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).backupDirectoryReset),
+        ),
+      );
+    } on Object catch (error) {
+      _showBackupError(error);
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  Future<void> _backupNowToDefault() async {
+    setState(() => _backupBusy = true);
+    try {
+      final result = await ref
+          .read(backupMaintenanceServiceProvider)
+          .createDefaultBackup();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).backupCreatedAt(result.path),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      _showBackupError(error);
+    } finally {
       if (mounted) setState(() => _backupBusy = false);
     }
   }
@@ -748,6 +997,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     ref.invalidate(catalogPaletteProvider);
     ref.invalidate(navigationRailExtendedProvider);
     ref.invalidate(hotkeyPreferenceProvider);
+    ref.invalidate(backupDirectoryPreferenceProvider);
+    ref.invalidate(backupDirectoryResolutionProvider);
+    ref.invalidate(automaticBackupEnabledProvider);
+    ref.invalidate(automaticBackupRetentionCountProvider);
   }
 
   Future<_ImportChoice?> _showImportPreview(ImportPreview preview) {

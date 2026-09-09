@@ -18,6 +18,7 @@ $stageDirectory = Join-Path $packageRoot "EchoDay-v$version-windows-x64"
 $distributionDirectory = Join-Path $projectRoot 'dist'
 $archivePath = Join-Path $distributionDirectory "EchoDay-v$version-windows-x64-portable.zip"
 $checksumPath = "$archivePath.sha256"
+$releaseNotesPath = Join-Path $projectRoot "docs\RELEASE_NOTES_v$version.md"
 $runtimeDllNames = @(
   'msvcp140.dll',
   'vcruntime140.dll',
@@ -36,6 +37,9 @@ function Assert-WorkspacePath {
 Assert-WorkspacePath $stageDirectory
 Assert-WorkspacePath $archivePath
 Assert-WorkspacePath $checksumPath
+if (-not (Test-Path -LiteralPath $releaseNotesPath)) {
+  throw "Release notes are missing: $releaseNotesPath"
+}
 
 Push-Location $projectRoot
 try {
@@ -59,7 +63,7 @@ try {
   Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination $stageDirectory
   Copy-Item -LiteralPath (Join-Path $projectRoot 'packaging\windows\PORTABLE_README.txt') -Destination (Join-Path $stageDirectory 'README.txt')
   Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\USER_BACKUP_GUIDE.md') -Destination $stageDirectory
-  Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\RELEASE_NOTES_v0.1.0.md') -Destination $stageDirectory
+  Copy-Item -LiteralPath $releaseNotesPath -Destination $stageDirectory
 
   # Flutter's Windows deployment guide allows these VC++ runtime DLLs to be
   # distributed app-locally. Keeping them beside EchoDay.exe makes the portable

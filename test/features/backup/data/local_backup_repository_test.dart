@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:echoday/src/data/database/app_database.dart';
 import 'package:echoday/src/features/backup/data/local_backup_repository.dart';
+import 'package:echoday/src/features/backup/domain/backup_preferences.dart';
 import 'package:echoday/src/features/backup/domain/backup_repository.dart';
 import 'package:echoday/src/features/todos/domain/local_date.dart';
 import 'package:echoday/src/features/todos/domain/recurrence_engine.dart';
@@ -52,9 +53,48 @@ void main() {
     expect(preview.isValid, isTrue);
     expect(preview.todoCount, 1);
     expect(preview.totalRecordCount, 7);
-    expect(json['appVersion'], '0.1.0');
+    expect(json['appVersion'], '1.0.1');
     expect(data.keys, isNot(contains('holidayYears')));
     expect(jsonEncode(json), isNot(contains('holiday.example')));
+  });
+
+  test('does not export device-local backup preferences', () async {
+    await database
+        .into(database.settings)
+        .insertOnConflictUpdate(
+          SettingsCompanion.insert(
+            key: BackupPreferenceKeys.directory,
+            value: r'E:\EchoDay Backups',
+            updatedAt: fixedNow,
+          ),
+        );
+    await database
+        .into(database.settings)
+        .insertOnConflictUpdate(
+          SettingsCompanion.insert(
+            key: 'device.sync.mode',
+            value: 'host',
+            updatedAt: fixedNow,
+          ),
+        );
+    final path =
+        '${temporaryDirectory.path}${Platform.pathSeparator}backup.json';
+
+    final manifest = await repository.exportTo(path);
+    final json =
+        jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
+    final settings = (json['settings'] as List).cast<Map<String, dynamic>>();
+
+    expect(manifest.formatVersion, 1);
+    expect(settings.map((row) => row['key']), contains('appearance.themeMode'));
+    expect(
+      settings.map((row) => row['key']),
+      isNot(contains(BackupPreferenceKeys.directory)),
+    );
+    expect(
+      settings.map((row) => row['key']),
+      isNot(contains('device.sync.mode')),
+    );
   });
 
   test('replace restores all user data and keeps holiday cache', () async {
@@ -84,6 +124,44 @@ void main() {
     expect(await database.select(database.settings).get(), hasLength(1));
     expect(await database.select(database.holidayYears).get(), hasLength(1));
   });
+
+  test(
+    'replace preserves local backup settings and ignores imported ones',
+    () async {
+      final path =
+          '${temporaryDirectory.path}${Platform.pathSeparator}backup.json';
+      await repository.exportTo(path);
+      await database
+          .into(database.settings)
+          .insert(
+            SettingsCompanion.insert(
+              key: BackupPreferenceKeys.directory,
+              value: r'E:\My EchoDay Backups',
+              updatedAt: fixedNow,
+            ),
+          );
+      final json =
+          jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
+      final settings = (json['settings'] as List).cast<Map<String, dynamic>>();
+      settings.add({
+        ...settings.single,
+        'key': BackupPreferenceKeys.directory,
+        'value': r'C:\Foreign Backup Path',
+      });
+      await File(path).writeAsString(jsonEncode(json));
+
+      final result = await repository.replace(path);
+      final rows = await database.select(database.settings).get();
+      final local = rows.singleWhere(
+        (row) => row.key == BackupPreferenceKeys.directory,
+      );
+
+      expect(result.importedCount, 7);
+      expect(result.skippedCount, 1);
+      expect(local.value, r'E:\My EchoDay Backups');
+      expect(rows, hasLength(2));
+    },
+  );
 
   test('merge de-duplicates stable IDs and relation keys', () async {
     final path =

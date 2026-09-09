@@ -1379,8 +1379,446 @@ abstract class AppLocalizations {
   /// No description provided for @dataSafetyDescription.
   ///
   /// In zh, this message translates to:
-  /// **'备份包含任务、分类、标签、重复规则和用户设置；法定节假日缓存不会写入。'**
+  /// **'备份包含任务、分类、标签、重复规则和可迁移的用户设置；法定节假日缓存及设备本地目录设置不会写入。'**
   String get dataSafetyDescription;
+
+  /// No description provided for @defaultBackupDirectoryTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认备份目录'**
+  String get defaultBackupDirectoryTitle;
+
+  /// No description provided for @backupDirectorySystemDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统默认目录'**
+  String get backupDirectorySystemDefault;
+
+  /// No description provided for @backupDirectoryFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义目录当前不可用，已临时回退到：{path}'**
+  String backupDirectoryFallback(String path);
+
+  /// No description provided for @chooseBackupDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择目录'**
+  String get chooseBackupDirectory;
+
+  /// No description provided for @openBackupDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开目录'**
+  String get openBackupDirectory;
+
+  /// No description provided for @testBackupDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'测试写入'**
+  String get testBackupDirectory;
+
+  /// No description provided for @resetBackupDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认'**
+  String get resetBackupDirectory;
+
+  /// No description provided for @backupDirectorySaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认备份目录已保存'**
+  String get backupDirectorySaved;
+
+  /// No description provided for @backupDirectoryReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复系统默认备份目录'**
+  String get backupDirectoryReset;
+
+  /// No description provided for @backupDirectoryTestPassed.
+  ///
+  /// In zh, this message translates to:
+  /// **'目录可写，测试通过'**
+  String get backupDirectoryTestPassed;
+
+  /// No description provided for @backupNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即备份到默认目录'**
+  String get backupNow;
+
+  /// No description provided for @backupCreatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'备份已创建：{path}'**
+  String backupCreatedAt(String path);
+
+  /// No description provided for @automaticBackupTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日自动备份'**
+  String get automaticBackupTitle;
+
+  /// No description provided for @automaticBackupDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天首次打开或回到丸成时最多创建一份；同步功能完成后也会在当日首次同步前复用此备份。'**
+  String get automaticBackupDescription;
+
+  /// No description provided for @automaticBackupRetention.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动备份保留数量'**
+  String get automaticBackupRetention;
+
+  /// No description provided for @automaticBackupRetentionValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留 {count} 份'**
+  String automaticBackupRetentionValue(int count);
+
+  /// No description provided for @syncHostTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'多端同步'**
+  String get syncHostTitle;
+
+  /// No description provided for @syncHostDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'一台 Windows PC 作为主机；局域网或 Tailscale 只负责连接，任务数据仍保存在各设备本地。'**
+  String get syncHostDescription;
+
+  /// No description provided for @syncModeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步模式'**
+  String get syncModeLabel;
+
+  /// No description provided for @syncModeOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭同步'**
+  String get syncModeOff;
+
+  /// No description provided for @syncModeHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'作为同步主机'**
+  String get syncModeHost;
+
+  /// No description provided for @syncModeClient.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接到同步主机'**
+  String get syncModeClient;
+
+  /// No description provided for @syncStatusStopped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已停止'**
+  String get syncStatusStopped;
+
+  /// No description provided for @syncStatusStarting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在启动'**
+  String get syncStatusStarting;
+
+  /// No description provided for @syncStatusRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在运行'**
+  String get syncStatusRunning;
+
+  /// No description provided for @syncStatusStopping.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在停止'**
+  String get syncStatusStopping;
+
+  /// No description provided for @syncStatusFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'启动失败'**
+  String get syncStatusFailed;
+
+  /// No description provided for @syncAddressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'监听网络接口'**
+  String get syncAddressLabel;
+
+  /// No description provided for @syncRefreshNetworks.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新网络'**
+  String get syncRefreshNetworks;
+
+  /// No description provided for @syncRestartHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'重启服务'**
+  String get syncRestartHost;
+
+  /// No description provided for @syncEndpointLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务地址：{endpoint}'**
+  String syncEndpointLabel(String endpoint);
+
+  /// No description provided for @syncFingerprintLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机指纹：{fingerprint}'**
+  String syncFingerprintLabel(String fingerprint);
+
+  /// No description provided for @syncCreatePairing.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加设备'**
+  String get syncCreatePairing;
+
+  /// No description provided for @syncPairingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对新设备'**
+  String get syncPairingTitle;
+
+  /// No description provided for @syncPairingHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'让客户端扫描二维码，或复制完整连接码。随后请核对双方显示的六位校验码。'**
+  String get syncPairingHint;
+
+  /// No description provided for @syncConnectionCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'一次性连接码'**
+  String get syncConnectionCode;
+
+  /// No description provided for @syncExpiresAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'有效期至 {time}'**
+  String syncExpiresAt(String time);
+
+  /// No description provided for @syncCopy.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制'**
+  String get syncCopy;
+
+  /// No description provided for @syncCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制到剪贴板'**
+  String get syncCopied;
+
+  /// No description provided for @syncPendingPairings.
+  ///
+  /// In zh, this message translates to:
+  /// **'待确认设备'**
+  String get syncPendingPairings;
+
+  /// No description provided for @syncVerificationCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'校验码 {code}'**
+  String syncVerificationCode(String code);
+
+  /// No description provided for @syncApprove.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认配对'**
+  String get syncApprove;
+
+  /// No description provided for @syncReject.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝'**
+  String get syncReject;
+
+  /// No description provided for @syncDevicesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接设备'**
+  String get syncDevicesTitle;
+
+  /// No description provided for @syncLocalDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机'**
+  String get syncLocalDevice;
+
+  /// No description provided for @syncOnline.
+  ///
+  /// In zh, this message translates to:
+  /// **'在线'**
+  String get syncOnline;
+
+  /// No description provided for @syncOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线'**
+  String get syncOffline;
+
+  /// No description provided for @syncWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待同步'**
+  String get syncWaiting;
+
+  /// No description provided for @syncRevoked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤销'**
+  String get syncRevoked;
+
+  /// No description provided for @syncNeedsUpgrade.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要升级'**
+  String get syncNeedsUpgrade;
+
+  /// No description provided for @syncNeverSynced.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未完成同步'**
+  String get syncNeverSynced;
+
+  /// No description provided for @syncLastSynced.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次同步：{time}'**
+  String syncLastSynced(String time);
+
+  /// No description provided for @syncEditNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改备注'**
+  String get syncEditNote;
+
+  /// No description provided for @syncDeviceNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'设备备注'**
+  String get syncDeviceNote;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'立即同步'**
+  String get syncNow;
+
+  /// No description provided for @syncAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'主动同步全部设备'**
+  String get syncAll;
+
+  /// No description provided for @syncRequestedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已向 {count} 台设备发出同步请求；离线设备将在下次连接时收到。'**
+  String syncRequestedCount(int count);
+
+  /// No description provided for @syncRevoke.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销设备'**
+  String get syncRevoke;
+
+  /// No description provided for @syncRevokeConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销此设备？'**
+  String get syncRevokeConfirmTitle;
+
+  /// No description provided for @syncRevokeConfirmBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销后现有会话立即失效；该设备若要重新加入，必须再次配对。本地任务不会被删除。'**
+  String get syncRevokeConfirmBody;
+
+  /// No description provided for @syncConflicts.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步冲突（{count}）'**
+  String syncConflicts(int count);
+
+  /// No description provided for @syncConflictsNeedAttention.
+  ///
+  /// In zh, this message translates to:
+  /// **'有 {count} 项同步冲突待处理'**
+  String syncConflictsNeedAttention(int count);
+
+  /// No description provided for @syncAttentionSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'多端同步需要处理'**
+  String get syncAttentionSemantics;
+
+  /// No description provided for @syncConflictTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'待处理同步冲突'**
+  String get syncConflictTitle;
+
+  /// No description provided for @syncConflictEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有待处理冲突'**
+  String get syncConflictEmpty;
+
+  /// No description provided for @syncRestoreVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复此版本'**
+  String get syncRestoreVersion;
+
+  /// No description provided for @syncLaunchAtStartup.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录 Windows 后启动丸成'**
+  String get syncLaunchAtStartup;
+
+  /// No description provided for @syncKeepInTray.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭窗口后在托盘继续运行'**
+  String get syncKeepInTray;
+
+  /// No description provided for @syncHostStartFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步主机启动失败，请检查所选网络、端口占用和 Windows 防火墙。'**
+  String get syncHostStartFailed;
+
+  /// No description provided for @syncInitializationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法载入同步设置，请稍后重试。'**
+  String get syncInitializationFailed;
+
+  /// No description provided for @syncInviteFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法创建配对邀请，请确认主机服务正在运行。'**
+  String get syncInviteFailed;
+
+  /// No description provided for @syncOperationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步操作失败，请稍后重试。'**
+  String get syncOperationFailed;
+
+  /// No description provided for @syncRoleChangeBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机已是同步组主机，不能直接改为客户端。请先完成主机迁移或清除同步组身份。'**
+  String get syncRoleChangeBlocked;
 
   /// No description provided for @exportBackup.
   ///
@@ -1507,6 +1945,312 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'覆盖前安全备份：{path}'**
   String backupSafetyCreated(String path);
+
+  /// No description provided for @syncClientTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'多端同步'**
+  String get syncClientTitle;
+
+  /// No description provided for @syncClientDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'通过局域网或 Tailscale 连接你的主 PC。手机仍可离线使用，只在打开、回到前台或手动操作时同步。'**
+  String get syncClientDescription;
+
+  /// No description provided for @syncClientDesktopDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'将本机作为客户端连接主 PC。支持局域网、Tailscale IP 和 MagicDNS；离线编辑会在下次打开窗口或手动同步时上传。'**
+  String get syncClientDesktopDescription;
+
+  /// No description provided for @syncClientDisconnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未连接同步主机'**
+  String get syncClientDisconnected;
+
+  /// No description provided for @syncClientConnecting.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在连接主机…'**
+  String get syncClientConnecting;
+
+  /// No description provided for @syncClientWaitingApproval.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待主机确认'**
+  String get syncClientWaitingApproval;
+
+  /// No description provided for @syncClientSyncing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在同步…'**
+  String get syncClientSyncing;
+
+  /// No description provided for @syncClientSynced.
+  ///
+  /// In zh, this message translates to:
+  /// **'已同步'**
+  String get syncClientSynced;
+
+  /// No description provided for @syncClientOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机暂时不可达，本地编辑不受影响'**
+  String get syncClientOffline;
+
+  /// No description provided for @syncClientError.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步需要处理'**
+  String get syncClientError;
+
+  /// No description provided for @syncScanQr.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描主机二维码'**
+  String get syncScanQr;
+
+  /// No description provided for @syncPasteCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴连接码'**
+  String get syncPasteCode;
+
+  /// No description provided for @syncPairingCodeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整连接码'**
+  String get syncPairingCodeLabel;
+
+  /// No description provided for @syncImportPairingFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入配对文件'**
+  String get syncImportPairingFile;
+
+  /// No description provided for @syncExportPairingFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出配对文件'**
+  String get syncExportPairingFile;
+
+  /// No description provided for @syncDiscoverNearby.
+  ///
+  /// In zh, this message translates to:
+  /// **'发现附近主机'**
+  String get syncDiscoverNearby;
+
+  /// No description provided for @syncNoNearbyHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'未发现正在展示配对邀请的主机。请在主 PC 上打开“添加设备”窗口后重试。'**
+  String get syncNoNearbyHost;
+
+  /// No description provided for @syncChooseNearbyHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择附近主机'**
+  String get syncChooseNearbyHost;
+
+  /// No description provided for @syncNearbyHostFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'已发现 {name}，请点击“连接”并在主机上核对校验码。'**
+  String syncNearbyHostFound(String name);
+
+  /// No description provided for @syncDiscoveryFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'附近主机发现失败。你仍可粘贴连接码或导入配对文件。'**
+  String get syncDiscoveryFailed;
+
+  /// No description provided for @syncPairingFileExported.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对文件已导出'**
+  String get syncPairingFileExported;
+
+  /// No description provided for @syncPairingFileInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对文件无效、损坏或已经过期。'**
+  String get syncPairingFileInvalid;
+
+  /// No description provided for @syncHostOverride.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机地址（可选覆盖）'**
+  String get syncHostOverride;
+
+  /// No description provided for @syncHostOverrideHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整连接码仍负责安全验证；这里可将其中的地址替换为当前可达的局域网 IP、Tailscale IP 或 MagicDNS 名称。'**
+  String get syncHostOverrideHint;
+
+  /// No description provided for @syncHostAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机地址'**
+  String get syncHostAddress;
+
+  /// No description provided for @syncPort.
+  ///
+  /// In zh, this message translates to:
+  /// **'端口'**
+  String get syncPort;
+
+  /// No description provided for @syncSaveAndRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存并重试'**
+  String get syncSaveAndRetry;
+
+  /// No description provided for @syncConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接'**
+  String get syncConnect;
+
+  /// No description provided for @syncScannerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描 EchoDay 配对码'**
+  String get syncScannerTitle;
+
+  /// No description provided for @syncScannerHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'将主 PC 上的二维码放入框内'**
+  String get syncScannerHint;
+
+  /// No description provided for @syncScannerPermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要相机权限才能扫码。你也可以返回后粘贴连接码。'**
+  String get syncScannerPermissionDenied;
+
+  /// No description provided for @syncClientVerificationHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请确认主 PC 显示相同的六位校验码，再在主 PC 上批准此设备。'**
+  String get syncClientVerificationHint;
+
+  /// No description provided for @syncClientHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步主机'**
+  String get syncClientHost;
+
+  /// No description provided for @syncClientAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址：{address}'**
+  String syncClientAddress(String address);
+
+  /// No description provided for @syncClientLastResult.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次上传 {uploaded} 项，下载 {downloaded} 项，冲突 {conflicts} 项'**
+  String syncClientLastResult(int uploaded, int downloaded, int conflicts);
+
+  /// No description provided for @syncClientDisconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除本机连接'**
+  String get syncClientDisconnect;
+
+  /// No description provided for @syncClientDisconnectTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除与主机的连接？'**
+  String get syncClientDisconnectTitle;
+
+  /// No description provided for @syncClientDisconnectBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机中的 TODO 会完整保留，并会先创建安全备份；同步身份与游标将被清除。如需再次同步，必须重新配对。'**
+  String get syncClientDisconnectBody;
+
+  /// No description provided for @syncClientDisconnectAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认解除'**
+  String get syncClientDisconnectAction;
+
+  /// No description provided for @syncClientInvalidCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接码无效或已损坏。'**
+  String get syncClientInvalidCode;
+
+  /// No description provided for @syncClientHostUnreachable.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法连接主机，请确认主 PC 已启动 Server 服务，并检查局域网或 Tailscale。'**
+  String get syncClientHostUnreachable;
+
+  /// No description provided for @syncClientPairRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机拒绝了本次配对。'**
+  String get syncClientPairRejected;
+
+  /// No description provided for @syncClientInviteExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对邀请已过期，请在主 PC 上重新生成。'**
+  String get syncClientInviteExpired;
+
+  /// No description provided for @syncClientFingerprintMismatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机安全指纹不匹配，已拒绝连接。'**
+  String get syncClientFingerprintMismatch;
+
+  /// No description provided for @syncClientProtocolIncompatible.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机与本机的 EchoDay 版本不兼容，请升级后重试。'**
+  String get syncClientProtocolIncompatible;
+
+  /// No description provided for @syncClientAlreadyConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机已经属于一个同步组，请先解除原连接。'**
+  String get syncClientAlreadyConnected;
+
+  /// No description provided for @syncClientDeviceRevoked.
+  ///
+  /// In zh, this message translates to:
+  /// **'本设备已被主机撤销。本地数据仍然保留；如需重新加入，请先解除连接并重新配对。'**
+  String get syncClientDeviceRevoked;
+
+  /// No description provided for @syncClientAuthenticationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步身份验证失败。本地数据仍然保留，请检查主机设备列表或重新配对。'**
+  String get syncClientAuthenticationFailed;
+
+  /// No description provided for @syncClientSyncFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步失败，本地数据没有丢失；请稍后重试。'**
+  String get syncClientSyncFailed;
+
+  /// No description provided for @syncClientDisconnectFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'解除连接失败，请稍后重试。'**
+  String get syncClientDisconnectFailed;
+
+  /// No description provided for @syncInvalidHostAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机地址或端口无效。请输入 IP 地址或 MagicDNS 名称，并检查端口范围。'**
+  String get syncInvalidHostAddress;
 
   /// No description provided for @routeNotFound.
   ///

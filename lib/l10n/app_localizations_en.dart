@@ -698,7 +698,258 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dataSafetyDescription =>
-      'Backups include tasks, categories, tags, recurrence rules, and user settings. Public-holiday cache data is excluded.';
+      'Backups include tasks, categories, tags, recurrence rules, and portable user settings. Public-holiday caches and device-local folder settings are excluded.';
+
+  @override
+  String get defaultBackupDirectoryTitle => 'Default backup folder';
+
+  @override
+  String get backupDirectorySystemDefault => 'System default folder';
+
+  @override
+  String backupDirectoryFallback(String path) {
+    return 'The custom folder is unavailable. EchoDay is temporarily using: $path';
+  }
+
+  @override
+  String get chooseBackupDirectory => 'Choose folder';
+
+  @override
+  String get openBackupDirectory => 'Open folder';
+
+  @override
+  String get testBackupDirectory => 'Test write';
+
+  @override
+  String get resetBackupDirectory => 'Use default';
+
+  @override
+  String get backupDirectorySaved => 'Default backup folder saved';
+
+  @override
+  String get backupDirectoryReset => 'System default backup folder restored';
+
+  @override
+  String get backupDirectoryTestPassed => 'The folder is writable';
+
+  @override
+  String get backupNow => 'Back up now to default folder';
+
+  @override
+  String backupCreatedAt(String path) {
+    return 'Backup created: $path';
+  }
+
+  @override
+  String get automaticBackupTitle => 'Daily automatic backup';
+
+  @override
+  String get automaticBackupDescription =>
+      'Creates at most one backup when EchoDay is first opened or resumed each day. Sync will reuse it before the first daily sync.';
+
+  @override
+  String get automaticBackupRetention => 'Automatic backup retention';
+
+  @override
+  String automaticBackupRetentionValue(int count) {
+    return 'Keep $count';
+  }
+
+  @override
+  String get syncHostTitle => 'Multi-device sync';
+
+  @override
+  String get syncHostDescription =>
+      'One Windows PC acts as the host. LAN or Tailscale provides connectivity while every device keeps a local copy of its tasks.';
+
+  @override
+  String get syncModeLabel => 'Sync mode';
+
+  @override
+  String get syncModeOff => 'Sync off';
+
+  @override
+  String get syncModeHost => 'Act as sync host';
+
+  @override
+  String get syncModeClient => 'Connect to a sync host';
+
+  @override
+  String get syncStatusStopped => 'Stopped';
+
+  @override
+  String get syncStatusStarting => 'Starting';
+
+  @override
+  String get syncStatusRunning => 'Running';
+
+  @override
+  String get syncStatusStopping => 'Stopping';
+
+  @override
+  String get syncStatusFailed => 'Failed';
+
+  @override
+  String get syncAddressLabel => 'Listening interface';
+
+  @override
+  String get syncRefreshNetworks => 'Refresh networks';
+
+  @override
+  String get syncRestartHost => 'Restart service';
+
+  @override
+  String syncEndpointLabel(String endpoint) {
+    return 'Service endpoint: $endpoint';
+  }
+
+  @override
+  String syncFingerprintLabel(String fingerprint) {
+    return 'Host fingerprint: $fingerprint';
+  }
+
+  @override
+  String get syncCreatePairing => 'Add device';
+
+  @override
+  String get syncPairingTitle => 'Pair a new device';
+
+  @override
+  String get syncPairingHint =>
+      'Scan the QR code on the client or copy the complete connection code, then compare the six-digit verification code on both devices.';
+
+  @override
+  String get syncConnectionCode => 'One-time connection code';
+
+  @override
+  String syncExpiresAt(String time) {
+    return 'Expires at $time';
+  }
+
+  @override
+  String get syncCopy => 'Copy';
+
+  @override
+  String get syncCopied => 'Copied to clipboard';
+
+  @override
+  String get syncPendingPairings => 'Devices awaiting approval';
+
+  @override
+  String syncVerificationCode(String code) {
+    return 'Verification code $code';
+  }
+
+  @override
+  String get syncApprove => 'Approve pairing';
+
+  @override
+  String get syncReject => 'Reject';
+
+  @override
+  String get syncDevicesTitle => 'Connected devices';
+
+  @override
+  String get syncLocalDevice => 'This PC';
+
+  @override
+  String get syncOnline => 'Online';
+
+  @override
+  String get syncOffline => 'Offline';
+
+  @override
+  String get syncWaiting => 'Sync pending';
+
+  @override
+  String get syncRevoked => 'Revoked';
+
+  @override
+  String get syncNeedsUpgrade => 'Upgrade required';
+
+  @override
+  String get syncNeverSynced => 'Not synced yet';
+
+  @override
+  String syncLastSynced(String time) {
+    return 'Last sync: $time';
+  }
+
+  @override
+  String get syncEditNote => 'Edit note';
+
+  @override
+  String get syncDeviceNote => 'Device note';
+
+  @override
+  String get syncNow => 'Sync now';
+
+  @override
+  String get syncAll => 'Sync all devices';
+
+  @override
+  String syncRequestedCount(int count) {
+    return 'Sent a sync request to $count devices. Offline devices will receive it when they reconnect.';
+  }
+
+  @override
+  String get syncRevoke => 'Revoke device';
+
+  @override
+  String get syncRevokeConfirmTitle => 'Revoke this device?';
+
+  @override
+  String get syncRevokeConfirmBody =>
+      'Current sessions will stop immediately. The device must pair again to rejoin; its local tasks will not be deleted.';
+
+  @override
+  String syncConflicts(int count) {
+    return 'Sync conflicts ($count)';
+  }
+
+  @override
+  String syncConflictsNeedAttention(int count) {
+    return '$count sync conflicts need attention';
+  }
+
+  @override
+  String get syncAttentionSemantics => 'Multi-device sync needs attention';
+
+  @override
+  String get syncConflictTitle => 'Unresolved sync conflicts';
+
+  @override
+  String get syncConflictEmpty => 'No unresolved conflicts';
+
+  @override
+  String get syncRestoreVersion => 'Restore this version';
+
+  @override
+  String get syncLaunchAtStartup => 'Start EchoDay after Windows sign-in';
+
+  @override
+  String get syncKeepInTray =>
+      'Keep running in the tray after closing the window';
+
+  @override
+  String get syncHostStartFailed =>
+      'The sync host could not start. Check the selected network, port use, and Windows Firewall.';
+
+  @override
+  String get syncInitializationFailed =>
+      'Sync settings could not be loaded. Try again later.';
+
+  @override
+  String get syncInviteFailed =>
+      'A pairing invitation could not be created. Check that the host service is running.';
+
+  @override
+  String get syncOperationFailed =>
+      'The sync operation failed. Try again later.';
+
+  @override
+  String get syncRoleChangeBlocked =>
+      'This device is already the sync-group host and cannot become a client directly. Migrate the host or clear its sync-group identity first.';
 
   @override
   String get exportBackup => 'Export JSON backup';
@@ -781,6 +1032,188 @@ class AppLocalizationsEn extends AppLocalizations {
   String backupSafetyCreated(String path) {
     return 'Pre-restore safety backup: $path';
   }
+
+  @override
+  String get syncClientTitle => 'Multi-device sync';
+
+  @override
+  String get syncClientDescription =>
+      'Connect to your main PC over LAN or Tailscale. The phone remains usable offline and syncs only on launch, resume, or manual action.';
+
+  @override
+  String get syncClientDesktopDescription =>
+      'Connect this PC to the main PC as a client. LAN, Tailscale IP, and MagicDNS are supported; offline edits upload when the window is reopened or sync is requested.';
+
+  @override
+  String get syncClientDisconnected => 'No sync host connected';
+
+  @override
+  String get syncClientConnecting => 'Connecting to host…';
+
+  @override
+  String get syncClientWaitingApproval => 'Waiting for host approval';
+
+  @override
+  String get syncClientSyncing => 'Syncing…';
+
+  @override
+  String get syncClientSynced => 'Synced';
+
+  @override
+  String get syncClientOffline =>
+      'Host is currently unreachable; offline editing remains available';
+
+  @override
+  String get syncClientError => 'Sync needs attention';
+
+  @override
+  String get syncScanQr => 'Scan host QR code';
+
+  @override
+  String get syncPasteCode => 'Paste connection code';
+
+  @override
+  String get syncPairingCodeLabel => 'Full connection code';
+
+  @override
+  String get syncImportPairingFile => 'Import pairing file';
+
+  @override
+  String get syncExportPairingFile => 'Export pairing file';
+
+  @override
+  String get syncDiscoverNearby => 'Discover nearby host';
+
+  @override
+  String get syncNoNearbyHost =>
+      'No host is currently advertising a pairing invitation. Open Add device on the main PC and try again.';
+
+  @override
+  String get syncChooseNearbyHost => 'Choose a nearby host';
+
+  @override
+  String syncNearbyHostFound(String name) {
+    return 'Found $name. Select Connect, then compare the verification code on the host.';
+  }
+
+  @override
+  String get syncDiscoveryFailed =>
+      'Nearby-host discovery failed. You can still paste a connection code or import a pairing file.';
+
+  @override
+  String get syncPairingFileExported => 'Pairing file exported';
+
+  @override
+  String get syncPairingFileInvalid =>
+      'The pairing file is invalid, damaged, or expired.';
+
+  @override
+  String get syncHostOverride => 'Host address (optional override)';
+
+  @override
+  String get syncHostOverrideHint =>
+      'The full connection code still provides security verification. This field can replace its address with a reachable LAN IP, Tailscale IP, or MagicDNS name.';
+
+  @override
+  String get syncHostAddress => 'Host address';
+
+  @override
+  String get syncPort => 'Port';
+
+  @override
+  String get syncSaveAndRetry => 'Save and retry';
+
+  @override
+  String get syncConnect => 'Connect';
+
+  @override
+  String get syncScannerTitle => 'Scan EchoDay pairing code';
+
+  @override
+  String get syncScannerHint =>
+      'Place the QR code from the main PC inside the frame';
+
+  @override
+  String get syncScannerPermissionDenied =>
+      'Camera permission is required to scan. You can go back and paste the connection code instead.';
+
+  @override
+  String get syncClientVerificationHint =>
+      'Confirm that the main PC shows the same six-digit code, then approve this device on the PC.';
+
+  @override
+  String get syncClientHost => 'Sync host';
+
+  @override
+  String syncClientAddress(String address) {
+    return 'Address: $address';
+  }
+
+  @override
+  String syncClientLastResult(int uploaded, int downloaded, int conflicts) {
+    return 'Uploaded $uploaded, downloaded $downloaded, conflicts $conflicts';
+  }
+
+  @override
+  String get syncClientDisconnect => 'Disconnect this device';
+
+  @override
+  String get syncClientDisconnectTitle => 'Disconnect from the host?';
+
+  @override
+  String get syncClientDisconnectBody =>
+      'TODO data stays on this device and a safety backup is created first. Sync identity and cursors are removed, so reconnecting requires pairing again.';
+
+  @override
+  String get syncClientDisconnectAction => 'Disconnect';
+
+  @override
+  String get syncClientInvalidCode =>
+      'The connection code is invalid or damaged.';
+
+  @override
+  String get syncClientHostUnreachable =>
+      'Cannot reach the host. Check that the PC Server service is running and that LAN or Tailscale is connected.';
+
+  @override
+  String get syncClientPairRejected =>
+      'The host rejected this pairing request.';
+
+  @override
+  String get syncClientInviteExpired =>
+      'The pairing invitation expired. Generate a new one on the PC.';
+
+  @override
+  String get syncClientFingerprintMismatch =>
+      'The host security fingerprint did not match, so the connection was rejected.';
+
+  @override
+  String get syncClientProtocolIncompatible =>
+      'The PC and phone use incompatible EchoDay versions. Upgrade and try again.';
+
+  @override
+  String get syncClientAlreadyConnected =>
+      'This device already belongs to a sync group. Disconnect it first.';
+
+  @override
+  String get syncClientDeviceRevoked =>
+      'The host revoked this device. Local data remains available. Disconnect and pair again to rejoin.';
+
+  @override
+  String get syncClientAuthenticationFailed =>
+      'Sync authentication failed. Local data remains available; check the host device list or pair again.';
+
+  @override
+  String get syncClientSyncFailed =>
+      'Sync failed without losing local data. Try again later.';
+
+  @override
+  String get syncClientDisconnectFailed =>
+      'Could not disconnect. Try again later.';
+
+  @override
+  String get syncInvalidHostAddress =>
+      'The host address or port is invalid. Enter an IP address or MagicDNS name and check the port range.';
 
   @override
   String get routeNotFound => 'Page not found';

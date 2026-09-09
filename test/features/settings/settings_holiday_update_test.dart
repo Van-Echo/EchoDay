@@ -156,6 +156,8 @@ void main() {
     expect(find.text('数据备份与恢复'), findsOneWidget);
     await tester.tap(find.text('数据备份与恢复'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('clear-data-button')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('clear-data-button')));
     await tester.pumpAndSettle();
     expect(
@@ -282,6 +284,15 @@ void main() {
           ?.value,
       'true',
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('backup-settings')),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byKey(const ValueKey('backup-settings')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('choose-backup-directory')), findsNothing);
+    expect(find.byKey(const ValueKey('automatic-backup-toggle')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

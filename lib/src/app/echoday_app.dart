@@ -10,7 +10,10 @@ import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_mode_controller.dart';
 import 'widgets/app_lifecycle_refresh_host.dart';
+import 'widgets/backup_lifecycle_host.dart';
 import 'widgets/hotkey_host.dart';
+import 'widgets/sync_client_lifecycle_host.dart';
+import 'widgets/sync_desktop_lifecycle_host.dart';
 
 class EchoDayApp extends ConsumerWidget {
   const EchoDayApp({super.key, this.locale});
@@ -74,7 +77,13 @@ class EchoDayApp extends ConsumerWidget {
             ),
           );
         }
-        return AppLifecycleRefreshHost(child: HotkeyHost(child: result));
+        return SyncDesktopLifecycleHost(
+          child: SyncClientLifecycleHost(
+            child: BackupLifecycleHost(
+              child: AppLifecycleRefreshHost(child: HotkeyHost(child: result)),
+            ),
+          ),
+        );
       },
     );
   }

@@ -28,13 +28,31 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 
 | 平台 | 下载内容 | 使用方式 |
 | --- | --- | --- |
-| Windows 10/11 x64 | `windows-x64-portable.zip` | 解压全部文件后运行 `EchoDay.exe` |
-| 大多数现代 Android 手机 | `android-arm64-v8a.apk` | 在系统提示下允许安装来自该来源的应用 |
-| 其他 Android 设备 | `android-universal.apk` | 不确定 CPU 架构时使用通用包 |
+| Windows 10/11 x64 | `EchoDay-v1.0.1-windows-x64-portable.zip` | 解压全部文件后运行 `EchoDay.exe` |
+| 大多数现代 Android 手机 | `EchoDay-v1.0.1-android-arm64-v8a.apk` | 在系统提示下允许安装来自该来源的应用 |
+| 其他 Android 设备 | `EchoDay-v1.0.1-android-universal.apk` | 不确定 CPU 架构时使用通用包 |
 
 发布包解压或安装后即可使用，不需要另行安装 Flutter、Visual Studio、Android Studio 或 Google Play 服务。`.aab` 文件仅供应用商店发布，普通用户无需下载。
 
 > Android 早期测试版使用 Debug 签名，不能直接覆盖正式版。请先导出 JSON 备份、卸载测试版，再安装正式版。安装正式版后，建议持续使用同一种 APK 类型进行升级。
+
+## 多端同步
+
+EchoDay V1.0.1 提供可选的设备直连同步，不需要 EchoDay 云服务器或账号：
+
+- 一台 Windows 电脑作为同步组中唯一的主 PC，负责接收和汇总变更。
+- Android 手机及其他 Windows 电脑作为客户端，可以离线编辑，稍后与主 PC 合并。
+- 同一网络中可通过局域网连接；异地设备可以安装 Tailscale 并登录用户自己的 Tailnet。
+- Android 支持扫描二维码或粘贴完整连接码；Windows 客户端还支持附近主机发现和导入 `.echoday-pair` 临时配对文件。
+- 首次配对需要在主 PC 核对六位校验码并确认；之后可在主 PC 查看设备、添加备注、请求同步或撤销设备。
+- Android 会在打开或回到 EchoDay 时同步，也可手动同步；Windows 客户端在窗口重新获得焦点或用户操作时同步。
+- TODO、分类、标签和重复规则参与同步；主题、语言、快捷键、备份目录等设备偏好不会跨设备覆盖。
+
+传输使用 HTTPS、证书指纹固定、Ed25519 设备签名、短期会话和防重放 nonce。EchoDay 项目方不接收、中转或保存同步数据；使用 Tailscale 时，网络服务由用户自己的 Tailscale 账号提供。
+
+主 PC 必须处于开机且 EchoDay Server 服务可用的状态才能立即同步。设备离线或主 PC 暂时不可用时，本地 TODO 功能不受影响，重新连接后会继续增量合并。发生同字段并发修改时，可在同步设置中查看并恢复冲突版本。
+
+> 本版已完成 Windows 主 PC 与小米 15 Pro 的 Tailscale、离线编辑和恢复收敛真机测试，以及 Windows 客户端的自动化 HTTPS 双数据库测试。由于当前没有第二台实体 Windows PC，PC-PC、三机实体收敛以及真实 PC 休眠/重启/网卡切换验收按项目方决定暂缓；对应自动恢复逻辑已有自动化覆盖，详情见 [S8 发布验收记录](docs/S8_RELEASE_VALIDATION.md)。
 
 ## 核心功能
 
@@ -47,7 +65,8 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 - 中国日历：显示法定节假日、调休与二十四节气；可在设置中手动获取最新节假日数据。
 - 个性化：浅色/深色主题、主色、字号、预览条数、默认排序、分类与标签颜色均可调整。
 - 中英双语：支持中文与 English；英文月份和星期采用适合紧凑界面的缩写。
-- 本地备份：支持 JSON 导出、导入预检、合并导入、覆盖恢复和清空数据前安全备份。
+- 本地备份：支持 JSON 导出、导入预检、合并导入、覆盖恢复和清空数据前安全备份；Windows 可设置默认目录、每日自动备份及保留数量。
+- 可选多端同步：一台 Windows 作为主机，Android 或其他 Windows 设备作为客户端；局域网可直连，异地连接复用用户自己的 Tailscale，不依赖 EchoDay 官方服务器。
 
 ## 平台体验
 
@@ -68,20 +87,22 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 
 ## 数据与隐私
 
-EchoDay v0.1.0 不提供账号、云同步、广告或行为分析。TODO、分类、标签和设置默认只保存在设备本地；只有在用户主动更新中国法定节假日时，应用才会访问相关公开数据源。
+EchoDay V1.0.1 不提供账号、项目方托管云同步、广告或行为分析。TODO、分类、标签和设置默认只保存在设备本地；只有在用户主动更新中国法定节假日时，应用才会访问相关公开数据源。多端同步由用户主动启用，只在用户自己的局域网或 Tailscale 网络中连接设备，EchoDay 项目方不接收或中转任务数据。
 
 在“设置 → 数据备份与恢复”中可以：
 
 - 导出标准名称为 `EchoDay-backup-yyyyMMdd-HHmmss.json` 的备份文件；
+- 在 Windows 上选择、打开并测试默认备份目录；
+- 在 Windows 上按需开启每日自动备份，并设置保留 1～30 份；
 - 预检并合并导入另一份备份；
 - 二次确认后覆盖恢复；
 - 清空用户数据。
 
-覆盖恢复或清空数据前，应用会在自身支持目录创建安全备份。完整说明请阅读 [隐私政策](PRIVACY.md) 与 [备份指南](docs/USER_BACKUP_GUIDE.md)。
+覆盖恢复或清空数据前，应用会在当前默认备份目录创建安全备份。备份目录、自动备份开关与保留数量属于设备本地设置，不写入 JSON，也不会参与多端同步。完整说明请阅读 [隐私政策](PRIVACY.md) 与 [备份指南](docs/USER_BACKUP_GUIDE.md)。
 
 ## 开发
 
-项目基于 Flutter 3.47.2 / Dart 3.13.2，使用 Riverpod 管理状态、Drift/SQLite 存储本地数据，并通过 Repository 接口隔离数据层，为未来增加同步实现保留边界。
+项目基于 Flutter 3.47.2 / Dart 3.13.2，使用 Riverpod 管理状态、Drift/SQLite 存储本地数据，并通过 Repository 与传输接口隔离本地存储、增量同步和界面层。
 
 ### 环境要求
 
@@ -121,9 +142,16 @@ Windows 首次构建前，请在系统“开发者选项”中启用开发者模
 - [产品需求文档](docs/PRD.md)
 - [Windows 开发计划](docs/PLAN.md)
 - [Android 开发计划](docs/PLAN_Android.md)
+- [多端同步开发计划](docs/PLAN_Sync.md)
+- [同步协议 V1](docs/SYNC_PROTOCOL_V1.md)
+- [同步数据库 Schema v3 设计](docs/SYNC_SCHEMA_V3.md)
+- [同步威胁模型与日志规范](docs/SYNC_SECURITY.md)
+- [多 PC 互联测试指南](docs/TEST_MULTI_PC_SYNC.md)
+- [V1.0.1 / S8 发布验收记录](docs/S8_RELEASE_VALIDATION.md)
 - [技术架构与开发计划](docs/DEVELOPMENT_PLAN.md)
 - [Android 发布指南](docs/ANDROID_RELEASE_GUIDE.md)
 - [Android Data Safety 基线](docs/ANDROID_DATA_SAFETY.md)
+- [V1.0.1 发布说明](docs/RELEASE_NOTES_v1.0.1.md)
 - [Windows v0.1.0 发布说明](docs/RELEASE_NOTES_v0.1.0.md)
 - [Android v0.1.0 发布说明](docs/RELEASE_NOTES_ANDROID_v0.1.0.md)
 

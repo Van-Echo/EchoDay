@@ -685,7 +685,251 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dataSafetyTitle => '数据备份与恢复';
 
   @override
-  String get dataSafetyDescription => '备份包含任务、分类、标签、重复规则和用户设置；法定节假日缓存不会写入。';
+  String get dataSafetyDescription =>
+      '备份包含任务、分类、标签、重复规则和可迁移的用户设置；法定节假日缓存及设备本地目录设置不会写入。';
+
+  @override
+  String get defaultBackupDirectoryTitle => '默认备份目录';
+
+  @override
+  String get backupDirectorySystemDefault => '系统默认目录';
+
+  @override
+  String backupDirectoryFallback(String path) {
+    return '自定义目录当前不可用，已临时回退到：$path';
+  }
+
+  @override
+  String get chooseBackupDirectory => '选择目录';
+
+  @override
+  String get openBackupDirectory => '打开目录';
+
+  @override
+  String get testBackupDirectory => '测试写入';
+
+  @override
+  String get resetBackupDirectory => '恢复默认';
+
+  @override
+  String get backupDirectorySaved => '默认备份目录已保存';
+
+  @override
+  String get backupDirectoryReset => '已恢复系统默认备份目录';
+
+  @override
+  String get backupDirectoryTestPassed => '目录可写，测试通过';
+
+  @override
+  String get backupNow => '立即备份到默认目录';
+
+  @override
+  String backupCreatedAt(String path) {
+    return '备份已创建：$path';
+  }
+
+  @override
+  String get automaticBackupTitle => '每日自动备份';
+
+  @override
+  String get automaticBackupDescription =>
+      '每天首次打开或回到丸成时最多创建一份；同步功能完成后也会在当日首次同步前复用此备份。';
+
+  @override
+  String get automaticBackupRetention => '自动备份保留数量';
+
+  @override
+  String automaticBackupRetentionValue(int count) {
+    return '保留 $count 份';
+  }
+
+  @override
+  String get syncHostTitle => '多端同步';
+
+  @override
+  String get syncHostDescription =>
+      '一台 Windows PC 作为主机；局域网或 Tailscale 只负责连接，任务数据仍保存在各设备本地。';
+
+  @override
+  String get syncModeLabel => '同步模式';
+
+  @override
+  String get syncModeOff => '关闭同步';
+
+  @override
+  String get syncModeHost => '作为同步主机';
+
+  @override
+  String get syncModeClient => '连接到同步主机';
+
+  @override
+  String get syncStatusStopped => '已停止';
+
+  @override
+  String get syncStatusStarting => '正在启动';
+
+  @override
+  String get syncStatusRunning => '正在运行';
+
+  @override
+  String get syncStatusStopping => '正在停止';
+
+  @override
+  String get syncStatusFailed => '启动失败';
+
+  @override
+  String get syncAddressLabel => '监听网络接口';
+
+  @override
+  String get syncRefreshNetworks => '刷新网络';
+
+  @override
+  String get syncRestartHost => '重启服务';
+
+  @override
+  String syncEndpointLabel(String endpoint) {
+    return '服务地址：$endpoint';
+  }
+
+  @override
+  String syncFingerprintLabel(String fingerprint) {
+    return '主机指纹：$fingerprint';
+  }
+
+  @override
+  String get syncCreatePairing => '添加设备';
+
+  @override
+  String get syncPairingTitle => '配对新设备';
+
+  @override
+  String get syncPairingHint => '让客户端扫描二维码，或复制完整连接码。随后请核对双方显示的六位校验码。';
+
+  @override
+  String get syncConnectionCode => '一次性连接码';
+
+  @override
+  String syncExpiresAt(String time) {
+    return '有效期至 $time';
+  }
+
+  @override
+  String get syncCopy => '复制';
+
+  @override
+  String get syncCopied => '已复制到剪贴板';
+
+  @override
+  String get syncPendingPairings => '待确认设备';
+
+  @override
+  String syncVerificationCode(String code) {
+    return '校验码 $code';
+  }
+
+  @override
+  String get syncApprove => '确认配对';
+
+  @override
+  String get syncReject => '拒绝';
+
+  @override
+  String get syncDevicesTitle => '已连接设备';
+
+  @override
+  String get syncLocalDevice => '本机';
+
+  @override
+  String get syncOnline => '在线';
+
+  @override
+  String get syncOffline => '离线';
+
+  @override
+  String get syncWaiting => '等待同步';
+
+  @override
+  String get syncRevoked => '已撤销';
+
+  @override
+  String get syncNeedsUpgrade => '需要升级';
+
+  @override
+  String get syncNeverSynced => '尚未完成同步';
+
+  @override
+  String syncLastSynced(String time) {
+    return '上次同步：$time';
+  }
+
+  @override
+  String get syncEditNote => '修改备注';
+
+  @override
+  String get syncDeviceNote => '设备备注';
+
+  @override
+  String get syncNow => '立即同步';
+
+  @override
+  String get syncAll => '主动同步全部设备';
+
+  @override
+  String syncRequestedCount(int count) {
+    return '已向 $count 台设备发出同步请求；离线设备将在下次连接时收到。';
+  }
+
+  @override
+  String get syncRevoke => '撤销设备';
+
+  @override
+  String get syncRevokeConfirmTitle => '撤销此设备？';
+
+  @override
+  String get syncRevokeConfirmBody => '撤销后现有会话立即失效；该设备若要重新加入，必须再次配对。本地任务不会被删除。';
+
+  @override
+  String syncConflicts(int count) {
+    return '同步冲突（$count）';
+  }
+
+  @override
+  String syncConflictsNeedAttention(int count) {
+    return '有 $count 项同步冲突待处理';
+  }
+
+  @override
+  String get syncAttentionSemantics => '多端同步需要处理';
+
+  @override
+  String get syncConflictTitle => '待处理同步冲突';
+
+  @override
+  String get syncConflictEmpty => '没有待处理冲突';
+
+  @override
+  String get syncRestoreVersion => '恢复此版本';
+
+  @override
+  String get syncLaunchAtStartup => '登录 Windows 后启动丸成';
+
+  @override
+  String get syncKeepInTray => '关闭窗口后在托盘继续运行';
+
+  @override
+  String get syncHostStartFailed => '同步主机启动失败，请检查所选网络、端口占用和 Windows 防火墙。';
+
+  @override
+  String get syncInitializationFailed => '无法载入同步设置，请稍后重试。';
+
+  @override
+  String get syncInviteFailed => '无法创建配对邀请，请确认主机服务正在运行。';
+
+  @override
+  String get syncOperationFailed => '同步操作失败，请稍后重试。';
+
+  @override
+  String get syncRoleChangeBlocked => '本机已是同步组主机，不能直接改为客户端。请先完成主机迁移或清除同步组身份。';
 
   @override
   String get exportBackup => '导出 JSON 备份';
@@ -768,6 +1012,173 @@ class AppLocalizationsZh extends AppLocalizations {
   String backupSafetyCreated(String path) {
     return '覆盖前安全备份：$path';
   }
+
+  @override
+  String get syncClientTitle => '多端同步';
+
+  @override
+  String get syncClientDescription =>
+      '通过局域网或 Tailscale 连接你的主 PC。手机仍可离线使用，只在打开、回到前台或手动操作时同步。';
+
+  @override
+  String get syncClientDesktopDescription =>
+      '将本机作为客户端连接主 PC。支持局域网、Tailscale IP 和 MagicDNS；离线编辑会在下次打开窗口或手动同步时上传。';
+
+  @override
+  String get syncClientDisconnected => '尚未连接同步主机';
+
+  @override
+  String get syncClientConnecting => '正在连接主机…';
+
+  @override
+  String get syncClientWaitingApproval => '等待主机确认';
+
+  @override
+  String get syncClientSyncing => '正在同步…';
+
+  @override
+  String get syncClientSynced => '已同步';
+
+  @override
+  String get syncClientOffline => '主机暂时不可达，本地编辑不受影响';
+
+  @override
+  String get syncClientError => '同步需要处理';
+
+  @override
+  String get syncScanQr => '扫描主机二维码';
+
+  @override
+  String get syncPasteCode => '粘贴连接码';
+
+  @override
+  String get syncPairingCodeLabel => '完整连接码';
+
+  @override
+  String get syncImportPairingFile => '导入配对文件';
+
+  @override
+  String get syncExportPairingFile => '导出配对文件';
+
+  @override
+  String get syncDiscoverNearby => '发现附近主机';
+
+  @override
+  String get syncNoNearbyHost => '未发现正在展示配对邀请的主机。请在主 PC 上打开“添加设备”窗口后重试。';
+
+  @override
+  String get syncChooseNearbyHost => '选择附近主机';
+
+  @override
+  String syncNearbyHostFound(String name) {
+    return '已发现 $name，请点击“连接”并在主机上核对校验码。';
+  }
+
+  @override
+  String get syncDiscoveryFailed => '附近主机发现失败。你仍可粘贴连接码或导入配对文件。';
+
+  @override
+  String get syncPairingFileExported => '配对文件已导出';
+
+  @override
+  String get syncPairingFileInvalid => '配对文件无效、损坏或已经过期。';
+
+  @override
+  String get syncHostOverride => '主机地址（可选覆盖）';
+
+  @override
+  String get syncHostOverrideHint =>
+      '完整连接码仍负责安全验证；这里可将其中的地址替换为当前可达的局域网 IP、Tailscale IP 或 MagicDNS 名称。';
+
+  @override
+  String get syncHostAddress => '主机地址';
+
+  @override
+  String get syncPort => '端口';
+
+  @override
+  String get syncSaveAndRetry => '保存并重试';
+
+  @override
+  String get syncConnect => '连接';
+
+  @override
+  String get syncScannerTitle => '扫描 EchoDay 配对码';
+
+  @override
+  String get syncScannerHint => '将主 PC 上的二维码放入框内';
+
+  @override
+  String get syncScannerPermissionDenied => '需要相机权限才能扫码。你也可以返回后粘贴连接码。';
+
+  @override
+  String get syncClientVerificationHint => '请确认主 PC 显示相同的六位校验码，再在主 PC 上批准此设备。';
+
+  @override
+  String get syncClientHost => '同步主机';
+
+  @override
+  String syncClientAddress(String address) {
+    return '地址：$address';
+  }
+
+  @override
+  String syncClientLastResult(int uploaded, int downloaded, int conflicts) {
+    return '本次上传 $uploaded 项，下载 $downloaded 项，冲突 $conflicts 项';
+  }
+
+  @override
+  String get syncClientDisconnect => '解除本机连接';
+
+  @override
+  String get syncClientDisconnectTitle => '解除与主机的连接？';
+
+  @override
+  String get syncClientDisconnectBody =>
+      '本机中的 TODO 会完整保留，并会先创建安全备份；同步身份与游标将被清除。如需再次同步，必须重新配对。';
+
+  @override
+  String get syncClientDisconnectAction => '确认解除';
+
+  @override
+  String get syncClientInvalidCode => '连接码无效或已损坏。';
+
+  @override
+  String get syncClientHostUnreachable =>
+      '无法连接主机，请确认主 PC 已启动 Server 服务，并检查局域网或 Tailscale。';
+
+  @override
+  String get syncClientPairRejected => '主机拒绝了本次配对。';
+
+  @override
+  String get syncClientInviteExpired => '配对邀请已过期，请在主 PC 上重新生成。';
+
+  @override
+  String get syncClientFingerprintMismatch => '主机安全指纹不匹配，已拒绝连接。';
+
+  @override
+  String get syncClientProtocolIncompatible => '主机与本机的 EchoDay 版本不兼容，请升级后重试。';
+
+  @override
+  String get syncClientAlreadyConnected => '本机已经属于一个同步组，请先解除原连接。';
+
+  @override
+  String get syncClientDeviceRevoked =>
+      '本设备已被主机撤销。本地数据仍然保留；如需重新加入，请先解除连接并重新配对。';
+
+  @override
+  String get syncClientAuthenticationFailed =>
+      '同步身份验证失败。本地数据仍然保留，请检查主机设备列表或重新配对。';
+
+  @override
+  String get syncClientSyncFailed => '同步失败，本地数据没有丢失；请稍后重试。';
+
+  @override
+  String get syncClientDisconnectFailed => '解除连接失败，请稍后重试。';
+
+  @override
+  String get syncInvalidHostAddress =>
+      '主机地址或端口无效。请输入 IP 地址或 MagicDNS 名称，并检查端口范围。';
 
   @override
   String get routeNotFound => '页面不存在';

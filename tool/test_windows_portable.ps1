@@ -6,7 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ([string]::IsNullOrWhiteSpace($ArchivePath)) {
-  $ArchivePath = Join-Path $projectRoot 'dist\EchoDay-v0.1.0-windows-x64-portable.zip'
+  $versionLine = Get-Content -LiteralPath (Join-Path $projectRoot 'pubspec.yaml') |
+    Where-Object { $_ -match '^version:\s*' } |
+    Select-Object -First 1
+  if (-not $versionLine -or $versionLine -notmatch '^version:\s*([^+\s]+)') {
+    throw 'Could not read the application version from pubspec.yaml.'
+  }
+  $ArchivePath = Join-Path $projectRoot "dist\EchoDay-v$($Matches[1])-windows-x64-portable.zip"
 }
 $archive = (Resolve-Path -LiteralPath $ArchivePath).Path
 $checksumFile = "$archive.sha256"

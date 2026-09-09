@@ -5,6 +5,10 @@ import '../../../core/time/clock.dart';
 import '../../../data/database/app_database.dart';
 import '../../holidays/data/holiday_year_codec.dart';
 import '../../holidays/domain/holiday_workday_calendar.dart';
+import '../../sync/data/database_sync_change_recorder.dart';
+import '../../sync/domain/sync_change_recorder.dart';
+import '../../sync/domain/sync_entity_payloads.dart';
+import '../../sync/domain/sync_protocol.dart';
 import '../domain/local_date.dart';
 import '../domain/recurrence_engine.dart';
 import '../domain/recurrence_series.dart';
@@ -29,12 +33,14 @@ final class LocalTodoRepository implements TodoRepository {
     UtcClock clock = systemUtcClock,
     RecurrenceEngine recurrenceEngine = const RecurrenceEngine(),
     RecurrenceRuleCodec recurrenceCodec = const RecurrenceRuleCodec(),
+    SyncChangeRecorder? syncRecorder,
   }) => LocalTodoRepository._(
     database,
     idGenerator,
     clock,
     recurrenceEngine,
     recurrenceCodec,
+    syncRecorder ?? DatabaseSyncChangeRecorder(database, clock: clock),
   );
 
   LocalTodoRepository._(
@@ -43,6 +49,7 @@ final class LocalTodoRepository implements TodoRepository {
     this._clock,
     this._recurrenceEngine,
     this._recurrenceCodec,
+    this._syncRecorder,
   );
 
   final AppDatabase _database;
@@ -50,6 +57,7 @@ final class LocalTodoRepository implements TodoRepository {
   final UtcClock _clock;
   final RecurrenceEngine _recurrenceEngine;
   final RecurrenceRuleCodec _recurrenceCodec;
+  final SyncChangeRecorder _syncRecorder;
 
   static const _virtualPrefix = 'virtual:';
 
@@ -138,6 +146,10 @@ final class LocalTodoRepository implements TodoRepository {
       );
       await _database.into(_database.todos).insert(_toCompanion(item));
       await _replaceTags(item.id, item.tagIds);
+      await _syncRecorder.recordAll([
+        ..._todoChanges(null, item),
+        for (final tagId in item.tagIds) _relationAdd(item.id, tagId),
+      ]);
       return item;
     });
   }
@@ -154,10 +166,21 @@ final class LocalTodoRepository implements TodoRepository {
         updatedAt: requireUtc(_clock(), 'clock'),
         revision: existing.revision + 1,
       );
+      final removedTags = existing.tagIds.difference(saved.tagIds);
+      final addedTags = saved.tagIds.difference(existing.tagIds);
+      final relationRemovals = <PendingSyncChange>[];
+      for (final tagId in removedTags) {
+        relationRemovals.add(await _relationRemove(existing.id, tagId));
+      }
       await (_database.update(
         _database.todos,
       )..where((table) => table.id.equals(todo.id))).write(_toCompanion(saved));
       await _replaceTags(saved.id, saved.tagIds);
+      await _syncRecorder.recordAll([
+        ..._todoChanges(existing, saved),
+        ...relationRemovals,
+        for (final tagId in addedTags) _relationAdd(saved.id, tagId),
+      ]);
       return saved;
     });
   }
@@ -192,12 +215,36 @@ final class LocalTodoRepository implements TodoRepository {
   Future<void> undoDelete(String id) async {
     final virtual = _parseVirtualId(id);
     if (virtual != null) {
-      await (_database.delete(_database.recurrenceExceptions)..where(
-            (table) =>
-                table.seriesId.equals(virtual.seriesId) &
-                table.occurrenceDate.equals(virtual.date.toString()),
-          ))
-          .go();
+      await _database.transaction(() async {
+        final row =
+            await (_database.select(_database.recurrenceExceptions)..where(
+                  (table) =>
+                      table.seriesId.equals(virtual.seriesId) &
+                      table.occurrenceDate.equals(virtual.date.toString()) &
+                      table.deletedAt.isNull(),
+                ))
+                .getSingleOrNull();
+        if (row == null) return;
+        final now = requireUtc(_clock(), 'clock');
+        await (_database.update(
+          _database.recurrenceExceptions,
+        )..where((table) => table.id.equals(row.id))).write(
+          RecurrenceExceptionsCompanion(
+            deletedAt: Value(now),
+            updatedAt: Value(now),
+            revision: Value(row.revision + 1),
+          ),
+        );
+        await _syncRecorder.recordAll([
+          PendingSyncChange(
+            entityType: SyncEntityType.recurrenceException,
+            entityId: row.id,
+            operationType: SyncOperationType.delete,
+            fieldGroup: SyncFieldGroup.deletion,
+            payload: SyncEntityPayloads.deletion(now),
+          ),
+        ]);
+      });
       return;
     }
     final item = await getById(id, includeDeleted: true);
@@ -234,12 +281,19 @@ final class LocalTodoRepository implements TodoRepository {
         );
       }
       final now = requireUtc(_clock(), 'clock');
+      final changes = <PendingSyncChange>[];
       for (var index = 0; index < resolvedIds.length; index++) {
+        final existing = await getById(
+          resolvedIds[index],
+          includeDeleted: true,
+        );
+        if (existing == null) throw TodoNotFoundException(resolvedIds[index]);
+        final order = index.toDouble();
         await (_database.update(
           _database.todos,
         )..where((table) => table.id.equals(resolvedIds[index]))).write(
           TodosCompanion(
-            manualOrder: Value(index.toDouble()),
+            manualOrder: Value(order),
             updatedAt: Value(now),
             revision: const Value.absent(),
           ),
@@ -249,7 +303,19 @@ final class LocalTodoRepository implements TodoRepository {
           variables: [Variable<String>(resolvedIds[index])],
           updates: {_database.todos},
         );
+        if (existing.manualOrder != order) {
+          changes.add(
+            PendingSyncChange(
+              entityType: SyncEntityType.todo,
+              entityId: existing.id,
+              operationType: SyncOperationType.upsert,
+              fieldGroup: SyncFieldGroup.order,
+              payload: {'manualOrder': order},
+            ),
+          );
+        }
       }
+      await _syncRecorder.recordAll(changes);
     });
   }
 
@@ -422,6 +488,11 @@ final class LocalTodoRepository implements TodoRepository {
       );
       await _database.into(_database.todos).insert(_toCompanion(materialized));
       await _replaceTags(materialized.id, materialized.tagIds);
+      await _syncRecorder.recordAll([
+        ..._todoChanges(null, materialized),
+        for (final tagId in materialized.tagIds)
+          _relationAdd(materialized.id, tagId),
+      ]);
       if (materialized.recurrenceSeriesId case final seriesId?) {
         await _writeException(
           seriesId,
@@ -438,7 +509,7 @@ final class LocalTodoRepository implements TodoRepository {
     LocalDate date, {
     bool isSkipped = false,
     String? overrideJson,
-  }) async {
+  }) => _database.transaction(() async {
     final existing =
         await (_database.select(_database.recurrenceExceptions)..where(
               (table) =>
@@ -447,22 +518,138 @@ final class LocalTodoRepository implements TodoRepository {
             ))
             .getSingleOrNull();
     final now = requireUtc(_clock(), 'clock');
+    final exceptionId = existing?.id ?? _idGenerator.next();
+    final createdAt = existing?.createdAt.toUtc() ?? now;
     await _database
         .into(_database.recurrenceExceptions)
         .insertOnConflictUpdate(
           RecurrenceExceptionsCompanion(
-            id: Value(existing?.id ?? _idGenerator.next()),
+            id: Value(exceptionId),
             seriesId: Value(seriesId),
             occurrenceDate: Value(date.toString()),
             overrideJson: Value(overrideJson),
             isSkipped: Value(isSkipped),
-            createdAt: Value(existing?.createdAt.toUtc() ?? now),
+            createdAt: Value(createdAt),
             updatedAt: Value(now),
             deletedAt: const Value(null),
             revision: Value((existing?.revision ?? 0) + 1),
           ),
         );
+    await _syncRecorder.recordAll([
+      PendingSyncChange(
+        entityType: SyncEntityType.recurrenceException,
+        entityId: exceptionId,
+        operationType: SyncOperationType.upsert,
+        fieldGroup: SyncFieldGroup.content,
+        payload: SyncEntityPayloads.recurrenceExceptionContent(
+          seriesId: seriesId,
+          occurrenceDate: date.toString(),
+          overrideJson: overrideJson,
+          isSkipped: isSkipped,
+          createdAt: createdAt,
+        ),
+      ),
+      if (existing?.deletedAt != null)
+        PendingSyncChange(
+          entityType: SyncEntityType.recurrenceException,
+          entityId: exceptionId,
+          operationType: SyncOperationType.restore,
+          fieldGroup: SyncFieldGroup.deletion,
+          payload: SyncEntityPayloads.deletion(null),
+        ),
+    ]);
+  });
+
+  List<PendingSyncChange> _todoChanges(TodoItem? existing, TodoItem saved) {
+    final changes = <PendingSyncChange>[];
+    if (existing == null || !_sameTodoContent(existing, saved)) {
+      changes.add(
+        PendingSyncChange(
+          entityType: SyncEntityType.todo,
+          entityId: saved.id,
+          operationType: SyncOperationType.upsert,
+          fieldGroup: SyncFieldGroup.content,
+          payload: SyncEntityPayloads.todoContent(saved),
+        ),
+      );
+    }
+    if (existing == null ||
+        existing.isCompleted != saved.isCompleted ||
+        existing.completedAt != saved.completedAt) {
+      changes.add(
+        PendingSyncChange(
+          entityType: SyncEntityType.todo,
+          entityId: saved.id,
+          operationType: SyncOperationType.upsert,
+          fieldGroup: SyncFieldGroup.completion,
+          payload: SyncEntityPayloads.todoCompletion(saved),
+        ),
+      );
+    }
+    if (existing == null || existing.manualOrder != saved.manualOrder) {
+      changes.add(
+        PendingSyncChange(
+          entityType: SyncEntityType.todo,
+          entityId: saved.id,
+          operationType: SyncOperationType.upsert,
+          fieldGroup: SyncFieldGroup.order,
+          payload: SyncEntityPayloads.todoOrder(saved),
+        ),
+      );
+    }
+    if (existing?.deletedAt != saved.deletedAt) {
+      changes.add(
+        PendingSyncChange(
+          entityType: SyncEntityType.todo,
+          entityId: saved.id,
+          operationType: saved.deletedAt == null
+              ? SyncOperationType.restore
+              : SyncOperationType.delete,
+          fieldGroup: SyncFieldGroup.deletion,
+          payload: SyncEntityPayloads.deletion(saved.deletedAt),
+        ),
+      );
+    }
+    return changes;
   }
+
+  bool _sameTodoContent(TodoItem left, TodoItem right) =>
+      left.title == right.title &&
+      left.localDate == right.localDate &&
+      left.createdAt == right.createdAt &&
+      left.plannedAt == right.plannedAt &&
+      left.priority == right.priority &&
+      left.categoryId == right.categoryId &&
+      left.notes == right.notes &&
+      left.deadlineAt == right.deadlineAt &&
+      left.timeZoneId == right.timeZoneId &&
+      left.recurrenceSeriesId == right.recurrenceSeriesId &&
+      left.occurrenceDate == right.occurrenceDate;
+
+  PendingSyncChange _relationAdd(String todoId, String tagId) =>
+      PendingSyncChange(
+        entityType: SyncEntityType.todoTag,
+        entityId: '$todoId:$tagId',
+        operationType: SyncOperationType.relationAdd,
+        fieldGroup: SyncFieldGroup.tags,
+        payload: SyncEntityPayloads.todoTag(todoId: todoId, tagId: tagId),
+      );
+
+  Future<PendingSyncChange> _relationRemove(
+    String todoId,
+    String tagId,
+  ) async => PendingSyncChange(
+    entityType: SyncEntityType.todoTag,
+    entityId: '$todoId:$tagId',
+    operationType: SyncOperationType.relationRemove,
+    fieldGroup: SyncFieldGroup.tags,
+    payload: SyncEntityPayloads.todoTag(
+      todoId: todoId,
+      tagId: tagId,
+      observedAddOperationIds: await _syncRecorder
+          .activeRelationAddOperationIds(todoId: todoId, tagId: tagId),
+    ),
+  );
 
   DateTime? _shiftToDate(DateTime? value, LocalDate target) {
     if (value == null) return null;

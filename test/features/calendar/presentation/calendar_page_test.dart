@@ -901,7 +901,11 @@ void main() {
       );
       addTearDown(container.dispose);
       await render(tester);
-      final target = container.read(calendarControllerProvider).visibleDates[2];
+      final today = LocalDate.fromDateTime(DateTime.now());
+      final target = container
+          .read(calendarControllerProvider)
+          .visibleDates
+          .firstWhere((date) => date != today);
       final finder = find.byKey(ValueKey('day-cell-$target'));
 
       await tester.tap(finder);

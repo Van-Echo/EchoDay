@@ -39,7 +39,9 @@ if (releaseTaskRequested && !hasReleaseSigning) {
 
 android {
     namespace = "com.vanecho.echoday"
-    compileSdk = flutter.compileSdkVersion
+    // Secure storage 11 targets the current Android platform. This only changes
+    // the compile API; minSdk/targetSdk and device compatibility stay unchanged.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

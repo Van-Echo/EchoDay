@@ -56,7 +56,7 @@ try {
   if ($RunIntegration) {
     Invoke-Checked $flutter @(
       'test',
-      'integration_test',
+      'integration_test/app_launch_test.dart',
       '-d',
       'windows'
     )

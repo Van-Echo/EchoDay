@@ -26,7 +26,7 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
         .map((row) => row.read<String>('name'))
         .toSet();
 
-    expect(database.schemaVersion, 2);
+    expect(database.schemaVersion, 3);
     expect(
       tableNames,
       containsAll({
@@ -38,6 +38,15 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
         'recurrence_exceptions',
         'holiday_years',
         'settings',
+        'sync_groups',
+        'sync_devices',
+        'sync_pairing_invites',
+        'sync_changes',
+        'sync_entity_versions',
+        'sync_relation_dots',
+        'sync_cursors',
+        'sync_conflicts',
+        'sync_runtime_states',
       }),
     );
     expect(
@@ -49,6 +58,12 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
         'todos_active_date_completion',
         'todo_tags_tag',
         'recurrence_exceptions_series_date',
+        'sync_devices_group_revoked',
+        'sync_changes_source_sequence',
+        'sync_changes_entity',
+        'sync_changes_transaction',
+        'sync_relation_dots_membership',
+        'sync_conflicts_unresolved',
       }),
     );
   });

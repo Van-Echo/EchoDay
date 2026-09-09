@@ -1,13 +1,16 @@
 name: echoday
 description: "丸成 EchoDay — an offline-first calendar and TODO planner."
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.13.2
 
 dependencies:
+  basic_utils: ^5.8.2
+  cryptography: ^2.9.0
   crypto: ^3.0.7
+  cupertino_icons: ^1.0.8
   drift: ^2.34.4
   drift_flutter: ^0.3.1
   file_selector: ^1.1.0
@@ -16,14 +19,20 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^3.4.2
+  flutter_secure_storage: 10.3.1
+  flutter_secure_storage_windows: 4.1.0
   font_awesome_flutter: ^11.0.0
   go_router: ^18.0.1
   html: ^0.15.6
   hotkey_manager: ^0.2.3
   http: ^1.5.0
   intl: ^0.20.3
+  launch_at_startup: ^0.5.1
   logging: ^1.3.0
+  mobile_scanner: ^7.4.0
   path_provider: ^2.1.6
+  qr_flutter: ^4.1.0
+  tray_manager: ^0.5.3
   url_launcher: ^6.3.2
   uuid: ^4.6.0
   window_manager: ^0.5.2
@@ -44,6 +53,7 @@ flutter:
     - LICENSE
     - assets/branding/echoday_maru.png
     - assets/branding/echoday_cheng.png
+    - windows/runner/resources/app_icon.ico
     - assets/holidays/
   fonts:
     - family: EchoDaySans

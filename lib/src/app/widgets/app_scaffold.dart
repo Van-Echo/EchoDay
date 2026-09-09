@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../features/sync/application/sync_client_controller.dart';
+import '../../features/sync/application/sync_host_controller.dart';
+import '../../features/sync/presentation/sync_status_badge.dart';
+import '../../features/sync/server/secure_sync_host_service.dart';
 import '../layout/adaptive_window.dart';
 import '../platform/platform_capabilities.dart';
 import '../providers/data_providers.dart';
@@ -38,35 +42,53 @@ class AppScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(appRefreshRevisionProvider);
     final localizations = AppLocalizations.of(context);
+    final hostSync = ref.watch(syncHostControllerProvider);
+    final clientSync = ref.watch(syncClientControllerProvider);
+    final showingClientStatus = hostSync.mode == SyncOperatingMode.client;
+    final syncIssueCount = showingClientStatus
+        ? clientSync.conflicts.length
+        : hostSync.conflicts.length +
+              hostSync.devices.where((device) => device.requiresUpgrade).length;
+    final syncWarning = showingClientStatus
+        ? clientSync.needsAttention
+        : hostSync.mode == SyncOperatingMode.host &&
+              (hostSync.lifecycle == SyncHostLifecycle.failed ||
+                  hostSync.messageCode != null);
+    Widget settingsIcon(IconData icon) => SyncStatusBadge(
+      icon: icon,
+      semanticLabel: localizations.syncAttentionSemantics,
+      issueCount: syncIssueCount,
+      hasWarning: syncWarning,
+    );
     final destinations = [
       _Destination(
         label: localizations.navCalendar,
-        icon: Icons.calendar_month_outlined,
-        selectedIcon: Icons.calendar_month_rounded,
+        icon: const Icon(Icons.calendar_month_outlined),
+        selectedIcon: const Icon(Icons.calendar_month_rounded),
         location: AppRoutes.calendar,
       ),
       _Destination(
         label: localizations.navDayTodos,
-        icon: Icons.checklist_outlined,
-        selectedIcon: Icons.checklist_rounded,
+        icon: const Icon(Icons.checklist_outlined),
+        selectedIcon: const Icon(Icons.checklist_rounded),
         location: AppRoutes.dayTodosFor(DateTime.now()),
       ),
       _Destination(
         label: localizations.navSearch,
-        icon: Icons.search_outlined,
-        selectedIcon: Icons.search_rounded,
+        icon: const Icon(Icons.search_outlined),
+        selectedIcon: const Icon(Icons.search_rounded),
         location: AppRoutes.search,
       ),
       _Destination(
         label: localizations.navSettings,
-        icon: Icons.settings_outlined,
-        selectedIcon: Icons.settings_rounded,
+        icon: settingsIcon(Icons.settings_outlined),
+        selectedIcon: settingsIcon(Icons.settings_rounded),
         location: AppRoutes.settings,
       ),
       _Destination(
         label: localizations.navAbout,
-        icon: Icons.info_outline_rounded,
-        selectedIcon: Icons.info_rounded,
+        icon: const Icon(Icons.info_outline_rounded),
+        selectedIcon: const Icon(Icons.info_rounded),
         location: AppRoutes.about,
       ),
     ];
@@ -123,8 +145,8 @@ class AppScaffold extends ConsumerWidget {
                     destinations: [
                       for (final destination in destinations)
                         NavigationRailDestination(
-                          icon: Icon(destination.icon),
-                          selectedIcon: Icon(destination.selectedIcon),
+                          icon: destination.icon,
+                          selectedIcon: destination.selectedIcon,
                           label: Text(destination.label),
                         ),
                     ],
@@ -223,8 +245,8 @@ class AppScaffold extends ConsumerWidget {
                       destinations: [
                         for (final destination in destinations)
                           NavigationDestination(
-                            icon: Icon(destination.icon),
-                            selectedIcon: Icon(destination.selectedIcon),
+                            icon: destination.icon,
+                            selectedIcon: destination.selectedIcon,
                             label: destination.label,
                           ),
                       ],
@@ -246,7 +268,7 @@ class _Destination {
   });
 
   final String label;
-  final IconData icon;
-  final IconData selectedIcon;
+  final Widget icon;
+  final Widget selectedIcon;
   final String location;
 }

@@ -2,6 +2,10 @@ import 'package:drift/drift.dart';
 
 import '../../../core/time/clock.dart';
 import '../../../data/database/app_database.dart';
+import '../../sync/data/database_sync_change_recorder.dart';
+import '../../sync/domain/sync_change_recorder.dart';
+import '../../sync/domain/sync_entity_payloads.dart';
+import '../../sync/domain/sync_protocol.dart';
 import '../domain/category.dart';
 import '../domain/repositories/category_repository.dart';
 
@@ -9,12 +13,18 @@ final class LocalCategoryRepository implements CategoryRepository {
   factory LocalCategoryRepository(
     AppDatabase database, {
     UtcClock clock = systemUtcClock,
-  }) => LocalCategoryRepository._(database, clock);
+    SyncChangeRecorder? syncRecorder,
+  }) => LocalCategoryRepository._(
+    database,
+    clock,
+    syncRecorder ?? DatabaseSyncChangeRecorder(database, clock: clock),
+  );
 
-  LocalCategoryRepository._(this._database, this._clock);
+  LocalCategoryRepository._(this._database, this._clock, this._syncRecorder);
 
   final AppDatabase _database;
   final UtcClock _clock;
+  final SyncChangeRecorder _syncRecorder;
 
   @override
   Stream<List<Category>> watchAll() {
@@ -39,10 +49,11 @@ final class LocalCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Future<Category> save(Category category) async {
-    final existing = await (_database.select(
+  Future<Category> save(Category category) => _database.transaction(() async {
+    final existingRow = await (_database.select(
       _database.categories,
     )..where((table) => table.id.equals(category.id))).getSingleOrNull();
+    final existing = existingRow == null ? null : _toDomain(existingRow);
     final now = requireUtc(_clock(), 'clock');
     final saved = Category(
       id: category.id,
@@ -50,8 +61,7 @@ final class LocalCategoryRepository implements CategoryRepository {
       colorValue: category.colorValue,
       sortOrder: category.sortOrder,
       createdAt:
-          existing?.createdAt.toUtc() ??
-          requireUtc(category.createdAt, 'createdAt'),
+          existing?.createdAt ?? requireUtc(category.createdAt, 'createdAt'),
       updatedAt: now,
       deletedAt: category.deletedAt == null
           ? null
@@ -75,32 +85,94 @@ final class LocalCategoryRepository implements CategoryRepository {
             revision: Value(saved.revision),
           ),
         );
+    final changes = <PendingSyncChange>[];
+    if (existing == null ||
+        existing.name != saved.name ||
+        existing.colorValue != saved.colorValue) {
+      changes.add(
+        PendingSyncChange(
+          entityType: SyncEntityType.category,
+          entityId: saved.id,
+          operationType: SyncOperationType.upsert,
+          fieldGroup: SyncFieldGroup.content,
+          payload: SyncEntityPayloads.categoryContent(saved),
+        ),
+      );
+    }
+    if (existing == null || existing.sortOrder != saved.sortOrder) {
+      changes.add(
+        PendingSyncChange(
+          entityType: SyncEntityType.category,
+          entityId: saved.id,
+          operationType: SyncOperationType.upsert,
+          fieldGroup: SyncFieldGroup.order,
+          payload: SyncEntityPayloads.categoryOrder(saved),
+        ),
+      );
+    }
+    if (existing?.deletedAt != saved.deletedAt && saved.deletedAt != null) {
+      changes.add(_deletionChange(saved));
+    } else if (existing?.deletedAt != null && saved.deletedAt == null) {
+      changes.add(_deletionChange(saved));
+    }
+    await _syncRecorder.recordAll(changes);
     return saved;
-  }
+  });
 
   @override
   Future<void> softDelete(String id, {DateTime? at}) async {
-    final now = requireUtc(at ?? _clock(), 'at');
-    await _database.customUpdate(
-      'UPDATE categories SET deleted_at = ?, updated_at = ?, '
-      'revision = revision + 1 WHERE id = ?',
-      variables: [
-        Variable<DateTime>(now),
-        Variable<DateTime>(now),
-        Variable<String>(id),
-      ],
-      updates: {_database.categories, _database.todos},
-    );
+    await _database.transaction(() async {
+      final row = await (_database.select(
+        _database.categories,
+      )..where((table) => table.id.equals(id))).getSingleOrNull();
+      if (row == null || row.deletedAt != null) return;
+      final now = requireUtc(at ?? _clock(), 'at');
+      await _database.customUpdate(
+        'UPDATE categories SET deleted_at = ?, updated_at = ?, '
+        'revision = revision + 1 WHERE id = ?',
+        variables: [
+          Variable<DateTime>(now),
+          Variable<DateTime>(now),
+          Variable<String>(id),
+        ],
+        updates: {_database.categories, _database.todos},
+      );
+      await _syncRecorder.recordAll([
+        _deletionChange(_toDomain(row), deletedAt: now),
+      ]);
+    });
   }
 
   @override
   Future<void> undoDelete(String id) async {
-    final now = requireUtc(_clock(), 'clock');
-    await _database.customUpdate(
-      'UPDATE categories SET deleted_at = NULL, updated_at = ?, '
-      'revision = revision + 1 WHERE id = ?',
-      variables: [Variable<DateTime>(now), Variable<String>(id)],
-      updates: {_database.categories},
+    await _database.transaction(() async {
+      final row = await (_database.select(
+        _database.categories,
+      )..where((table) => table.id.equals(id))).getSingleOrNull();
+      if (row == null || row.deletedAt == null) return;
+      final now = requireUtc(_clock(), 'clock');
+      await _database.customUpdate(
+        'UPDATE categories SET deleted_at = NULL, updated_at = ?, '
+        'revision = revision + 1 WHERE id = ?',
+        variables: [Variable<DateTime>(now), Variable<String>(id)],
+        updates: {_database.categories},
+      );
+      await _syncRecorder.recordAll([
+        _deletionChange(_toDomain(row), deletedAt: null),
+      ]);
+    });
+  }
+
+  PendingSyncChange _deletionChange(Category category, {DateTime? deletedAt}) {
+    final value = deletedAt ?? category.deletedAt;
+    return PendingSyncChange(
+      entityType: SyncEntityType.category,
+      entityId: category.id,
+      operationType: value == null
+          ? SyncOperationType.restore
+          : SyncOperationType.delete,
+      fieldGroup: SyncFieldGroup.deletion,
+      payload: SyncEntityPayloads.deletion(value),
     );
   }
 

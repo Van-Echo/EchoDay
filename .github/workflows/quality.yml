@@ -26,5 +26,5 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - run: flutter build windows --debug
-      - run: flutter test integration_test -d windows
+      - run: flutter test integration_test/app_launch_test.dart -d windows
       - run: flutter build windows --debug

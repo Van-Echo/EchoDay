@@ -1,13 +1,14 @@
 # 丸成 / EchoDay 隐私政策
 
-生效日期：2026-09-08
+生效日期：2026-09-09
 
-丸成 / EchoDay 是一款本地优先的日历与 TODO 应用。本版本不提供账号、云同步、广告、分析统计或用户画像功能。
+丸成 / EchoDay 是一款本地优先的日历与 TODO 应用。本版本不提供账号、开发者托管的云同步、广告、分析统计或用户画像功能。
 
 ## 数据如何存储
 
 - TODO、分类、标签、设置和节假日缓存保存在用户设备的应用私有目录中。
 - 应用不会主动把这些内容上传到开发者服务器或第三方分析服务。
+- 只有用户主动启用多端同步并完成设备配对后，TODO、分类、标签和重复规则才会通过加密连接发送到用户指定的主 PC 或已配对设备。EchoDay 项目方不接收、中转或保存这些内容。
 - 用户主动执行 JSON 备份或恢复时，应用通过系统文件选择器读写用户选定的文件；文件位置及后续保管由用户决定。
 - 卸载应用通常会删除应用私有目录中的本地数据。建议卸载前先导出 JSON 备份。
 
@@ -16,13 +17,14 @@
 应用仅在以下用户可感知的场景使用网络：
 
 - 用户在设置中主动更新中国法定节假日数据时，访问中华人民共和国中央人民政府网站公开接口。
+- 用户主动启用或执行多端同步时，通过局域网或用户自己的 Tailscale 网络连接已配对设备。若使用 Tailscale，其网络处理还受用户与 Tailscale 之间的服务条款和隐私政策约束。
 - 用户点击“关于”页面中的哔哩哔哩或 GitHub 链接时，交由系统浏览器打开对应网页。
 
 本版本不依赖 Google Play Services、Firebase 或其他跟踪 SDK。
 
 ## 权限
 
-Android 版声明网络访问权限。备份与恢复使用 Android 系统文件选择器，不请求读取全部存储空间的权限。
+Android 版声明网络访问权限，并仅在用户主动打开扫码配对页时申请相机权限。备份与恢复使用 Android 系统文件选择器，不请求读取全部存储空间的权限。
 
 ## 数据删除与用户权利
 
@@ -36,14 +38,16 @@ Android 版声明网络访问权限。备份与恢复使用 Android 系统文件
 
 # EchoDay Privacy Policy
 
-Effective date: 2026-09-08
+Effective date: 2026-09-09
 
-EchoDay is an offline-first calendar and TODO application. This version has no account system, cloud sync, advertising, analytics, or user profiling.
+EchoDay is an offline-first calendar and TODO application. This version has no account system, developer-hosted cloud sync, advertising, analytics, or user profiling.
 
 - TODOs, categories, tags, preferences, and holiday cache are stored in the app-private area on the user's device.
 - EchoDay does not send this content to a developer-operated server or an analytics provider.
+- When the user explicitly enables multi-device sync and pairs devices, TODOs, categories, tags, and recurrence rules are transferred over encrypted direct connections to the user's designated host PC or paired devices. The EchoDay project does not receive, relay, or store this content.
 - JSON backup and restore only access a file explicitly selected by the user through the system document picker.
-- Network access is used when the user requests a Chinese statutory-holiday update, or opens an external link from the About page.
+- Network access is used for user-initiated Chinese statutory-holiday updates, direct sync over the user's LAN or Tailscale network, and external links opened from the About page.
+- Android requests camera permission only when the user opens the QR pairing scanner. Backup and restore use the system document picker rather than broad storage access.
 - The Android app does not depend on Google Play Services, Firebase, or a tracking SDK.
 - Users can erase app data from EchoDay settings, Android system settings, or by uninstalling the app. Export a JSON backup before uninstalling if the data should be retained.
 

@@ -1,4 +1,4 @@
-name: Android release
+name: EchoDay release
 
 on:
   push:
@@ -13,7 +13,7 @@ on:
         type: boolean
         default: false
       release_tag:
-        description: Existing release tag, for example V0.1.0
+        description: Existing release tag, for example V1.0.1
         required: false
         type: string
 
@@ -21,7 +21,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: echoday-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -83,12 +83,23 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk "$universal"
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$arm64"
           cp build/app/outputs/bundle/release/app-release.aab "$bundle"
-          forbidden='(^|/)(key\.properties|[^/]*\.(jks|keystore|sqlite|sqlite3|db)|EchoDay-backup-[^/]*|before-(clear|restore)-[^/]*|[^/]*signing-credentials[^/]*)$'
+          forbidden='(^|/)(key\.properties|[^/]*\.(jks|keystore|sqlite|sqlite3|db|pem)|EchoDay-backup-[^/]*|before-(clear|restore)-[^/]*|[^/]*signing-credentials[^/]*|device\.sync\.client\.profile)$'
+          secret_content='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|^[[:space:]]*(storePassword|keyPassword)[[:space:]]*='
           for archive in "$universal" "$arm64" "$bundle"; do
             if unzip -Z1 "$archive" | grep -Eiq "$forbidden"; then
               echo "Private or user-data payload found in $archive" >&2
               exit 1
             fi
+            while IFS= read -r entry; do
+              case "${entry,,}" in
+                *.json|*.txt|*.md|*.properties|*.yaml|*.yml|*.ini|*.config|*.pem)
+                  if unzip -p "$archive" "$entry" | grep -Eaiq "$secret_content"; then
+                    echo "Possible secret content found in $archive entry $entry" >&2
+                    exit 1
+                  fi
+                  ;;
+              esac
+            done < <(unzip -Z1 "$archive")
           done
           apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$apksigner"
@@ -104,19 +115,77 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish tag release assets
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          prerelease: true
-          body_path: docs/RELEASE_NOTES_ANDROID_v0.1.0.md
-          files: dist/android/*
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Publish manually selected release assets
-        if: github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != ''
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.2
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: dart run build_runner build
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build windows --release
+      - shell: powershell
+        run: .\tool\package_windows.ps1 -SkipBuild
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: echoday-windows-release
+          path: |
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: [build, windows]
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.release_tag != '')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Select and validate release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml | head -n 1)"
+          test -n "$version"
+          notes="docs/RELEASE_NOTES_v${version}.md"
+          test -f "$notes"
+          release_tag="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            release_tag="${{ inputs.release_tag }}"
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "V${version}" && "${GITHUB_REF_NAME}" != "v${version}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match pubspec version ${version}." >&2
+            exit 1
+          fi
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "$release_tag" != "V${version}" && "$release_tag" != "v${version}" ]]; then
+            echo "Requested tag ${release_tag} does not match pubspec version ${version}." >&2
+            exit 1
+          fi
+          echo "RELEASE_NOTES_PATH=$notes" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
+
+      - name: Publish stable release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release_tag }}
-          prerelease: true
-          body_path: docs/RELEASE_NOTES_ANDROID_v0.1.0.md
-          files: dist/android/*
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: EchoDay ${{ env.RELEASE_TAG }}
+          prerelease: false
+          body_path: ${{ env.RELEASE_NOTES_PATH }}
+          files: release-assets/*
