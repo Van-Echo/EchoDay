@@ -1,7 +1,7 @@
 # EchoDay V1.0.1（S8）发布验收记录
 
-> 状态：本地发布门禁通过，等待 GitHub Release 验证
-> 最近更新：2026-09-09
+> 状态：发布门禁完成
+> 最近更新：2026-09-10
 > 发布门禁来源：[PLAN_Sync.md](PLAN_Sync.md#s8v101-发布验收)
 
 ## 已通过
@@ -38,16 +38,16 @@
 - [x] 重新运行最终静态分析、全量自动化与 Windows 启动门禁。
 - [x] 生成 V1.0.1 Windows ZIP、Android APK/AAB，并完成签名与敏感内容扫描。
 - [x] 验证 `0.1.0+1` 到最终 `1.0.1+2` 的正式签名覆盖升级。
-- [ ] 创建并验证 GitHub `V1.0.1` Release 及全部下载附件。
+- [x] 创建并验证 GitHub `V1.0.1` Release 及全部下载附件。
 
-最终本地产物 SHA-256：
+GitHub Release 远端附件 SHA-256（2026-09-10 重新下载并流式校验）：
 
 | 文件 | SHA-256 |
 | --- | --- |
-| `EchoDay-v1.0.1-windows-x64-portable.zip` | `f3160fbf83343b586ff9903254d7eafd089a5a66475f2aaa14f47d66bb2653f7` |
-| `EchoDay-v1.0.1-android-universal.apk` | `6329a823296c763916f2c8f6620aa3ea1b8979cfd2e142d9bab27a7ec4c6dd20` |
-| `EchoDay-v1.0.1-android-arm64-v8a.apk` | `4609578388dbda3c365f408595b20058b9b2aebb04f6d017d40dc98a67d75f46` |
-| `EchoDay-v1.0.1-android.aab` | `fed57b1b4cde8b104d9acca9c406244a689839c925614ad61e3371ae0f68ec2d` |
+| `EchoDay-v1.0.1-windows-x64-portable.zip` | `0c4155da17d1c6f8813f607b4680f281c734ca5a1f1e32aa972d3dfc107dfcdb` |
+| `EchoDay-v1.0.1-android-universal.apk` | `c94a0f99fc42ac1962aa46232defa285b9db1c748f212c5ea0fb2a4263bc248c` |
+| `EchoDay-v1.0.1-android-arm64-v8a.apk` | `1d3dc631219aad6ce61b7543d265b54e023dcf58e005c158407199bcf23d774b` |
+| `EchoDay-v1.0.1-android.aab` | `4c39fa54ebaab2e20a792d4fc9bf4e9783e7a95854bbeeef7cacae5670eeda46` |
 
 ## 已知非阻断维护项
 
