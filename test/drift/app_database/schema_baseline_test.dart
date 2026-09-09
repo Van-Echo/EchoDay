@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
@@ -29,7 +30,11 @@ void main() {
     for (final entry in expected.entries) {
       final file = File(entry.key);
       expect(await file.exists(), isTrue, reason: '${entry.key} is missing');
-      final digest = sha256.convert(await file.readAsBytes()).toString();
+      final source = await file.readAsString();
+      final canonicalSource = source
+          .replaceAll('\r\n', '\n')
+          .replaceAll('\r', '\n');
+      final digest = sha256.convert(utf8.encode(canonicalSource)).toString();
       expect(digest, entry.value, reason: '${entry.key} was modified in place');
     }
   });
