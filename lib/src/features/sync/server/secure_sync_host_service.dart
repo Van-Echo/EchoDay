@@ -392,13 +392,13 @@ final class SecureSyncHostService {
             'The sync group is unavailable.',
           );
         }
-        final devices =
-            await (_database.select(_database.syncDevices)..where(
-                  (row) =>
-                      row.syncGroupId.equals(identity.groupId) &
-                      row.revokedAt.isNull(),
-                ))
-                .get();
+        // A fresh client needs the public identity of revoked devices to
+        // validate and merge operations that the host accepted before those
+        // devices were revoked. Revocation still prevents authentication and
+        // new uploads; this endpoint is available only to an active peer.
+        final devices = await (_database.select(
+          _database.syncDevices,
+        )..where((row) => row.syncGroupId.equals(identity.groupId))).get();
         await _json(response, 200, {
           'devices': devices.map(_deviceJson).toList(growable: false),
         });

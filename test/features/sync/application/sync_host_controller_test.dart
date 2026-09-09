@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
@@ -8,6 +9,8 @@ import 'package:echoday/src/features/backup/application/backup_maintenance_servi
 import 'package:echoday/src/features/backup/data/backup_directory_resolver.dart';
 import 'package:echoday/src/features/backup/data/local_backup_repository.dart';
 import 'package:echoday/src/features/sync/application/sync_host_controller.dart';
+import 'package:echoday/src/features/sync/data/local_sync_repository.dart';
+import 'package:echoday/src/features/sync/domain/sync_repository.dart';
 import 'package:echoday/src/features/sync/security/device_secret_store.dart';
 import 'package:echoday/src/features/sync/server/secure_sync_host_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,6 +78,41 @@ void main() {
       expect(
         (await settings.get(SyncHostPreferenceKeys.port))?.value,
         '${running.binding!.port}',
+      );
+
+      final repository = LocalSyncRepository(database);
+      await repository.registerDevice(
+        const SyncDeviceRegistration(
+          deviceId: 'active-client',
+          displayName: 'Active phone',
+          platform: 'android',
+          appVersion: '1.0.1',
+          publicKey: 'active-public-key',
+        ),
+      );
+      await repository.registerDevice(
+        const SyncDeviceRegistration(
+          deviceId: 'revoked-client',
+          displayName: 'Revoked phone',
+          platform: 'android',
+          appVersion: '0.1.0',
+          publicKey: 'revoked-public-key',
+        ),
+      );
+      await (database.update(
+        database.syncDevices,
+      )..where((row) => row.deviceId.equals('revoked-client'))).write(
+        SyncDevicesCompanion(revokedAt: Value(DateTime.utc(2026, 9, 10))),
+      );
+      await controller.refreshAdminData();
+      final visibleDevices = container.read(syncHostControllerProvider).devices;
+      expect(
+        visibleDevices.map((device) => device.id),
+        containsAll(<String>[running.devices.single.id, 'active-client']),
+      );
+      expect(
+        visibleDevices.map((device) => device.id),
+        isNot(contains('revoked-client')),
       );
 
       final invite = await controller.createPairingInvite();

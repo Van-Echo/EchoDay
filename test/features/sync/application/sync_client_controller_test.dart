@@ -10,6 +10,7 @@ import 'package:echoday/src/features/backup/application/backup_maintenance_servi
 import 'package:echoday/src/features/backup/data/backup_directory_resolver.dart';
 import 'package:echoday/src/features/backup/data/local_backup_repository.dart';
 import 'package:echoday/src/features/sync/application/sync_client_controller.dart';
+import 'package:echoday/src/features/sync/data/database_sync_change_recorder.dart';
 import 'package:echoday/src/features/sync/data/direct_sync_client.dart';
 import 'package:echoday/src/features/sync/data/local_sync_repository.dart';
 import 'package:echoday/src/features/sync/domain/sync_client_models.dart';
@@ -34,6 +35,7 @@ void main() {
     'Android pairs, merges offline data, resyncs, and disconnects safely',
     () => _exerciseClient(
       const PlatformCapabilities(isAndroid: true, isWindows: false),
+      seedRevokedHistory: true,
     ),
     timeout: const Timeout(Duration(minutes: 2)),
   );
@@ -46,7 +48,10 @@ void main() {
   );
 }
 
-Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
+Future<void> _exerciseClient(
+  PlatformCapabilities capabilities, {
+  bool seedRevokedHistory = false,
+}) async {
   final hostDatabase = AppDatabase.forTesting(NativeDatabase.memory());
   final clientDatabase = AppDatabase.forTesting(NativeDatabase.memory());
   final temporary = await Directory.systemTemp.createTemp('echoday-s5-client-');
@@ -68,6 +73,38 @@ Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
       publicKey: hostIdentity.publicKeyBase64Url,
     ),
   );
+  if (seedRevokedHistory) {
+    await hostSync.registerDevice(
+      const SyncDeviceRegistration(
+        deviceId: 'retired-phone',
+        displayName: 'Retired phone',
+        platform: 'android',
+        appVersion: '0.1.0',
+        publicKey: 'retired-phone-public-key',
+      ),
+    );
+    await (hostDatabase.update(hostDatabase.syncRuntimeStates)..where(
+          (row) =>
+              row.key.equals(DatabaseSyncChangeRecorder.localDeviceStateKey),
+        ))
+        .write(const SyncRuntimeStatesCompanion(value: Value('retired-phone')));
+    await hostTodos.create(
+      TodoDraft(
+        title: 'Retired phone historical task',
+        localDate: LocalDate(2026, 9, 8),
+      ),
+    );
+    await (hostDatabase.update(hostDatabase.syncRuntimeStates)..where(
+          (row) =>
+              row.key.equals(DatabaseSyncChangeRecorder.localDeviceStateKey),
+        ))
+        .write(SyncRuntimeStatesCompanion(value: Value(hostIdentity.deviceId)));
+    await (hostDatabase.update(
+      hostDatabase.syncDevices,
+    )..where((row) => row.deviceId.equals('retired-phone'))).write(
+      SyncDevicesCompanion(revokedAt: Value(DateTime.utc(2026, 9, 9, 1))),
+    );
+  }
   final hostService = SecureSyncHostService(
     database: hostDatabase,
     syncRepository: hostSync,
@@ -177,8 +214,23 @@ Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
   if (capabilities.isWindows) {
     expect(pairedState.profile?.address, 'localhost');
   }
-  expect(await hostDatabase.select(hostDatabase.todos).get(), hasLength(2));
-  expect(await clientDatabase.select(clientDatabase.todos).get(), hasLength(2));
+  final seededTaskCount = seedRevokedHistory ? 1 : 0;
+  expect(
+    await hostDatabase.select(hostDatabase.todos).get(),
+    hasLength(2 + seededTaskCount),
+  );
+  expect(
+    await clientDatabase.select(clientDatabase.todos).get(),
+    hasLength(2 + seededTaskCount),
+  );
+  if (seedRevokedHistory) {
+    expect(
+      await (clientDatabase.select(clientDatabase.syncDevices)
+            ..where((row) => row.deviceId.equals('retired-phone')))
+          .getSingleOrNull(),
+      isNotNull,
+    );
+  }
 
   final connectedClientTodos = container.read(todoRepositoryProvider);
   await connectedClientTodos.create(
@@ -197,8 +249,14 @@ Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
   expect(result, isNotNull);
   expect(result!.uploaded, greaterThan(0));
   expect(result.downloaded, greaterThan(0));
-  expect(await hostDatabase.select(hostDatabase.todos).get(), hasLength(4));
-  expect(await clientDatabase.select(clientDatabase.todos).get(), hasLength(4));
+  expect(
+    await hostDatabase.select(hostDatabase.todos).get(),
+    hasLength(4 + seededTaskCount),
+  );
+  expect(
+    await clientDatabase.select(clientDatabase.todos).get(),
+    hasLength(4 + seededTaskCount),
+  );
 
   await hostService.stop();
   await connectedClientTodos.create(
@@ -212,8 +270,14 @@ Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
     container.read(syncClientControllerProvider).phase,
     SyncClientPhase.offline,
   );
-  expect(await hostDatabase.select(hostDatabase.todos).get(), hasLength(4));
-  expect(await clientDatabase.select(clientDatabase.todos).get(), hasLength(5));
+  expect(
+    await hostDatabase.select(hostDatabase.todos).get(),
+    hasLength(4 + seededTaskCount),
+  );
+  expect(
+    await clientDatabase.select(clientDatabase.todos).get(),
+    hasLength(5 + seededTaskCount),
+  );
 
   await hostService.start(
     address: InternetAddress.loopbackIPv4,
@@ -221,8 +285,14 @@ Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
   );
   final recovered = await controller.synchronize();
   expect(recovered, isNotNull);
-  expect(await hostDatabase.select(hostDatabase.todos).get(), hasLength(5));
-  expect(await clientDatabase.select(clientDatabase.todos).get(), hasLength(5));
+  expect(
+    await hostDatabase.select(hostDatabase.todos).get(),
+    hasLength(5 + seededTaskCount),
+  );
+  expect(
+    await clientDatabase.select(clientDatabase.todos).get(),
+    hasLength(5 + seededTaskCount),
+  );
 
   if (capabilities.isWindows) {
     await controller.updateEndpointAndSynchronize(
@@ -246,7 +316,10 @@ Future<void> _exerciseClient(PlatformCapabilities capabilities) async {
   );
   expect(await hostSync.activeIdentity(), isNotNull);
   expect(await container.read(syncRepositoryProvider).activeIdentity(), isNull);
-  expect(await clientDatabase.select(clientDatabase.todos).get(), hasLength(5));
+  expect(
+    await clientDatabase.select(clientDatabase.todos).get(),
+    hasLength(5 + seededTaskCount),
+  );
 }
 
 Future<void> _waitUntil(bool Function() condition) async {

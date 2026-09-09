@@ -450,9 +450,13 @@ class SyncHostController extends Notifier<SyncHostViewState> {
       return;
     }
     final database = ref.read(appDatabaseProvider);
-    final rows = await (database.select(
-      database.syncDevices,
-    )..where((row) => row.syncGroupId.equals(identity.groupId))).get();
+    final rows =
+        await (database.select(database.syncDevices)..where(
+              (row) =>
+                  row.syncGroupId.equals(identity.groupId) &
+                  row.revokedAt.isNull(),
+            ))
+            .get();
     if (!ref.mounted) return;
     final service = ref.read(secureSyncHostServiceProvider);
     final online = service.onlineDeviceIds;
@@ -477,9 +481,6 @@ class SyncHostController extends Notifier<SyncHostViewState> {
             .toList()
           ..sort((left, right) {
             if (left.isLocal != right.isLocal) return left.isLocal ? -1 : 1;
-            if ((left.revokedAt == null) != (right.revokedAt == null)) {
-              return left.revokedAt == null ? -1 : 1;
-            }
             return left.displayName.compareTo(right.displayName);
           });
     final conflicts = await repository.unresolvedConflicts();
