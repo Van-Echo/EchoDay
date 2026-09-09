@@ -1,4 +1,5 @@
 import 'package:echoday/src/app/echoday_app.dart';
+import 'package:echoday/src/app/platform/platform_capabilities.dart';
 import 'package:echoday/src/app/providers/data_providers.dart';
 import 'package:echoday/src/app/widgets/app_scaffold.dart';
 import 'package:echoday/src/features/settings/application/app_preferences.dart';
@@ -23,6 +24,9 @@ void main() {
 
   Widget app({Locale? locale = const Locale('zh')}) => ProviderScope(
     overrides: [
+      platformCapabilitiesProvider.overrideWithValue(
+        const PlatformCapabilities(isAndroid: false, isWindows: true),
+      ),
       settingsRepositoryProvider.overrideWithValue(settings),
       todosByDateProvider.overrideWith(
         (ref, date) => Stream.value(const <TodoItem>[]),
