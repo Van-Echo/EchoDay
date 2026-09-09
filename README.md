@@ -7,7 +7,7 @@
 
 <p align="center">
   让每一天，都有迹可循。<br>
-  一款面向 Windows 与 Android 的本地优先日历 TODO 应用。
+  一款面向 Windows 与 Android 的去中心化多端数据互通 RunDown + TODOList 应用。
 </p>
 
 <p align="center">
