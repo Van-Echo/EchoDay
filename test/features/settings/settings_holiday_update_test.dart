@@ -271,8 +271,21 @@ void main() {
     final expandTodaySwitch = find.byKey(
       const ValueKey('android-expand-today-by-default'),
     );
+    final expansionEnabledSwitch = find.byKey(
+      const ValueKey('android-calendar-cell-expansion-enabled'),
+    );
+    expect(expansionEnabledSwitch, findsOneWidget);
+    expect(
+      tester.widget<SwitchListTile>(expansionEnabledSwitch).value,
+      isFalse,
+    );
     expect(expandTodaySwitch, findsOneWidget);
     expect(tester.widget<SwitchListTile>(expandTodaySwitch).value, isFalse);
+    expect(tester.widget<SwitchListTile>(expandTodaySwitch).onChanged, isNull);
+    await tester.ensureVisible(expansionEnabledSwitch);
+    await tester.pumpAndSettle();
+    await tester.tap(expansionEnabledSwitch);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(expandTodaySwitch);
     await tester.pumpAndSettle();
     await tester.tap(expandTodaySwitch);
@@ -281,6 +294,13 @@ void main() {
       (await (ProviderScope.containerOf(tester.element(expandTodaySwitch))
               .read(settingsRepositoryProvider)
               .get(AppPreferenceKeys.androidExpandTodayByDefault)))
+          ?.value,
+      'true',
+    );
+    expect(
+      (await (ProviderScope.containerOf(tester.element(expandTodaySwitch))
+              .read(settingsRepositoryProvider)
+              .get(AppPreferenceKeys.androidCalendarCellExpansionEnabled)))
           ?.value,
       'true',
     );

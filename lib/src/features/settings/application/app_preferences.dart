@@ -11,6 +11,8 @@ abstract final class AppPreferenceKeys {
   static const motto = 'calendar.motto';
   static const mottoStyle = 'calendar.mottoStyle';
   static const calendarTodoFontSize = 'calendar.todoFontSize';
+  static const androidCalendarCellExpansionEnabled =
+      'calendar.androidCellExpansionEnabled';
   static const androidExpandTodayByDefault =
       'calendar.androidExpandTodayByDefault';
   static const sidebarTodoFontSize = 'todo.sidebarFontSize';
@@ -168,6 +170,13 @@ final androidExpandTodayByDefaultProvider = StreamProvider<bool>((ref) {
       .map((setting) => setting?.value == 'true');
 });
 
+final androidCalendarCellExpansionEnabledProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watch(AppPreferenceKeys.androidCalendarCellExpansionEnabled)
+      .map((setting) => setting?.value == 'true');
+});
+
 final sidebarTodoFontSizeProvider = StreamProvider<double>((ref) {
   return ref
       .watch(settingsRepositoryProvider)
@@ -248,6 +257,12 @@ Future<void> setAndroidExpandTodayByDefault(WidgetRef ref, bool value) {
   return ref
       .read(settingsRepositoryProvider)
       .set(AppPreferenceKeys.androidExpandTodayByDefault, '$value');
+}
+
+Future<void> setAndroidCalendarCellExpansionEnabled(WidgetRef ref, bool value) {
+  return ref
+      .read(settingsRepositoryProvider)
+      .set(AppPreferenceKeys.androidCalendarCellExpansionEnabled, '$value');
 }
 
 Future<void> setPostponeDays(Ref ref, int days) {

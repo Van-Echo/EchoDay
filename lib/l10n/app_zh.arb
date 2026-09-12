@@ -162,6 +162,7 @@
   "mottoSaved": "碎碎念已保存",
   "editMotto": "修改碎碎念",
   "calendarTodoFontSizeLabel": "日历格 TODO 字体大小",
+  "calendarCellExpansionEnabled": "启用日历格放大",
   "expandTodayByDefault": "默认放大当日日历格",
   "sidebarTodoFontSizeLabel": "右侧 TODOList 字体大小",
   "dayTodoFontSizeLabel": "当日 TODO 字体大小",

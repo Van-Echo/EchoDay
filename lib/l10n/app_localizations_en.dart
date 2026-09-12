@@ -488,6 +488,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarTodoFontSizeLabel => 'Calendar-cell TODO font size';
 
   @override
+  String get calendarCellExpansionEnabled => 'Enable calendar-cell expansion';
+
+  @override
   String get expandTodayByDefault => 'Expand today\'s cell by default';
 
   @override

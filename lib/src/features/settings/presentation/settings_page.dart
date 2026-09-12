@@ -78,6 +78,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         defaultCalendarTodoFontSize;
     final androidExpandTodayByDefault =
         ref.watch(androidExpandTodayByDefaultProvider).value ?? false;
+    final androidCalendarCellExpansionEnabled =
+        ref.watch(androidCalendarCellExpansionEnabledProvider).value ?? false;
     final sidebarTodoFontSize =
         ref.watch(sidebarTodoFontSizeProvider).value ??
         defaultSidebarTodoFontSize;
@@ -330,12 +332,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     if (isAndroid) ...[
                       const SizedBox(height: 8),
                       SwitchListTile.adaptive(
+                        key: const ValueKey(
+                          'android-calendar-cell-expansion-enabled',
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(localizations.calendarCellExpansionEnabled),
+                        value: androidCalendarCellExpansionEnabled,
+                        onChanged: (value) =>
+                            setAndroidCalendarCellExpansionEnabled(ref, value),
+                      ),
+                      SwitchListTile.adaptive(
                         key: const ValueKey('android-expand-today-by-default'),
                         contentPadding: EdgeInsets.zero,
                         title: Text(localizations.expandTodayByDefault),
                         value: androidExpandTodayByDefault,
-                        onChanged: (value) =>
-                            setAndroidExpandTodayByDefault(ref, value),
+                        onChanged: androidCalendarCellExpansionEnabled
+                            ? (value) =>
+                                  setAndroidExpandTodayByDefault(ref, value)
+                            : null,
                       ),
                     ],
                     const SizedBox(height: 12),

@@ -127,6 +127,10 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final today = LocalDate.fromDateTime(DateTime.now());
+    await settings.set(
+      AppPreferenceKeys.androidCalendarCellExpansionEnabled,
+      'true',
+    );
     await settings.set(AppPreferenceKeys.androidExpandTodayByDefault, 'true');
 
     await tester.pumpWidget(app(isAndroid: true));
@@ -183,6 +187,16 @@ void main() {
 
     final today = LocalDate.fromDateTime(DateTime.now());
     expect(find.byKey(ValueKey('expanded-day-card-$today')), findsNothing);
+
+    final todayWeekday = DateTime(today.year, today.month, today.day).weekday;
+    final anotherDate = today.addDays(todayWeekday == DateTime.sunday ? -1 : 1);
+    await tester.tap(find.byKey(ValueKey('day-cell-$anotherDate')));
+    await render(tester);
+
+    expect(
+      find.byKey(ValueKey('expanded-day-card-$anotherDate')),
+      findsNothing,
+    );
   });
 
   testWidgets('Android compact calendar supports its complete touch flow', (
@@ -191,6 +205,10 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     late ProviderContainer container;
+    await settings.set(
+      AppPreferenceKeys.androidCalendarCellExpansionEnabled,
+      'true',
+    );
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container = ProviderContainer(

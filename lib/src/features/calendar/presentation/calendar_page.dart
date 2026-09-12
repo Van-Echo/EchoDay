@@ -119,8 +119,11 @@ class _CalendarWorkspaceState extends ConsumerState<_CalendarWorkspace> {
   LocalDate? _focusDate;
 
   void _setAndroidFocusExpanded(bool value) {
-    if (_androidFocusExpanded != value) {
-      setState(() => _androidFocusExpanded = value);
+    final enabled =
+        ref.read(androidCalendarCellExpansionEnabledProvider).value ?? false;
+    final nextValue = enabled && value;
+    if (_androidFocusExpanded != nextValue) {
+      setState(() => _androidFocusExpanded = nextValue);
     }
   }
 
@@ -130,15 +133,26 @@ class _CalendarWorkspaceState extends ConsumerState<_CalendarWorkspace> {
     final expandTodayPreference = ref.watch(
       androidExpandTodayByDefaultProvider,
     );
-    if (!_androidFocusInitialized && expandTodayPreference.hasValue) {
+    final expansionEnabledPreference = ref.watch(
+      androidCalendarCellExpansionEnabledProvider,
+    );
+    final expansionEnabled = expansionEnabledPreference.value ?? false;
+    if (!expansionEnabled) {
+      _androidFocusExpanded = false;
+    }
+    if (!_androidFocusInitialized &&
+        expandTodayPreference.hasValue &&
+        expansionEnabledPreference.hasValue) {
       _androidFocusInitialized = true;
       _focusDate = state.selectedDate;
       final today = LocalDate.fromDateTime(DateTime.now());
       _androidFocusExpanded =
-          state.selectedDate == today && (expandTodayPreference.value ?? false);
+          expansionEnabled &&
+          state.selectedDate == today &&
+          (expandTodayPreference.value ?? false);
     } else if (_focusDate != state.selectedDate) {
       _focusDate = state.selectedDate;
-      _androidFocusExpanded = true;
+      _androidFocusExpanded = expansionEnabled;
     }
     return LayoutBuilder(
       builder: (context, constraints) {

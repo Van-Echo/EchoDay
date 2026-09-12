@@ -484,6 +484,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarTodoFontSizeLabel => '日历格 TODO 字体大小';
 
   @override
+  String get calendarCellExpansionEnabled => '启用日历格放大';
+
+  @override
   String get expandTodayByDefault => '默认放大当日日历格';
 
   @override

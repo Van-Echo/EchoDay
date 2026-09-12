@@ -162,6 +162,7 @@
   "mottoSaved": "Calendar note saved",
   "editMotto": "Edit calendar note",
   "calendarTodoFontSizeLabel": "Calendar-cell TODO font size",
+  "calendarCellExpansionEnabled": "Enable calendar-cell expansion",
   "expandTodayByDefault": "Expand today's cell by default",
   "sidebarTodoFontSizeLabel": "Sidebar TODOList font size",
   "dayTodoFontSizeLabel": "Day TODO font size",

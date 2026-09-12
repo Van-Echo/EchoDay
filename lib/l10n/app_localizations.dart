@@ -998,6 +998,12 @@ abstract class AppLocalizations {
   /// **'日历格 TODO 字体大小'**
   String get calendarTodoFontSizeLabel;
 
+  /// No description provided for @calendarCellExpansionEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用日历格放大'**
+  String get calendarCellExpansionEnabled;
+
   /// No description provided for @expandTodayByDefault.
   ///
   /// In zh, this message translates to:

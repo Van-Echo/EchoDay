@@ -1,7 +1,7 @@
 name: echoday
 description: "丸成 EchoDay — an offline-first calendar and TODO planner."
 publish_to: 'none'
-version: 1.0.3+4
+version: 1.0.4+5
 
 environment:
   sdk: ^3.13.2
