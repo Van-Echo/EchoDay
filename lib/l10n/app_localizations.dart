@@ -1778,6 +1778,90 @@ abstract class AppLocalizations {
   /// **'没有待处理冲突'**
   String get syncConflictEmpty;
 
+  /// No description provided for @syncConflictRecoverableVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'可恢复的版本'**
+  String get syncConflictRecoverableVersion;
+
+  /// No description provided for @syncConflictEntityTodo.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get syncConflictEntityTodo;
+
+  /// No description provided for @syncConflictEntitySeries.
+  ///
+  /// In zh, this message translates to:
+  /// **'重复规则'**
+  String get syncConflictEntitySeries;
+
+  /// No description provided for @syncConflictEntityException.
+  ///
+  /// In zh, this message translates to:
+  /// **'重复任务例外'**
+  String get syncConflictEntityException;
+
+  /// No description provided for @syncConflictEntityRelation.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务标签关联'**
+  String get syncConflictEntityRelation;
+
+  /// No description provided for @syncConflictGroupContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容'**
+  String get syncConflictGroupContent;
+
+  /// No description provided for @syncConflictGroupCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成状态'**
+  String get syncConflictGroupCompletion;
+
+  /// No description provided for @syncConflictGroupOrder.
+  ///
+  /// In zh, this message translates to:
+  /// **'排序'**
+  String get syncConflictGroupOrder;
+
+  /// No description provided for @syncConflictGroupTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get syncConflictGroupTags;
+
+  /// No description provided for @syncConflictGroupDeletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除状态'**
+  String get syncConflictGroupDeletion;
+
+  /// No description provided for @syncConflictValueChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'此项有不同版本，可选择恢复。'**
+  String get syncConflictValueChanged;
+
+  /// No description provided for @syncConflictRuleChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'重复规则已修改'**
+  String get syncConflictRuleChanged;
+
+  /// No description provided for @syncConflictCategoryChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'分类已修改'**
+  String get syncConflictCategoryChanged;
+
+  /// No description provided for @syncConflictNotSet.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get syncConflictNotSet;
+
   /// No description provided for @syncRestoreVersion.
   ///
   /// In zh, this message translates to:

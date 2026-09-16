@@ -28,9 +28,9 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 
 | 平台 | 下载内容 | 使用方式 |
 | --- | --- | --- |
-| Windows 10/11 x64 | `EchoDay-v1.0.4-windows-x64-portable.zip` | 解压全部文件后运行 `EchoDay.exe` |
-| 大多数现代 Android 手机 | `EchoDay-v1.0.4-android-arm64-v8a.apk` | 在系统提示下允许安装来自该来源的应用 |
-| 其他 Android 设备 | `EchoDay-v1.0.4-android-universal.apk` | 不确定 CPU 架构时使用通用包 |
+| Windows 10/11 x64 | `EchoDay-v1.0.5-windows-x64-portable.zip` | 解压全部文件后运行 `EchoDay.exe` |
+| 大多数现代 Android 手机 | `EchoDay-v1.0.5-android-arm64-v8a.apk` | 在系统提示下允许安装来自该来源的应用 |
+| 其他 Android 设备 | `EchoDay-v1.0.5-android-universal.apk` | 不确定 CPU 架构时使用通用包 |
 
 发布包解压或安装后即可使用，不需要另行安装 Flutter、Visual Studio、Android Studio 或 Google Play 服务。`.aab` 文件仅供应用商店发布，普通用户无需下载。
 
@@ -38,7 +38,7 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 
 ## 多端同步
 
-EchoDay V1.0.4 提供可选的设备直连同步，不需要 EchoDay 云服务器或账号：
+EchoDay V1.0.5 提供可选的设备直连同步，不需要 EchoDay 云服务器或账号：
 
 - 一台 Windows 电脑作为同步组中唯一的主 PC，负责接收和汇总变更。
 - Android 手机及其他 Windows 电脑作为客户端，可以离线编辑，稍后与主 PC 合并。
@@ -47,6 +47,7 @@ EchoDay V1.0.4 提供可选的设备直连同步，不需要 EchoDay 云服务�
 - 首次配对需要在主 PC 核对六位校验码并确认；之后可在主 PC 查看设备、添加备注、请求同步或撤销设备。
 - Android 会在打开或回到 EchoDay 时同步，也可手动同步；Windows 客户端在窗口重新获得焦点或用户操作时同步。
 - TODO、分类、标签和重复规则参与同步；主题、语言、快捷键、备份目录等设备偏好不会跨设备覆盖。
+- 同步冲突以可读文字展示；客户端恢复冲突版本后会立即尝试同步，主 PC 恢复后会请求已配对设备同步。离线设备在下次打开或回到应用时接收结果。
 - 如使用Tailscale，建议在安卓端为其开启 允许自启动、后台运行权限：无限制、电池优化：不限制，以保证运行稳定性。
 
 传输使用 HTTPS、证书指纹固定、Ed25519 设备签名、短期会话和防重放 nonce。EchoDay 项目方不接收、中转或保存同步数据；使用 Tailscale 时，网络服务由用户自己的 Tailscale 账号提供。
@@ -88,7 +89,7 @@ EchoDay V1.0.4 提供可选的设备直连同步，不需要 EchoDay 云服务�
 
 ## 数据与隐私
 
-EchoDay V1.0.4 不提供账号、项目方托管云同步、广告或行为分析。TODO、分类、标签和设置默认只保存在设备本地；只有在用户主动更新中国法定节假日时，应用才会访问相关公开数据源。多端同步由用户主动启用，只在用户自己的局域网或 Tailscale 网络中连接设备，EchoDay 项目方不接收或中转任务数据。
+EchoDay V1.0.5 不提供账号、项目方托管云同步、广告或行为分析。TODO、分类、标签和设置默认只保存在设备本地；只有在用户主动更新中国法定节假日时，应用才会访问相关公开数据源。多端同步由用户主动启用，只在用户自己的局域网或 Tailscale 网络中连接设备，EchoDay 项目方不接收或中转任务数据。
 
 在“设置 → 数据备份与恢复”中可以：
 
@@ -156,6 +157,7 @@ Windows 首次构建前，请在系统“开发者选项”中启用开发者模
 - [V1.0.2 发布说明](docs/RELEASE_NOTES_v1.0.2.md)
 - [V1.0.3 发布说明](docs/RELEASE_NOTES_v1.0.3.md)
 - [V1.0.4 发布说明](docs/RELEASE_NOTES_v1.0.4.md)
+- [V1.0.5 发布说明](docs/RELEASE_NOTES_v1.0.5.md)
 - [Windows v0.1.0 发布说明](docs/RELEASE_NOTES_v0.1.0.md)
 - [Android v0.1.0 发布说明](docs/RELEASE_NOTES_ANDROID_v0.1.0.md)
 

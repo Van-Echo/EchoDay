@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 
 import '../../features/calendar/application/calendar_controller.dart';
 import '../../features/settings/application/hotkey_preferences.dart';
 import '../platform/platform_capabilities.dart';
 import '../platform/windows_desktop_runtime.dart';
+import '../router/app_router.dart';
 import '../router/app_routes.dart';
 
 class HotkeyHost extends ConsumerStatefulWidget {
@@ -58,17 +58,13 @@ class _HotkeyHostState extends ConsumerState<HotkeyHost> {
           case AppHotkeyAction.today:
             if (mounted) {
               ref.read(calendarControllerProvider.notifier).goToToday();
-              context.go(AppRoutes.calendar);
+              ref.read(appRouterProvider).go(AppRoutes.calendar);
             }
           case AppHotkeyAction.addTodo:
             if (mounted) {
               final date = ref.read(calendarControllerProvider).selectedDate;
-              context.go(AppRoutes.calendar);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  ref.read(addTodoHotkeyRequestProvider.notifier).request(date);
-                }
-              });
+              ref.read(addTodoHotkeyRequestProvider.notifier).request(date);
+              ref.read(appRouterProvider).go(AppRoutes.calendar);
             }
         }
       });

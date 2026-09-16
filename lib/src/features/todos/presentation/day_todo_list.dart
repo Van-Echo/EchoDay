@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
+import '../../../app/widgets/app_snack_bar.dart';
 import '../../settings/application/app_preferences.dart';
 import '../application/recurrence_actions.dart';
 import '../application/todo_providers.dart';
@@ -1320,16 +1321,15 @@ class _TodoListTile extends ConsumerWidget {
       }
       if (!context.mounted) return;
       final strings = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(strings.taskDeleted),
-          action: scope == RecurrenceActionScope.occurrence
-              ? SnackBarAction(
-                  label: strings.undo,
-                  onPressed: () => repository.undoDelete(todo.id),
-                )
-              : null,
-        ),
+      showAppSnackBar(
+        context,
+        strings.taskDeleted,
+        action: scope == RecurrenceActionScope.occurrence
+            ? SnackBarAction(
+                label: strings.undo,
+                onPressed: () => repository.undoDelete(todo.id),
+              )
+            : null,
       );
     } catch (_) {
       if (!context.mounted) return;

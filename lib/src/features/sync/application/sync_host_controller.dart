@@ -424,7 +424,13 @@ class SyncHostController extends Notifier<SyncHostViewState> {
 
   Future<void> resolveConflict(String conflictId) async {
     await ref.read(syncRepositoryProvider).resolveConflict(conflictId);
-    await refreshAdminData();
+    try {
+      if (state.lifecycle == SyncHostLifecycle.running) {
+        await ref.read(secureSyncHostServiceProvider).requestAllDeviceSyncs();
+      }
+    } finally {
+      await refreshAdminData();
+    }
   }
 
   Future<void> setKeepRunningInTray(bool value) async {

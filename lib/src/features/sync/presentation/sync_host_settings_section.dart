@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
@@ -20,6 +19,7 @@ import '../server/secure_sync_host_service.dart';
 import '../server/sync_lan_pairing_discovery.dart';
 import '../server/sync_network_discovery.dart';
 import 'sync_client_settings_section.dart';
+import 'sync_conflict_description.dart';
 import 'sync_status_badge.dart';
 
 class SyncHostSettingsSection extends ConsumerStatefulWidget {
@@ -262,19 +262,14 @@ class _SyncHostSettingsSectionState
                     separatorBuilder: (_, _) => const Divider(),
                     itemBuilder: (context, index) {
                       final conflict = conflicts[index];
-                      final payload = const JsonEncoder.withIndent('  ')
-                          .convert(conflict.losingPayload);
+                      final description = SyncConflictDescription.from(
+                        conflict,
+                        strings,
+                      );
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          '${conflict.entityType.wireName} · '
-                          '${conflict.fieldGroup.wireName}',
-                        ),
-                        subtitle: SelectableText(
-                          payload.length > 500
-                              ? '${payload.substring(0, 500)}…'
-                              : payload,
-                        ),
+                        title: Text(description.title),
+                        subtitle: SelectableText(description.details),
                         trailing: FilledButton(
                           onPressed: () async {
                             await ref

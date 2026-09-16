@@ -911,6 +911,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncConflictEmpty => '没有待处理冲突';
 
   @override
+  String get syncConflictRecoverableVersion => '可恢复的版本';
+
+  @override
+  String get syncConflictEntityTodo => '任务';
+
+  @override
+  String get syncConflictEntitySeries => '重复规则';
+
+  @override
+  String get syncConflictEntityException => '重复任务例外';
+
+  @override
+  String get syncConflictEntityRelation => '任务标签关联';
+
+  @override
+  String get syncConflictGroupContent => '内容';
+
+  @override
+  String get syncConflictGroupCompletion => '完成状态';
+
+  @override
+  String get syncConflictGroupOrder => '排序';
+
+  @override
+  String get syncConflictGroupTags => '标签';
+
+  @override
+  String get syncConflictGroupDeletion => '删除状态';
+
+  @override
+  String get syncConflictValueChanged => '此项有不同版本，可选择恢复。';
+
+  @override
+  String get syncConflictRuleChanged => '重复规则已修改';
+
+  @override
+  String get syncConflictCategoryChanged => '分类已修改';
+
+  @override
+  String get syncConflictNotSet => '未设置';
+
+  @override
   String get syncRestoreVersion => '恢复此版本';
 
   @override

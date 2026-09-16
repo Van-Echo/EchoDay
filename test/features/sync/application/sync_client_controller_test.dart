@@ -258,6 +258,28 @@ Future<void> _exerciseClient(
     hasLength(4 + seededTaskCount),
   );
 
+  final hostEdited = (await hostTodos.getByDate(LocalDate(2026, 9, 9))).single;
+  final clientEdited = (await clientTodos.getByDate(LocalDate(2026, 9, 9)))
+      .single;
+  await hostTodos.save(hostEdited.copyWith(title: 'Host conflict version'));
+  await clientTodos.save(
+    clientEdited.copyWith(title: 'Phone conflict version'),
+  );
+  await controller.synchronize();
+  final clientConflicts = container
+      .read(syncClientControllerProvider)
+      .conflicts;
+  expect(clientConflicts, isNotEmpty);
+  expect(await hostSync.unresolvedConflicts(), isNotEmpty);
+
+  await controller.resolveConflict(clientConflicts.first.id);
+  expect(container.read(syncClientControllerProvider).conflicts, isEmpty);
+  expect(await hostSync.unresolvedConflicts(), isEmpty);
+  expect(
+    (await hostTodos.getById(hostEdited.id))!.title,
+    (await clientTodos.getById(clientEdited.id))!.title,
+  );
+
   await hostService.stop();
   await connectedClientTodos.create(
     TodoDraft(

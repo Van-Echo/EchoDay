@@ -925,6 +925,49 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncConflictEmpty => 'No unresolved conflicts';
 
   @override
+  String get syncConflictRecoverableVersion => 'Version available to restore';
+
+  @override
+  String get syncConflictEntityTodo => 'Task';
+
+  @override
+  String get syncConflictEntitySeries => 'Repeat rule';
+
+  @override
+  String get syncConflictEntityException => 'Recurring-task exception';
+
+  @override
+  String get syncConflictEntityRelation => 'Task-tag link';
+
+  @override
+  String get syncConflictGroupContent => 'Content';
+
+  @override
+  String get syncConflictGroupCompletion => 'Completion';
+
+  @override
+  String get syncConflictGroupOrder => 'Order';
+
+  @override
+  String get syncConflictGroupTags => 'Tags';
+
+  @override
+  String get syncConflictGroupDeletion => 'Deletion status';
+
+  @override
+  String get syncConflictValueChanged =>
+      'This item has another version you can restore.';
+
+  @override
+  String get syncConflictRuleChanged => 'Repeat rule changed';
+
+  @override
+  String get syncConflictCategoryChanged => 'Category changed';
+
+  @override
+  String get syncConflictNotSet => 'Not set';
+
+  @override
   String get syncRestoreVersion => 'Restore this version';
 
   @override

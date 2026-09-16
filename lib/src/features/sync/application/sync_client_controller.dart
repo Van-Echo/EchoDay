@@ -457,6 +457,7 @@ class SyncClientController extends Notifier<SyncClientViewState> {
   Future<void> resolveConflict(String conflictId) async {
     await ref.read(syncRepositoryProvider).resolveConflict(conflictId);
     await _refreshConflicts();
+    await synchronize();
   }
 
   Future<void> updateEndpointAndSynchronize(String address, int port) async {

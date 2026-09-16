@@ -7,6 +7,7 @@ import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
 import '../../../app/theme/theme_mode_controller.dart';
 import '../../../app/widgets/app_scaffold.dart';
+import '../../../app/widgets/app_snack_bar.dart';
 import '../../../app/widgets/echoday_color_picker.dart';
 import '../../backup/application/backup_preferences.dart';
 import '../../backup/domain/backup_preferences.dart';
@@ -779,9 +780,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await ref.read(backupRepositoryProvider).exportTo(target.path);
       await gateway.commitExport(target);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).backupExported)),
-      );
+      showAppSnackBar(context, AppLocalizations.of(context).backupExported);
     } on Object catch (error) {
       _showBackupError(error);
     } finally {

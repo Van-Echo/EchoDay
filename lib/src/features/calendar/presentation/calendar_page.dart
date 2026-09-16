@@ -32,6 +32,8 @@ class CalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
+  int? _scheduledAddTodoRevision;
+
   @override
   void initState() {
     super.initState();
@@ -44,16 +46,20 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     final state = ref.watch(calendarControllerProvider);
-    ref.listen<AddTodoHotkeyRequest?>(addTodoHotkeyRequestProvider, (
-      previous,
-      request,
-    ) {
-      if (request == null) return;
-      ref.read(addTodoHotkeyRequestProvider.notifier).consume(request.revision);
+    final addTodoRequest = ref.watch(addTodoHotkeyRequestProvider);
+    if (addTodoRequest != null &&
+        _scheduledAddTodoRevision != addTodoRequest.revision) {
+      _scheduledAddTodoRevision = addTodoRequest.revision;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) showTodoEditor(context, ref, date: request.date);
+        if (!mounted) return;
+        final pending = ref.read(addTodoHotkeyRequestProvider);
+        if (pending?.revision != addTodoRequest.revision) return;
+        ref
+            .read(addTodoHotkeyRequestProvider.notifier)
+            .consume(pending!.revision);
+        showTodoEditor(context, ref, date: pending.date);
       });
-    });
+    }
     final isAndroid = ref.watch(platformCapabilitiesProvider).isAndroid;
     final today = LocalDate.fromDateTime(DateTime.now());
     final selectedIsToday = state.selectedDate == today;
