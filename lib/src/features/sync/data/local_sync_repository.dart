@@ -387,6 +387,9 @@ final class LocalSyncRepository implements SyncRepository {
   @override
   Future<List<SyncConflict>> unresolvedConflicts() async {
     final identity = await _requireIdentity();
+    final group = await (_database.select(
+      _database.syncGroups,
+    )..where((row) => row.id.equals(identity.groupId))).getSingle();
     final rows =
         await (_database.select(_database.syncConflicts)
               ..where(
@@ -396,11 +399,61 @@ final class LocalSyncRepository implements SyncRepository {
               )
               ..orderBy([(row) => OrderingTerm.desc(row.createdAt)]))
             .get();
-    return rows.map(_conflictFromRow).toList(growable: false);
+    final conflicts = <SyncConflict>[];
+    for (final row in rows) {
+      final winner =
+          await (_database.select(_database.syncChanges)..where(
+                (change) => change.operationId.equals(row.winnerOperationId),
+              ))
+              .getSingleOrNull();
+      final loser =
+          await (_database.select(_database.syncChanges)..where(
+                (change) => change.operationId.equals(row.loserOperationId),
+              ))
+              .getSingleOrNull();
+      String? summary;
+      switch (row.entityType) {
+        case 'todo':
+          summary =
+              (await (_database.select(_database.todos)
+                        ..where((todo) => todo.id.equals(row.entityId)))
+                      .getSingleOrNull())
+                  ?.title;
+        case 'category':
+          summary =
+              (await (_database.select(_database.categories)
+                        ..where((category) => category.id.equals(row.entityId)))
+                      .getSingleOrNull())
+                  ?.name;
+        case 'tag':
+          summary =
+              (await (_database.select(_database.tags)
+                        ..where((tag) => tag.id.equals(row.entityId)))
+                      .getSingleOrNull())
+                  ?.name;
+      }
+      conflicts.add(
+        _conflictFromRow(
+          row,
+          winningPayload: winner == null
+              ? const {}
+              : (jsonDecode(winner.payloadJson) as Map).cast<String, dynamic>(),
+          entitySummary: summary,
+          winnerSourceDeviceId: winner?.sourceDeviceId,
+          loserSourceDeviceId: loser?.sourceDeviceId,
+          localDeviceId: identity.localDeviceId,
+          hostDeviceId: group.hostDeviceId,
+        ),
+      );
+    }
+    return conflicts;
   }
 
   @override
-  Future<void> resolveConflict(String conflictId) {
+  Future<void> resolveConflict(
+    String conflictId, {
+    bool useLosingVersion = true,
+  }) {
     return _database.transaction(() async {
       final identity = await _requireIdentity();
       final row =
@@ -418,21 +471,36 @@ final class LocalSyncRepository implements SyncRepository {
       final fieldGroup = SyncFieldGroup.values.firstWhere(
         (value) => value.wireName == row.fieldGroup,
       );
-      final payload = (jsonDecode(row.losingPayloadJson) as Map)
+      final selectedOperationId = useLosingVersion
+          ? row.loserOperationId
+          : row.winnerOperationId;
+      final selectedOperation =
+          await (_database.select(_database.syncChanges)..where(
+                (change) => change.operationId.equals(selectedOperationId),
+              ))
+              .getSingle();
+      final payload = (jsonDecode(selectedOperation.payloadJson) as Map)
           .cast<String, dynamic>();
+      final choosingDeletion =
+          row.kind == SyncConflictKind.deletionVersusEdit.name &&
+          !useLosingVersion;
+      final recordedFieldGroup = choosingDeletion
+          ? SyncFieldGroup.deletion
+          : fieldGroup;
       final pending = <PendingSyncChange>[
         PendingSyncChange(
           entityType: entityType,
           entityId: row.entityId,
-          operationType: fieldGroup == SyncFieldGroup.deletion
+          operationType: recordedFieldGroup == SyncFieldGroup.deletion
               ? (payload['deletedAt'] == null
                     ? SyncOperationType.restore
                     : SyncOperationType.delete)
               : SyncOperationType.upsert,
-          fieldGroup: fieldGroup,
+          fieldGroup: recordedFieldGroup,
           payload: payload,
         ),
-        if (row.kind == SyncConflictKind.deletionVersusEdit.name)
+        if (row.kind == SyncConflictKind.deletionVersusEdit.name &&
+            useLosingVersion)
           PendingSyncChange(
             entityType: entityType,
             entityId: row.entityId,
@@ -1220,7 +1288,15 @@ final class LocalSyncRepository implements SyncRepository {
     SyncEntityType.todoTag => 5,
   };
 
-  SyncConflict _conflictFromRow(SyncConflictRow row) => SyncConflict(
+  SyncConflict _conflictFromRow(
+    SyncConflictRow row, {
+    Map<String, dynamic> winningPayload = const {},
+    String? entitySummary,
+    String? winnerSourceDeviceId,
+    String? loserSourceDeviceId,
+    String? localDeviceId,
+    String? hostDeviceId,
+  }) => SyncConflict(
     id: row.id,
     kind: SyncConflictKind.values.byName(row.kind),
     entityType: SyncEntityType.values.firstWhere(
@@ -1233,6 +1309,12 @@ final class LocalSyncRepository implements SyncRepository {
     winnerOperationId: row.winnerOperationId,
     loserOperationId: row.loserOperationId,
     losingPayload: (jsonDecode(row.losingPayloadJson) as Map).cast(),
+    winningPayload: winningPayload,
+    entitySummary: entitySummary,
+    winnerSourceDeviceId: winnerSourceDeviceId,
+    loserSourceDeviceId: loserSourceDeviceId,
+    localDeviceId: localDeviceId,
+    hostDeviceId: hostDeviceId,
   );
 
   String _canonical(SyncOperation operation) =>

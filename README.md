@@ -28,9 +28,9 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 
 | 平台 | 下载内容 | 使用方式 |
 | --- | --- | --- |
-| Windows 10/11 x64 | `EchoDay-v1.0.5-windows-x64-portable.zip` | 解压全部文件后运行 `EchoDay.exe` |
-| 大多数现代 Android 手机 | `EchoDay-v1.0.5-android-arm64-v8a.apk` | 在系统提示下允许安装来自该来源的应用 |
-| 其他 Android 设备 | `EchoDay-v1.0.5-android-universal.apk` | 不确定 CPU 架构时使用通用包 |
+| Windows 10/11 x64 | `EchoDay-v1.0.6-windows-x64-portable.zip` | 解压全部文件后运行 `EchoDay.exe` |
+| 大多数现代 Android 手机 | `EchoDay-v1.0.6-android-arm64-v8a.apk` | 在系统提示下允许安装来自该来源的应用 |
+| 其他 Android 设备 | `EchoDay-v1.0.6-android-universal.apk` | 不确定 CPU 架构时使用通用包 |
 
 发布包解压或安装后即可使用，不需要另行安装 Flutter、Visual Studio、Android Studio 或 Google Play 服务。`.aab` 文件仅供应用商店发布，普通用户无需下载。
 
@@ -38,7 +38,7 @@ EchoDay 默认离线运行，不要求账号，不依赖云服务，也不收集
 
 ## 多端同步
 
-EchoDay V1.0.5 提供可选的设备直连同步，不需要 EchoDay 云服务器或账号：
+EchoDay V1.0.6 提供可选的设备直连同步，不需要 EchoDay 云服务器或账号：
 
 - 一台 Windows 电脑作为同步组中唯一的主 PC，负责接收和汇总变更。
 - Android 手机及其他 Windows 电脑作为客户端，可以离线编辑，稍后与主 PC 合并。
@@ -47,12 +47,12 @@ EchoDay V1.0.5 提供可选的设备直连同步，不需要 EchoDay 云服务�
 - 首次配对需要在主 PC 核对六位校验码并确认；之后可在主 PC 查看设备、添加备注、请求同步或撤销设备。
 - Android 会在打开或回到 EchoDay 时同步，也可手动同步；Windows 客户端在窗口重新获得焦点或用户操作时同步。
 - TODO、分类、标签和重复规则参与同步；主题、语言、快捷键、备份目录等设备偏好不会跨设备覆盖。
-- 同步冲突以可读文字展示；客户端恢复冲突版本后会立即尝试同步，主 PC 恢复后会请求已配对设备同步。离线设备在下次打开或回到应用时接收结果。
+- 同步冲突并列展示本地端和主 PC 端的任务概要、差异与状态，可选择任一版本；客户端选择后会立即尝试同步，主 PC 选择后会请求已配对设备同步。离线设备在下次打开或回到应用时接收结果。
 - 如使用Tailscale，建议在安卓端为其开启 允许自启动、后台运行权限：无限制、电池优化：不限制，以保证运行稳定性。
 
 传输使用 HTTPS、证书指纹固定、Ed25519 设备签名、短期会话和防重放 nonce。EchoDay 项目方不接收、中转或保存同步数据；使用 Tailscale 时，网络服务由用户自己的 Tailscale 账号提供。
 
-主 PC 必须处于开机且 EchoDay Server 服务可用的状态才能立即同步。设备离线或主 PC 暂时不可用时，本地 TODO 功能不受影响，重新连接后会继续增量合并。发生同字段并发修改时，可在同步设置中查看并恢复冲突版本。
+主 PC 必须处于开机且 EchoDay Server 服务可用的状态才能立即同步。设备离线或主 PC 暂时不可用时，本地 TODO 功能不受影响，重新连接后会继续增量合并。发生同字段并发修改时，可在同步设置中对照两端并选择保留的版本。
 
 > 本版已完成 Windows 主 PC 与小米 15 Pro 的 Tailscale、离线编辑和恢复收敛真机测试，以及 Windows 客户端的自动化 HTTPS 双数据库测试。由于当前没有第二台实体 Windows PC，PC-PC、三机实体收敛以及真实 PC 休眠/重启/网卡切换验收按项目方决定暂缓；对应自动恢复逻辑已有自动化覆盖，详情见 [S8 发布验收记录](docs/S8_RELEASE_VALIDATION.md)。
 
@@ -89,7 +89,7 @@ EchoDay V1.0.5 提供可选的设备直连同步，不需要 EchoDay 云服务�
 
 ## 数据与隐私
 
-EchoDay V1.0.5 不提供账号、项目方托管云同步、广告或行为分析。TODO、分类、标签和设置默认只保存在设备本地；只有在用户主动更新中国法定节假日时，应用才会访问相关公开数据源。多端同步由用户主动启用，只在用户自己的局域网或 Tailscale 网络中连接设备，EchoDay 项目方不接收或中转任务数据。
+EchoDay V1.0.6 不提供账号、项目方托管云同步、广告或行为分析。TODO、分类、标签和设置默认只保存在设备本地；只有在用户主动更新中国法定节假日时，应用才会访问相关公开数据源。多端同步由用户主动启用，只在用户自己的局域网或 Tailscale 网络中连接设备，EchoDay 项目方不接收或中转任务数据。
 
 在“设置 → 数据备份与恢复”中可以：
 
@@ -158,6 +158,7 @@ Windows 首次构建前，请在系统“开发者选项”中启用开发者模
 - [V1.0.3 发布说明](docs/RELEASE_NOTES_v1.0.3.md)
 - [V1.0.4 发布说明](docs/RELEASE_NOTES_v1.0.4.md)
 - [V1.0.5 发布说明](docs/RELEASE_NOTES_v1.0.5.md)
+- [V1.0.6 发布说明](docs/RELEASE_NOTES_v1.0.6.md)
 - [Windows v0.1.0 发布说明](docs/RELEASE_NOTES_v0.1.0.md)
 - [Android v0.1.0 发布说明](docs/RELEASE_NOTES_ANDROID_v0.1.0.md)
 

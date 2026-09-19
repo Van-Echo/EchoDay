@@ -4,8 +4,22 @@ import '../../../../l10n/app_localizations.dart';
 import '../domain/sync_merge_engine.dart';
 import '../domain/sync_protocol.dart';
 
+final class SyncConflictVersionDescription {
+  const SyncConflictVersionDescription({
+    required this.label,
+    required this.summary,
+    required this.details,
+    required this.useLosingVersion,
+  });
+
+  final String label;
+  final String summary;
+  final String details;
+  final bool useLosingVersion;
+}
+
 final class SyncConflictDescription {
-  const SyncConflictDescription(this.title, this.details);
+  const SyncConflictDescription(this.title, this.versions);
 
   factory SyncConflictDescription.from(
     SyncConflict conflict,
@@ -26,7 +40,73 @@ final class SyncConflictDescription {
       SyncFieldGroup.tags => strings.syncConflictGroupTags,
       SyncFieldGroup.deletion => strings.syncConflictGroupDeletion,
     };
-    final payload = conflict.losingPayload;
+    final versions = [
+      _version(
+        conflict,
+        strings,
+        conflict.winningPayload,
+        conflict.winnerSourceDeviceId,
+        false,
+      ),
+      _version(
+        conflict,
+        strings,
+        conflict.losingPayload,
+        conflict.loserSourceDeviceId,
+        true,
+      ),
+    ];
+    versions.sort((left, right) {
+      final leftLocal =
+          _sourceId(conflict, left.useLosingVersion) == conflict.localDeviceId;
+      final rightLocal =
+          _sourceId(conflict, right.useLosingVersion) == conflict.localDeviceId;
+      if (leftLocal == rightLocal) return 0;
+      return leftLocal ? -1 : 1;
+    });
+    return SyncConflictDescription('$entity · $group', versions);
+  }
+
+  final String title;
+  final List<SyncConflictVersionDescription> versions;
+
+  static String? _sourceId(SyncConflict conflict, bool losing) =>
+      losing ? conflict.loserSourceDeviceId : conflict.winnerSourceDeviceId;
+
+  static SyncConflictVersionDescription _version(
+    SyncConflict conflict,
+    AppLocalizations strings,
+    Map<String, dynamic> payload,
+    String? sourceId,
+    bool losing,
+  ) {
+    final label = sourceId != null && sourceId == conflict.hostDeviceId
+        ? strings.syncConflictHostSide
+        : sourceId != null && sourceId == conflict.localDeviceId
+        ? strings.syncConflictLocalSide
+        : strings.syncConflictOtherSide;
+    final rawSummary =
+        payload['title'] ??
+        payload['name'] ??
+        conflict.entitySummary ??
+        conflict.entityId;
+    final summary = '$rawSummary'.trim();
+    final shortSummary = summary.length > 64
+        ? '${summary.substring(0, 64)}…'
+        : summary;
+    final lines = _detailLines(payload, strings);
+    return SyncConflictVersionDescription(
+      label: label,
+      summary: shortSummary,
+      details: lines.join('\n'),
+      useLosingVersion: losing,
+    );
+  }
+
+  static List<String> _detailLines(
+    Map<String, dynamic> payload,
+    AppLocalizations strings,
+  ) {
     final lines = <String>[];
     final separator = strings.localeName.startsWith('zh') ? '：' : ': ';
 
@@ -36,16 +116,17 @@ final class SyncConflictDescription {
       if (value != null) lines.add('$label$separator$value');
     }
 
-    add('title', strings.titleLabel);
-    add(
-      'name',
-      conflict.entityType == SyncEntityType.category
-          ? strings.categoryLabel
-          : strings.tagsLabel,
-    );
     add('localDate', strings.dateLabel);
-    add('plannedAtUtc', strings.plannedAtLabel, format: _localTime);
-    add('deadlineAtUtc', strings.deadlineAtLabel, format: _localTime);
+    add(
+      'plannedAtUtc',
+      strings.plannedAtLabel,
+      format: (value) => _localTime(value) ?? strings.syncConflictNotSet,
+    );
+    add(
+      'deadlineAtUtc',
+      strings.deadlineAtLabel,
+      format: (value) => _localTime(value) ?? strings.syncConflictNotSet,
+    );
     add('notes', strings.notesLabel);
     add(
       'priority',
@@ -63,7 +144,9 @@ final class SyncConflictDescription {
       'isCompleted',
       strings.syncConflictGroupCompletion,
       format: (value) {
-        return value == true ? strings.completedTasks : strings.incompleteTasks;
+        return value == true
+            ? strings.completedTasks
+            : strings.syncConflictIncomplete;
       },
     );
     if (payload.containsKey('deletedAt')) {
@@ -94,18 +177,12 @@ final class SyncConflictDescription {
       lines.add(strings.syncConflictGroupOrder);
     }
     if (lines.isEmpty) lines.add(strings.syncConflictValueChanged);
-    return SyncConflictDescription(
-      '$entity · $group',
-      '${strings.syncConflictRecoverableVersion}\n${lines.join('\n')}',
-    );
+    return lines;
   }
 
-  final String title;
-  final String details;
-
   static String? _plain(Object? value, AppLocalizations strings) {
-    if (value == null) return strings.syncConflictNotSet;
-    if (value is! String || value.isEmpty) return null;
+    if (value == null || value == '') return strings.syncConflictNotSet;
+    if (value is! String) return null;
     return value.length > 160 ? '${value.substring(0, 160)}…' : value;
   }
 

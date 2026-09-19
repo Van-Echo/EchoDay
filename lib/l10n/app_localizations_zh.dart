@@ -914,6 +914,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncConflictRecoverableVersion => '可恢复的版本';
 
   @override
+  String get syncConflictLocalSide => '本地端';
+
+  @override
+  String get syncConflictHostSide => '主 PC 端';
+
+  @override
+  String get syncConflictOtherSide => '其他设备';
+
+  @override
+  String get syncConflictUseVersion => '使用此版本';
+
+  @override
+  String get syncConflictIncomplete => '未完成';
+
+  @override
   String get syncConflictEntityTodo => '任务';
 
   @override

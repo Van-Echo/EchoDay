@@ -14,6 +14,7 @@ import '../domain/sync_client_models.dart';
 import '../domain/sync_merge_engine.dart';
 import '../domain/sync_pairing_document.dart';
 import '../server/sync_lan_pairing_discovery.dart';
+import 'sync_conflict_comparison.dart';
 import 'sync_conflict_description.dart';
 import 'sync_status_badge.dart';
 
@@ -449,6 +450,7 @@ class _SyncClientSettingsSectionState
   Future<void> _showConflicts(List<SyncConflict> initial) async {
     final strings = AppLocalizations.of(context);
     var conflicts = initial;
+    var resolving = false;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -468,24 +470,28 @@ class _SyncClientSettingsSectionState
                         conflict,
                         strings,
                       );
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(description.title),
-                        subtitle: SelectableText(description.details),
-                        trailing: FilledButton(
-                          onPressed: () async {
+                      return SyncConflictComparison(
+                        description: description,
+                        busy: resolving,
+                        onChoose: (useLosingVersion) async {
+                          if (resolving) return;
+                          setDialogState(() => resolving = true);
+                          try {
                             await ref
                                 .read(syncClientControllerProvider.notifier)
-                                .resolveConflict(conflict.id);
+                                .resolveConflict(
+                                  conflict.id,
+                                  useLosingVersion: useLosingVersion,
+                                );
                             conflicts = ref
                                 .read(syncClientControllerProvider)
                                 .conflicts;
+                          } finally {
                             if (dialogContext.mounted) {
-                              setDialogState(() {});
+                              setDialogState(() => resolving = false);
                             }
-                          },
-                          child: Text(strings.syncRestoreVersion),
-                        ),
+                          }
+                        },
                       );
                     },
                   ),

@@ -454,8 +454,13 @@ class SyncClientController extends Notifier<SyncClientViewState> {
     return (uploaded: uploaded, conflicts: conflicts, cursor: remoteCursor);
   }
 
-  Future<void> resolveConflict(String conflictId) async {
-    await ref.read(syncRepositoryProvider).resolveConflict(conflictId);
+  Future<void> resolveConflict(
+    String conflictId, {
+    bool useLosingVersion = true,
+  }) async {
+    await ref
+        .read(syncRepositoryProvider)
+        .resolveConflict(conflictId, useLosingVersion: useLosingVersion);
     await _refreshConflicts();
     await synchronize();
   }

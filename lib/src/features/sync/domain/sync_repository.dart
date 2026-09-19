@@ -77,7 +77,10 @@ abstract interface class SyncRepository {
 
   Future<List<SyncConflict>> unresolvedConflicts();
 
-  Future<void> resolveConflict(String conflictId);
+  Future<void> resolveConflict(
+    String conflictId, {
+    bool useLosingVersion = true,
+  });
 
   /// Removes synchronization metadata while preserving all user entities.
   Future<void> leaveGroup();

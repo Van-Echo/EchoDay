@@ -422,8 +422,13 @@ class SyncHostController extends Notifier<SyncHostViewState> {
     return count;
   }
 
-  Future<void> resolveConflict(String conflictId) async {
-    await ref.read(syncRepositoryProvider).resolveConflict(conflictId);
+  Future<void> resolveConflict(
+    String conflictId, {
+    bool useLosingVersion = true,
+  }) async {
+    await ref
+        .read(syncRepositoryProvider)
+        .resolveConflict(conflictId, useLosingVersion: useLosingVersion);
     try {
       if (state.lifecycle == SyncHostLifecycle.running) {
         await ref.read(secureSyncHostServiceProvider).requestAllDeviceSyncs();

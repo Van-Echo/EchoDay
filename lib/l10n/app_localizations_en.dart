@@ -928,6 +928,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncConflictRecoverableVersion => 'Version available to restore';
 
   @override
+  String get syncConflictLocalSide => 'This device';
+
+  @override
+  String get syncConflictHostSide => 'Host PC';
+
+  @override
+  String get syncConflictOtherSide => 'Other device';
+
+  @override
+  String get syncConflictUseVersion => 'Use this version';
+
+  @override
+  String get syncConflictIncomplete => 'Incomplete';
+
+  @override
   String get syncConflictEntityTodo => 'Task';
 
   @override

@@ -1784,6 +1784,36 @@ abstract class AppLocalizations {
   /// **'可恢复的版本'**
   String get syncConflictRecoverableVersion;
 
+  /// No description provided for @syncConflictLocalSide.
+  ///
+  /// In zh, this message translates to:
+  /// **'本地端'**
+  String get syncConflictLocalSide;
+
+  /// No description provided for @syncConflictHostSide.
+  ///
+  /// In zh, this message translates to:
+  /// **'主 PC 端'**
+  String get syncConflictHostSide;
+
+  /// No description provided for @syncConflictOtherSide.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他设备'**
+  String get syncConflictOtherSide;
+
+  /// No description provided for @syncConflictUseVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用此版本'**
+  String get syncConflictUseVersion;
+
+  /// No description provided for @syncConflictIncomplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'未完成'**
+  String get syncConflictIncomplete;
+
   /// No description provided for @syncConflictEntityTodo.
   ///
   /// In zh, this message translates to:

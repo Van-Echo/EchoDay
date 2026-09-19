@@ -178,16 +178,80 @@ void main() {
     final hostConflicts = await hostSync.unresolvedConflicts();
     expect(hostConflicts, isNotEmpty);
     expect(await clientSync.unresolvedConflicts(), isNotEmpty);
+    final winningTitle = (await hostTodos.getById(original.id))!.title;
+    expect(hostConflicts.single.entitySummary, winningTitle);
+    expect(hostConflicts.single.winningPayload['title'], winningTitle);
+    expect(hostConflicts.single.losingPayload['title'], isNot(winningTitle));
+    expect(
+      {
+        hostConflicts.single.winnerSourceDeviceId,
+        hostConflicts.single.loserSourceDeviceId,
+      },
+      {hostDevice.deviceId, clientDevice.deviceId},
+    );
 
-    await hostSync.resolveConflict(hostConflicts.single.id);
+    await hostSync.resolveConflict(
+      hostConflicts.single.id,
+      useLosingVersion: false,
+    );
     expect(await hostSync.unresolvedConflicts(), isEmpty);
     await clientSync.applyBatch(await hostSync.changesAfter(baseline.cursor));
     expect(await clientSync.unresolvedConflicts(), isEmpty);
-    expect(
-      (await hostTodos.getById(original.id))!.title,
-      (await clientTodos.getById(original.id))!.title,
-    );
+    expect((await hostTodos.getById(original.id))!.title, winningTitle);
+    expect((await clientTodos.getById(original.id))!.title, winningTitle);
   });
+
+  test(
+    'completion conflict keeps task identity and either version can be chosen',
+    () async {
+      final original = await hostTodos.create(
+        TodoDraft(title: '完成 EchoDay 开发', localDate: LocalDate(2026, 9, 9)),
+      );
+      await hostSync.initializeHost(
+        groupId: 'echo-group',
+        localDevice: hostDevice,
+      );
+      await clientSync.initializeClient(
+        groupId: 'echo-group',
+        hostDeviceId: hostDevice.deviceId,
+        hostDevice: hostDevice,
+        localDevice: clientDevice,
+      );
+      await hostSync.registerDevice(clientDevice);
+      final baseline = await hostSync.changesAfter(SyncCursor());
+      await clientSync.applyBatch(baseline);
+
+      await hostTodos.complete(original.id, at: now);
+      await clientTodos.complete(original.id, at: now);
+      await clientTodos.restore(original.id);
+      await hostSync.applyBatch(await clientSync.changesAfter(baseline.cursor));
+      await clientSync.applyBatch(await hostSync.changesAfter(baseline.cursor));
+
+      final conflicts = await clientSync.unresolvedConflicts();
+      final conflict = conflicts.singleWhere(
+        (item) => item.fieldGroup == SyncFieldGroup.completion,
+      );
+      expect(conflict.entitySummary, '完成 EchoDay 开发');
+      expect(
+        {
+          conflict.winningPayload['isCompleted'],
+          conflict.losingPayload['isCompleted'],
+        },
+        {true, false},
+      );
+      expect(conflict.localDeviceId, clientDevice.deviceId);
+      expect(conflict.hostDeviceId, hostDevice.deviceId);
+
+      await clientSync.resolveConflict(
+        conflict.id,
+        useLosingVersion: conflict.loserSourceDeviceId == hostDevice.deviceId,
+      );
+      expect((await clientTodos.getById(original.id))!.isCompleted, isTrue);
+      await hostSync.applyBatch(await clientSync.changesAfter(baseline.cursor));
+      expect((await hostTodos.getById(original.id))!.isCompleted, isTrue);
+      expect(await hostSync.unresolvedConflicts(), isEmpty);
+    },
+  );
 
   test(
     'failed business transaction cannot leave an orphan sync change',

@@ -14,6 +14,12 @@ final class SyncConflict {
     required this.winnerOperationId,
     required this.loserOperationId,
     required this.losingPayload,
+    this.winningPayload = const {},
+    this.entitySummary,
+    this.winnerSourceDeviceId,
+    this.loserSourceDeviceId,
+    this.localDeviceId,
+    this.hostDeviceId,
   });
 
   final String id;
@@ -24,6 +30,12 @@ final class SyncConflict {
   final String winnerOperationId;
   final String loserOperationId;
   final Map<String, dynamic> losingPayload;
+  final Map<String, dynamic> winningPayload;
+  final String? entitySummary;
+  final String? winnerSourceDeviceId;
+  final String? loserSourceDeviceId;
+  final String? localDeviceId;
+  final String? hostDeviceId;
 }
 
 final class MaterializedSyncEntity {
