@@ -12,6 +12,7 @@ final class TodoItem {
     required this.createdAt,
     required this.updatedAt,
     this.isCompleted = false,
+    this.isAbandoned = false,
     this.plannedAt,
     this.priority = TodoPriority.none,
     this.categoryId,
@@ -20,6 +21,7 @@ final class TodoItem {
     this.deadlineAt,
     this.timeZoneId,
     this.completedAt,
+    this.abandonedAt,
     this.deletedAt,
     this.manualOrder = 0,
     this.revision = 1,
@@ -36,6 +38,7 @@ final class TodoItem {
     if (plannedAt != null) requireUtc(plannedAt!, 'plannedAt');
     if (deadlineAt != null) requireUtc(deadlineAt!, 'deadlineAt');
     if (completedAt != null) requireUtc(completedAt!, 'completedAt');
+    if (abandonedAt != null) requireUtc(abandonedAt!, 'abandonedAt');
     if (deletedAt != null) requireUtc(deletedAt!, 'deletedAt');
     if (revision < 1) {
       throw ArgumentError.value(revision, 'revision', 'must be positive');
@@ -48,12 +51,21 @@ final class TodoItem {
         'isCompleted and completedAt must represent the same state.',
       );
     }
+    if (isAbandoned != (abandonedAt != null)) {
+      throw ArgumentError(
+        'isAbandoned and abandonedAt must represent the same state.',
+      );
+    }
+    if (isCompleted && isAbandoned) {
+      throw ArgumentError('A todo cannot be completed and abandoned.');
+    }
   }
 
   final String id;
   final String title;
   final LocalDate localDate;
   final bool isCompleted;
+  final bool isAbandoned;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? plannedAt;
@@ -64,6 +76,7 @@ final class TodoItem {
   final DateTime? deadlineAt;
   final String? timeZoneId;
   final DateTime? completedAt;
+  final DateTime? abandonedAt;
   final DateTime? deletedAt;
   final double manualOrder;
   final int revision;
@@ -71,10 +84,11 @@ final class TodoItem {
   final LocalDate? occurrenceDate;
 
   bool get isDeleted => deletedAt != null;
+  bool get isTerminal => isCompleted || isAbandoned;
 
   bool isOverdueAt(DateTime nowUtc) {
     requireUtc(nowUtc, 'nowUtc');
-    return !isCompleted &&
+    return !isTerminal &&
         !isDeleted &&
         deadlineAt != null &&
         nowUtc.isAfter(deadlineAt!);
@@ -84,6 +98,7 @@ final class TodoItem {
     String? title,
     LocalDate? localDate,
     bool? isCompleted,
+    bool? isAbandoned,
     DateTime? updatedAt,
     Object? plannedAt = _unset,
     TodoPriority? priority,
@@ -93,6 +108,7 @@ final class TodoItem {
     Object? deadlineAt = _unset,
     Object? timeZoneId = _unset,
     Object? completedAt = _unset,
+    Object? abandonedAt = _unset,
     Object? deletedAt = _unset,
     double? manualOrder,
     int? revision,
@@ -104,6 +120,7 @@ final class TodoItem {
       title: title ?? this.title,
       localDate: localDate ?? this.localDate,
       isCompleted: isCompleted ?? this.isCompleted,
+      isAbandoned: isAbandoned ?? this.isAbandoned,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       plannedAt: identical(plannedAt, _unset)
@@ -124,6 +141,9 @@ final class TodoItem {
       completedAt: identical(completedAt, _unset)
           ? this.completedAt
           : completedAt as DateTime?,
+      abandonedAt: identical(abandonedAt, _unset)
+          ? this.abandonedAt
+          : abandonedAt as DateTime?,
       deletedAt: identical(deletedAt, _unset)
           ? this.deletedAt
           : deletedAt as DateTime?,

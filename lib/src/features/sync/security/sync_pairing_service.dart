@@ -193,7 +193,9 @@ final class SyncPairingService {
         await (_database.select(_database.syncDevices)
               ..where((row) => row.deviceId.equals(request.device.deviceId)))
             .getSingleOrNull();
-    if (existingDevice != null) {
+    if (existingDevice != null &&
+        (existingDevice.revokedAt == null ||
+            existingDevice.publicKey != request.device.publicKey)) {
       await _recordFailedAttempt(invite, now);
       throw const SyncProtocolException(
         SyncErrorCode.validationFailed,
@@ -239,7 +241,33 @@ final class SyncPairingService {
           !invite.expiresAt.toUtc().isAfter(now)) {
         throw StateError('Pairing invite expired before approval.');
       }
-      await _syncRepository.registerDevice(pending.publicValue.device);
+      final registration = pending.publicValue.device;
+      final existingDevice =
+          await (_database.select(_database.syncDevices)
+                ..where((row) => row.deviceId.equals(registration.deviceId)))
+              .getSingleOrNull();
+      if (existingDevice == null) {
+        await _syncRepository.registerDevice(registration);
+      } else {
+        if (existingDevice.revokedAt == null ||
+            existingDevice.publicKey != registration.publicKey) {
+          throw StateError('Device identity changed before approval.');
+        }
+        await (_database.update(
+          _database.syncDevices,
+        )..where((row) => row.deviceId.equals(registration.deviceId))).write(
+          SyncDevicesCompanion(
+            displayName: Value(registration.displayName),
+            platform: Value(registration.platform),
+            appVersion: Value(registration.appVersion),
+            protocolVersion: const Value(SyncProtocol.version),
+            publicKey: Value(registration.publicKey),
+            updatedAt: Value(now),
+            lastSeenAt: const Value(null),
+            revokedAt: const Value(null),
+          ),
+        );
+      }
       await (_database.update(_database.syncPairingInvites)
             ..where((row) => row.id.equals(invite.id)))
           .write(SyncPairingInvitesCompanion(consumedAt: Value(now)));

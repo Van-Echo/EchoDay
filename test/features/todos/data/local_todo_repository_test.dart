@@ -74,6 +74,19 @@ void main() {
       expect(fetched?.completedAt, isNull);
 
       now = now.add(const Duration(minutes: 1));
+      await todos.abandon(created.id);
+      fetched = await todos.getById(created.id);
+      expect(fetched?.isAbandoned, true);
+      expect(fetched?.abandonedAt, now);
+      expect(fetched?.isCompleted, false);
+
+      now = now.add(const Duration(minutes: 1));
+      await todos.restore(created.id);
+      fetched = await todos.getById(created.id);
+      expect(fetched?.isTerminal, false);
+      expect(fetched?.abandonedAt, isNull);
+
+      now = now.add(const Duration(minutes: 1));
       await todos.softDelete(created.id);
       expect(await todos.getById(created.id), isNull);
       expect(
@@ -232,6 +245,22 @@ void main() {
       )).items,
       isEmpty,
     );
+  });
+
+  test('search returns dates in descending order by default', () async {
+    await todos.create(
+      TodoDraft(title: 'Old', localDate: LocalDate(2026, 9, 1)),
+    );
+    await todos.create(
+      TodoDraft(title: 'Newest', localDate: LocalDate(2026, 9, 10)),
+    );
+    await todos.create(
+      TodoDraft(title: 'Middle', localDate: LocalDate(2026, 9, 5)),
+    );
+
+    final result = await todos.search(const TodoSearchQuery());
+
+    expect(result.items.map((item) => item.title), ['Newest', 'Middle', 'Old']);
   });
 
   test(

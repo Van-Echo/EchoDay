@@ -320,6 +320,12 @@ abstract class AppLocalizations {
   /// **'标记完成'**
   String get markComplete;
 
+  /// No description provided for @abandonTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃'**
+  String get abandonTask;
+
   /// No description provided for @restoreTask.
   ///
   /// In zh, this message translates to:

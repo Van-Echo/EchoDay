@@ -113,8 +113,12 @@ final class BackupDocumentCodec {
   RecurrenceSeriesRow decodeRecurrenceSeries(Map<String, dynamic> value) =>
       RecurrenceSeriesRow.fromJson(value, serializer: serializer);
 
-  TodoRow decodeTodo(Map<String, dynamic> value) =>
-      TodoRow.fromJson(value, serializer: serializer);
+  TodoRow decodeTodo(Map<String, dynamic> value) => TodoRow.fromJson({
+    ...value,
+    // Backups created before V1.0.7 do not contain abandonment state.
+    'isAbandoned': value['isAbandoned'] ?? false,
+    'abandonedAt': value['abandonedAt'],
+  }, serializer: serializer);
 
   TodoTagRow decodeTodoTag(Map<String, dynamic> value) =>
       TodoTagRow.fromJson(value, serializer: serializer);
@@ -279,9 +283,14 @@ abstract final class BackupDocumentValidator {
       _utc(row.plannedAt, '计划执行时间');
       _utc(row.deadlineAt, '计划 DDL 时间');
       _utc(row.completedAt, '完成时间');
+      _utc(row.abandonedAt, '放弃时间');
       _utc(row.deletedAt, 'TODO 删除时间');
       if (row.isCompleted != (row.completedAt != null)) {
         throw BackupFormatException('TODO ${row.id} 的完成状态不一致');
+      }
+      if (row.isAbandoned != (row.abandonedAt != null) ||
+          (row.isCompleted && row.isAbandoned)) {
+        throw BackupFormatException('TODO ${row.id} 的放弃状态不一致');
       }
       if (row.categoryId case final id? when !categoryIds.contains(id)) {
         throw BackupFormatException('TODO ${row.id} 引用了不存在的分类');

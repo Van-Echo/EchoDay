@@ -9,6 +9,7 @@ abstract interface class TodoRepository {
   Future<TodoItem> create(TodoDraft draft);
   Future<TodoItem> save(TodoItem todo);
   Future<void> complete(String id, {DateTime? at});
+  Future<void> abandon(String id, {DateTime? at});
   Future<void> restore(String id);
   Future<void> softDelete(String id, {DateTime? at});
   Future<void> undoDelete(String id);

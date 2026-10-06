@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   const expected = {
@@ -18,12 +19,16 @@ void main() {
         '3e4c5d8e86039710be487187d6d9e1d46c9e60e8cda808e522af0a0ce701d1b2',
     'drift_schemas/app_database/drift_schema_v3.json':
         '7354d87ff0f312732c900e4ffb62b5ee25aa031d50ec31ea0638b9845bd3f2d7',
+    'drift_schemas/app_database/drift_schema_v4.json':
+        'cfe62a5db4122ee26ee2379715c9b8100514e0a2b770a05e780f907c3f4743b1',
     'test/fixtures/migrations/schema_v1_seed.sql':
         '06cc800522455f7cdf554f6c6eb14ec74b37424bafe0e4dd4affbbd982fb8bc3',
     'test/fixtures/migrations/schema_v2_seed.sql':
         '23a090f7f48a9c3c16efd2535ce0cbcde2e2365978b01160c14dcd58e6dddd25',
     'test/fixtures/migrations/schema_v3_seed.sql':
         '6b4787eadca3c0f205fdd593d4aefc8f099a866b0d14c3a5a9e4c3845050c7ca',
+    'test/fixtures/migrations/schema_v4_seed.sql':
+        'a8e2c2c48118ea9aae4375a5fc96b4e71ee469a4a6db6c30ebf1bd22bad75143',
   };
 
   test('published Drift schema snapshots remain immutable', () async {
@@ -74,6 +79,19 @@ void main() {
     expect(await database.select(database.syncDevices).get(), hasLength(1));
     expect(await database.select(database.syncChanges).get(), hasLength(1));
     expect(await database.select(database.syncConflicts).get(), hasLength(1));
+  });
+
+  test('v4 representative seed loads into the published schema', () async {
+    final database = v4.DatabaseAtV4(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await _runSeed(database, 'test/fixtures/migrations/schema_v4_seed.sql');
+
+    final todos = await database.select(database.todos).get();
+    expect(todos, hasLength(1));
+    expect(todos.single.isAbandoned, 1);
+    expect(todos.single.abandonedAt, isNot(equals(null)));
+    expect(await database.select(database.settings).get(), hasLength(1));
   });
 }
 

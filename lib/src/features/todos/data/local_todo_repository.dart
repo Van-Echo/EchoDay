@@ -94,7 +94,9 @@ final class LocalTodoRepository implements TodoRepository {
                 _database.todos.deletedAt.isNull(),
           )
           ..orderBy([
-            OrderingTerm.asc(_database.todos.isCompleted),
+            OrderingTerm.asc(
+              _database.todos.isCompleted | _database.todos.isAbandoned,
+            ),
             OrderingTerm.asc(_database.todos.manualOrder),
             OrderingTerm.asc(_database.todos.createdAt),
           ]);
@@ -190,14 +192,43 @@ final class LocalTodoRepository implements TodoRepository {
     final item = await _requireTodo(id);
     if (item.isCompleted) return;
     final completedAt = requireUtc(at ?? _clock(), 'at');
-    await save(item.copyWith(isCompleted: true, completedAt: completedAt));
+    await save(
+      item.copyWith(
+        isCompleted: true,
+        completedAt: completedAt,
+        isAbandoned: false,
+        abandonedAt: null,
+      ),
+    );
+  }
+
+  @override
+  Future<void> abandon(String id, {DateTime? at}) async {
+    final item = await _requireTodo(id);
+    if (item.isAbandoned) return;
+    final abandonedAt = requireUtc(at ?? _clock(), 'at');
+    await save(
+      item.copyWith(
+        isCompleted: false,
+        completedAt: null,
+        isAbandoned: true,
+        abandonedAt: abandonedAt,
+      ),
+    );
   }
 
   @override
   Future<void> restore(String id) async {
     final item = await _requireTodo(id);
-    if (!item.isCompleted) return;
-    await save(item.copyWith(isCompleted: false, completedAt: null));
+    if (!item.isTerminal) return;
+    await save(
+      item.copyWith(
+        isCompleted: false,
+        completedAt: null,
+        isAbandoned: false,
+        abandonedAt: null,
+      ),
+    );
   }
 
   @override
@@ -355,8 +386,8 @@ final class LocalTodoRepository implements TodoRepository {
       matches.add(item);
     }
     matches.sort((left, right) {
-      final date = left.localDate.compareTo(right.localDate);
-      return date != 0 ? date : left.createdAt.compareTo(right.createdAt);
+      final date = right.localDate.compareTo(left.localDate);
+      return date != 0 ? date : right.createdAt.compareTo(left.createdAt);
     });
     final end = (query.offset + query.limit).clamp(0, matches.length);
     final items = query.offset >= matches.length
@@ -469,6 +500,7 @@ final class LocalTodoRepository implements TodoRepository {
         title: virtualTodo.title,
         localDate: virtualTodo.localDate,
         isCompleted: virtualTodo.isCompleted,
+        isAbandoned: virtualTodo.isAbandoned,
         createdAt: now,
         updatedAt: now,
         plannedAt: virtualTodo.plannedAt,
@@ -479,6 +511,7 @@ final class LocalTodoRepository implements TodoRepository {
         deadlineAt: virtualTodo.deadlineAt,
         timeZoneId: virtualTodo.timeZoneId,
         completedAt: virtualTodo.completedAt,
+        abandonedAt: virtualTodo.abandonedAt,
         deletedAt: virtualTodo.deletedAt,
         manualOrder: await _nextManualOrderForDate(
           virtualTodo.localDate.toString(),
@@ -575,7 +608,9 @@ final class LocalTodoRepository implements TodoRepository {
     }
     if (existing == null ||
         existing.isCompleted != saved.isCompleted ||
-        existing.completedAt != saved.completedAt) {
+        existing.completedAt != saved.completedAt ||
+        existing.isAbandoned != saved.isAbandoned ||
+        existing.abandonedAt != saved.abandonedAt) {
       changes.add(
         PendingSyncChange(
           entityType: SyncEntityType.todo,
@@ -742,6 +777,7 @@ final class LocalTodoRepository implements TodoRepository {
       title: row.title,
       localDate: LocalDate.parse(row.localDate),
       isCompleted: row.isCompleted,
+      isAbandoned: row.isAbandoned,
       createdAt: row.createdAt.toUtc(),
       updatedAt: row.updatedAt.toUtc(),
       plannedAt: row.plannedAt?.toUtc(),
@@ -752,6 +788,7 @@ final class LocalTodoRepository implements TodoRepository {
       deadlineAt: row.deadlineAt?.toUtc(),
       timeZoneId: row.timeZoneId,
       completedAt: row.completedAt?.toUtc(),
+      abandonedAt: row.abandonedAt?.toUtc(),
       deletedAt: row.deletedAt?.toUtc(),
       manualOrder: row.manualOrder,
       revision: row.revision,
@@ -768,6 +805,7 @@ final class LocalTodoRepository implements TodoRepository {
       title: Value(item.title),
       localDate: Value(item.localDate.toString()),
       isCompleted: Value(item.isCompleted),
+      isAbandoned: Value(item.isAbandoned),
       createdAt: Value(item.createdAt),
       updatedAt: Value(item.updatedAt),
       plannedAt: Value(item.plannedAt),
@@ -777,6 +815,7 @@ final class LocalTodoRepository implements TodoRepository {
       deadlineAt: Value(item.deadlineAt),
       timeZoneId: Value(item.timeZoneId),
       completedAt: Value(item.completedAt),
+      abandonedAt: Value(item.abandonedAt),
       deletedAt: Value(item.deletedAt),
       manualOrder: Value(item.manualOrder),
       revision: Value(item.revision),
@@ -786,10 +825,10 @@ final class LocalTodoRepository implements TodoRepository {
   }
 
   bool _matchesFilters(TodoItem item, TodoSearchQuery query) {
-    if (query.completion == CompletionFilter.completed && !item.isCompleted) {
+    if (query.completion == CompletionFilter.completed && !item.isTerminal) {
       return false;
     }
-    if (query.completion == CompletionFilter.incomplete && item.isCompleted) {
+    if (query.completion == CompletionFilter.incomplete && item.isTerminal) {
       return false;
     }
     if (query.fromDate != null &&

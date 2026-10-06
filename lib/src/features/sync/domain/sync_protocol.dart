@@ -4,7 +4,7 @@ import 'hybrid_logical_clock.dart';
 
 abstract final class SyncProtocol {
   static const version = 1;
-  static const targetDatabaseSchemaVersion = 3;
+  static const targetDatabaseSchemaVersion = 4;
   static const payloadFormatVersion = 1;
   static const maximumBatchOperations = 1000;
   static const maximumDecompressedBytes = 10 * 1024 * 1024;

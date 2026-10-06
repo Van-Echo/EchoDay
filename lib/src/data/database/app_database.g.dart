@@ -1080,6 +1080,21 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isAbandonedMeta = const VerificationMeta(
+    'isAbandoned',
+  );
+  @override
+  late final GeneratedColumn<bool> isAbandoned = GeneratedColumn<bool>(
+    'is_abandoned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_abandoned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1181,6 +1196,17 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _abandonedAtMeta = const VerificationMeta(
+    'abandonedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> abandonedAt = GeneratedColumn<DateTime>(
+    'abandoned_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _deletedAtMeta = const VerificationMeta(
     'deletedAt',
   );
@@ -1247,6 +1273,7 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
     title,
     localDate,
     isCompleted,
+    isAbandoned,
     createdAt,
     updatedAt,
     plannedAt,
@@ -1256,6 +1283,7 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
     deadlineAt,
     timeZoneId,
     completedAt,
+    abandonedAt,
     deletedAt,
     manualOrder,
     revision,
@@ -1301,6 +1329,15 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
         isCompleted.isAcceptableOrUnknown(
           data['is_completed']!,
           _isCompletedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_abandoned')) {
+      context.handle(
+        _isAbandonedMeta,
+        isAbandoned.isAcceptableOrUnknown(
+          data['is_abandoned']!,
+          _isAbandonedMeta,
         ),
       );
     }
@@ -1368,6 +1405,15 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
         ),
       );
     }
+    if (data.containsKey('abandoned_at')) {
+      context.handle(
+        _abandonedAtMeta,
+        abandonedAt.isAcceptableOrUnknown(
+          data['abandoned_at']!,
+          _abandonedAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('deleted_at')) {
       context.handle(
         _deletedAtMeta,
@@ -1432,6 +1478,10 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_completed'],
       )!,
+      isAbandoned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_abandoned'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1468,6 +1518,10 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}completed_at'],
       ),
+      abandonedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}abandoned_at'],
+      ),
       deletedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}deleted_at'],
@@ -1502,6 +1556,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
   final String title;
   final String localDate;
   final bool isCompleted;
+  final bool isAbandoned;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? plannedAt;
@@ -1511,6 +1566,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
   final DateTime? deadlineAt;
   final String? timeZoneId;
   final DateTime? completedAt;
+  final DateTime? abandonedAt;
   final DateTime? deletedAt;
   final double manualOrder;
   final int revision;
@@ -1521,6 +1577,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     required this.title,
     required this.localDate,
     required this.isCompleted,
+    required this.isAbandoned,
     required this.createdAt,
     required this.updatedAt,
     this.plannedAt,
@@ -1530,6 +1587,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     this.deadlineAt,
     this.timeZoneId,
     this.completedAt,
+    this.abandonedAt,
     this.deletedAt,
     required this.manualOrder,
     required this.revision,
@@ -1543,6 +1601,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     map['title'] = Variable<String>(title);
     map['local_date'] = Variable<String>(localDate);
     map['is_completed'] = Variable<bool>(isCompleted);
+    map['is_abandoned'] = Variable<bool>(isAbandoned);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || plannedAt != null) {
@@ -1564,6 +1623,9 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     if (!nullToAbsent || completedAt != null) {
       map['completed_at'] = Variable<DateTime>(completedAt);
     }
+    if (!nullToAbsent || abandonedAt != null) {
+      map['abandoned_at'] = Variable<DateTime>(abandonedAt);
+    }
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
     }
@@ -1584,6 +1646,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       title: Value(title),
       localDate: Value(localDate),
       isCompleted: Value(isCompleted),
+      isAbandoned: Value(isAbandoned),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       plannedAt: plannedAt == null && nullToAbsent
@@ -1605,6 +1668,9 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(completedAt),
+      abandonedAt: abandonedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(abandonedAt),
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
@@ -1629,6 +1695,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       title: serializer.fromJson<String>(json['title']),
       localDate: serializer.fromJson<String>(json['localDate']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
+      isAbandoned: serializer.fromJson<bool>(json['isAbandoned']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       plannedAt: serializer.fromJson<DateTime?>(json['plannedAt']),
@@ -1638,6 +1705,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       deadlineAt: serializer.fromJson<DateTime?>(json['deadlineAt']),
       timeZoneId: serializer.fromJson<String?>(json['timeZoneId']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
+      abandonedAt: serializer.fromJson<DateTime?>(json['abandonedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       manualOrder: serializer.fromJson<double>(json['manualOrder']),
       revision: serializer.fromJson<int>(json['revision']),
@@ -1655,6 +1723,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       'title': serializer.toJson<String>(title),
       'localDate': serializer.toJson<String>(localDate),
       'isCompleted': serializer.toJson<bool>(isCompleted),
+      'isAbandoned': serializer.toJson<bool>(isAbandoned),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'plannedAt': serializer.toJson<DateTime?>(plannedAt),
@@ -1664,6 +1733,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       'deadlineAt': serializer.toJson<DateTime?>(deadlineAt),
       'timeZoneId': serializer.toJson<String?>(timeZoneId),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
+      'abandonedAt': serializer.toJson<DateTime?>(abandonedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'manualOrder': serializer.toJson<double>(manualOrder),
       'revision': serializer.toJson<int>(revision),
@@ -1677,6 +1747,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     String? title,
     String? localDate,
     bool? isCompleted,
+    bool? isAbandoned,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> plannedAt = const Value.absent(),
@@ -1686,6 +1757,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     Value<DateTime?> deadlineAt = const Value.absent(),
     Value<String?> timeZoneId = const Value.absent(),
     Value<DateTime?> completedAt = const Value.absent(),
+    Value<DateTime?> abandonedAt = const Value.absent(),
     Value<DateTime?> deletedAt = const Value.absent(),
     double? manualOrder,
     int? revision,
@@ -1696,6 +1768,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     title: title ?? this.title,
     localDate: localDate ?? this.localDate,
     isCompleted: isCompleted ?? this.isCompleted,
+    isAbandoned: isAbandoned ?? this.isAbandoned,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     plannedAt: plannedAt.present ? plannedAt.value : this.plannedAt,
@@ -1705,6 +1778,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     deadlineAt: deadlineAt.present ? deadlineAt.value : this.deadlineAt,
     timeZoneId: timeZoneId.present ? timeZoneId.value : this.timeZoneId,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    abandonedAt: abandonedAt.present ? abandonedAt.value : this.abandonedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
     manualOrder: manualOrder ?? this.manualOrder,
     revision: revision ?? this.revision,
@@ -1723,6 +1797,9 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       isCompleted: data.isCompleted.present
           ? data.isCompleted.value
           : this.isCompleted,
+      isAbandoned: data.isAbandoned.present
+          ? data.isAbandoned.value
+          : this.isAbandoned,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       plannedAt: data.plannedAt.present ? data.plannedAt.value : this.plannedAt,
@@ -1740,6 +1817,9 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       completedAt: data.completedAt.present
           ? data.completedAt.value
           : this.completedAt,
+      abandonedAt: data.abandonedAt.present
+          ? data.abandonedAt.value
+          : this.abandonedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       manualOrder: data.manualOrder.present
           ? data.manualOrder.value
@@ -1761,6 +1841,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
           ..write('title: $title, ')
           ..write('localDate: $localDate, ')
           ..write('isCompleted: $isCompleted, ')
+          ..write('isAbandoned: $isAbandoned, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('plannedAt: $plannedAt, ')
@@ -1770,6 +1851,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
           ..write('deadlineAt: $deadlineAt, ')
           ..write('timeZoneId: $timeZoneId, ')
           ..write('completedAt: $completedAt, ')
+          ..write('abandonedAt: $abandonedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('manualOrder: $manualOrder, ')
           ..write('revision: $revision, ')
@@ -1785,6 +1867,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     title,
     localDate,
     isCompleted,
+    isAbandoned,
     createdAt,
     updatedAt,
     plannedAt,
@@ -1794,6 +1877,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     deadlineAt,
     timeZoneId,
     completedAt,
+    abandonedAt,
     deletedAt,
     manualOrder,
     revision,
@@ -1808,6 +1892,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
           other.title == this.title &&
           other.localDate == this.localDate &&
           other.isCompleted == this.isCompleted &&
+          other.isAbandoned == this.isAbandoned &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.plannedAt == this.plannedAt &&
@@ -1817,6 +1902,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
           other.deadlineAt == this.deadlineAt &&
           other.timeZoneId == this.timeZoneId &&
           other.completedAt == this.completedAt &&
+          other.abandonedAt == this.abandonedAt &&
           other.deletedAt == this.deletedAt &&
           other.manualOrder == this.manualOrder &&
           other.revision == this.revision &&
@@ -1829,6 +1915,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
   final Value<String> title;
   final Value<String> localDate;
   final Value<bool> isCompleted;
+  final Value<bool> isAbandoned;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> plannedAt;
@@ -1838,6 +1925,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
   final Value<DateTime?> deadlineAt;
   final Value<String?> timeZoneId;
   final Value<DateTime?> completedAt;
+  final Value<DateTime?> abandonedAt;
   final Value<DateTime?> deletedAt;
   final Value<double> manualOrder;
   final Value<int> revision;
@@ -1849,6 +1937,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     this.title = const Value.absent(),
     this.localDate = const Value.absent(),
     this.isCompleted = const Value.absent(),
+    this.isAbandoned = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.plannedAt = const Value.absent(),
@@ -1858,6 +1947,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     this.deadlineAt = const Value.absent(),
     this.timeZoneId = const Value.absent(),
     this.completedAt = const Value.absent(),
+    this.abandonedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.manualOrder = const Value.absent(),
     this.revision = const Value.absent(),
@@ -1870,6 +1960,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     required String title,
     required String localDate,
     this.isCompleted = const Value.absent(),
+    this.isAbandoned = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.plannedAt = const Value.absent(),
@@ -1879,6 +1970,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     this.deadlineAt = const Value.absent(),
     this.timeZoneId = const Value.absent(),
     this.completedAt = const Value.absent(),
+    this.abandonedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.manualOrder = const Value.absent(),
     this.revision = const Value.absent(),
@@ -1895,6 +1987,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     Expression<String>? title,
     Expression<String>? localDate,
     Expression<bool>? isCompleted,
+    Expression<bool>? isAbandoned,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? plannedAt,
@@ -1904,6 +1997,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     Expression<DateTime>? deadlineAt,
     Expression<String>? timeZoneId,
     Expression<DateTime>? completedAt,
+    Expression<DateTime>? abandonedAt,
     Expression<DateTime>? deletedAt,
     Expression<double>? manualOrder,
     Expression<int>? revision,
@@ -1916,6 +2010,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
       if (title != null) 'title': title,
       if (localDate != null) 'local_date': localDate,
       if (isCompleted != null) 'is_completed': isCompleted,
+      if (isAbandoned != null) 'is_abandoned': isAbandoned,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (plannedAt != null) 'planned_at': plannedAt,
@@ -1925,6 +2020,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
       if (deadlineAt != null) 'deadline_at': deadlineAt,
       if (timeZoneId != null) 'time_zone_id': timeZoneId,
       if (completedAt != null) 'completed_at': completedAt,
+      if (abandonedAt != null) 'abandoned_at': abandonedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (manualOrder != null) 'manual_order': manualOrder,
       if (revision != null) 'revision': revision,
@@ -1940,6 +2036,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     Value<String>? title,
     Value<String>? localDate,
     Value<bool>? isCompleted,
+    Value<bool>? isAbandoned,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? plannedAt,
@@ -1949,6 +2046,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     Value<DateTime?>? deadlineAt,
     Value<String?>? timeZoneId,
     Value<DateTime?>? completedAt,
+    Value<DateTime?>? abandonedAt,
     Value<DateTime?>? deletedAt,
     Value<double>? manualOrder,
     Value<int>? revision,
@@ -1961,6 +2059,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
       title: title ?? this.title,
       localDate: localDate ?? this.localDate,
       isCompleted: isCompleted ?? this.isCompleted,
+      isAbandoned: isAbandoned ?? this.isAbandoned,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       plannedAt: plannedAt ?? this.plannedAt,
@@ -1970,6 +2069,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
       deadlineAt: deadlineAt ?? this.deadlineAt,
       timeZoneId: timeZoneId ?? this.timeZoneId,
       completedAt: completedAt ?? this.completedAt,
+      abandonedAt: abandonedAt ?? this.abandonedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       manualOrder: manualOrder ?? this.manualOrder,
       revision: revision ?? this.revision,
@@ -1993,6 +2093,9 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     }
     if (isCompleted.present) {
       map['is_completed'] = Variable<bool>(isCompleted.value);
+    }
+    if (isAbandoned.present) {
+      map['is_abandoned'] = Variable<bool>(isAbandoned.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -2020,6 +2123,9 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     }
     if (completedAt.present) {
       map['completed_at'] = Variable<DateTime>(completedAt.value);
+    }
+    if (abandonedAt.present) {
+      map['abandoned_at'] = Variable<DateTime>(abandonedAt.value);
     }
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
@@ -2049,6 +2155,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
           ..write('title: $title, ')
           ..write('localDate: $localDate, ')
           ..write('isCompleted: $isCompleted, ')
+          ..write('isAbandoned: $isAbandoned, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('plannedAt: $plannedAt, ')
@@ -2058,6 +2165,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
           ..write('deadlineAt: $deadlineAt, ')
           ..write('timeZoneId: $timeZoneId, ')
           ..write('completedAt: $completedAt, ')
+          ..write('abandonedAt: $abandonedAt, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('manualOrder: $manualOrder, ')
           ..write('revision: $revision, ')
@@ -10629,6 +10737,7 @@ typedef $$TodosTableCreateCompanionBuilder = TodosCompanion Function({
   required String title,
   required String localDate,
   Value<bool> isCompleted,
+  Value<bool> isAbandoned,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> plannedAt,
@@ -10638,6 +10747,7 @@ typedef $$TodosTableCreateCompanionBuilder = TodosCompanion Function({
   Value<DateTime?> deadlineAt,
   Value<String?> timeZoneId,
   Value<DateTime?> completedAt,
+  Value<DateTime?> abandonedAt,
   Value<DateTime?> deletedAt,
   Value<double> manualOrder,
   Value<int> revision,
@@ -10650,6 +10760,7 @@ typedef $$TodosTableUpdateCompanionBuilder = TodosCompanion Function({
   Value<String> title,
   Value<String> localDate,
   Value<bool> isCompleted,
+  Value<bool> isAbandoned,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> plannedAt,
@@ -10659,6 +10770,7 @@ typedef $$TodosTableUpdateCompanionBuilder = TodosCompanion Function({
   Value<DateTime?> deadlineAt,
   Value<String?> timeZoneId,
   Value<DateTime?> completedAt,
+  Value<DateTime?> abandonedAt,
   Value<DateTime?> deletedAt,
   Value<double> manualOrder,
   Value<int> revision,
@@ -10755,6 +10867,11 @@ class $$TodosTableFilterComposer extends Composer<_$AppDatabase, $TodosTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get isAbandoned => $composableBuilder(
+    column: $table.isAbandoned,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -10792,6 +10909,11 @@ class $$TodosTableFilterComposer extends Composer<_$AppDatabase, $TodosTable> {
 
   ColumnFilters<DateTime> get completedAt => $composableBuilder(
     column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get abandonedAt => $composableBuilder(
+    column: $table.abandonedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10917,6 +11039,11 @@ class $$TodosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isAbandoned => $composableBuilder(
+    column: $table.isAbandoned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10954,6 +11081,11 @@ class $$TodosTableOrderingComposer
 
   ColumnOrderings<DateTime> get completedAt => $composableBuilder(
     column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get abandonedAt => $composableBuilder(
+    column: $table.abandonedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11048,6 +11180,11 @@ class $$TodosTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isAbandoned => $composableBuilder(
+    column: $table.isAbandoned,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -11075,6 +11212,11 @@ class $$TodosTableAnnotationComposer
 
   GeneratedColumn<DateTime> get completedAt => $composableBuilder(
     column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get abandonedAt => $composableBuilder(
+    column: $table.abandonedAt,
     builder: (column) => column,
   );
 
@@ -11203,6 +11345,7 @@ class $$TodosTableTableManager
                 Value<String> title = const Value.absent(),
                 Value<String> localDate = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
+                Value<bool> isAbandoned = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> plannedAt = const Value.absent(),
@@ -11212,6 +11355,7 @@ class $$TodosTableTableManager
                 Value<DateTime?> deadlineAt = const Value.absent(),
                 Value<String?> timeZoneId = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
+                Value<DateTime?> abandonedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<double> manualOrder = const Value.absent(),
                 Value<int> revision = const Value.absent(),
@@ -11223,6 +11367,7 @@ class $$TodosTableTableManager
                 title: title,
                 localDate: localDate,
                 isCompleted: isCompleted,
+                isAbandoned: isAbandoned,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 plannedAt: plannedAt,
@@ -11232,6 +11377,7 @@ class $$TodosTableTableManager
                 deadlineAt: deadlineAt,
                 timeZoneId: timeZoneId,
                 completedAt: completedAt,
+                abandonedAt: abandonedAt,
                 deletedAt: deletedAt,
                 manualOrder: manualOrder,
                 revision: revision,
@@ -11245,6 +11391,7 @@ class $$TodosTableTableManager
                 required String title,
                 required String localDate,
                 Value<bool> isCompleted = const Value.absent(),
+                Value<bool> isAbandoned = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> plannedAt = const Value.absent(),
@@ -11254,6 +11401,7 @@ class $$TodosTableTableManager
                 Value<DateTime?> deadlineAt = const Value.absent(),
                 Value<String?> timeZoneId = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
+                Value<DateTime?> abandonedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
                 Value<double> manualOrder = const Value.absent(),
                 Value<int> revision = const Value.absent(),
@@ -11265,6 +11413,7 @@ class $$TodosTableTableManager
                 title: title,
                 localDate: localDate,
                 isCompleted: isCompleted,
+                isAbandoned: isAbandoned,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 plannedAt: plannedAt,
@@ -11274,6 +11423,7 @@ class $$TodosTableTableManager
                 deadlineAt: deadlineAt,
                 timeZoneId: timeZoneId,
                 completedAt: completedAt,
+                abandonedAt: abandonedAt,
                 deletedAt: deletedAt,
                 manualOrder: manualOrder,
                 revision: revision,

@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../../app/providers/data_providers.dart';
-import '../../../app/router/app_routes.dart';
 import '../../../app/widgets/app_scaffold.dart';
 import '../../../app/widgets/echoday_date_picker.dart';
 import '../../todos/application/todo_providers.dart';
@@ -18,6 +16,7 @@ import '../../todos/domain/todo_item.dart';
 import '../../todos/domain/todo_priority.dart';
 import '../../todos/domain/todo_search.dart'
     show CompletionFilter, TodoSearchPage, TodoSearchQuery;
+import '../../todos/presentation/todo_editor.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
@@ -281,6 +280,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 tags: tags
                     .where((tag) => value.items[index].tagIds.contains(tag.id))
                     .toList(),
+                onTap: () async {
+                  final todo = value.items[index];
+                  await showTodoEditor(
+                    context,
+                    ref,
+                    date: todo.localDate,
+                    todo: todo,
+                  );
+                  if (mounted) await _search();
+                },
               ),
             ),
           ),
@@ -353,11 +362,13 @@ class _SearchResultTile extends StatelessWidget {
     required this.todo,
     required this.category,
     required this.tags,
+    required this.onTap,
   });
 
   final TodoItem todo;
   final Category? category;
   final List<Tag> tags;
+  final Future<void> Function() onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -379,19 +390,18 @@ class _SearchResultTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: () => context.go(
-          '${AppRoutes.dayTodosForLocalDate(todo.localDate)}'
-          '?todo=${Uri.encodeQueryComponent(todo.id)}',
-        ),
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
               Icon(
-                todo.isCompleted
+                todo.isAbandoned
+                    ? Icons.cancel_rounded
+                    : todo.isCompleted
                     ? Icons.check_circle_rounded
                     : Icons.radio_button_unchecked_rounded,
-                color: todo.isCompleted ? colors.primary : colors.outline,
+                color: todo.isTerminal ? colors.primary : colors.outline,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -401,7 +411,7 @@ class _SearchResultTile extends StatelessWidget {
                     Text(
                       todo.title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        decoration: todo.isCompleted
+                        decoration: todo.isTerminal
                             ? TextDecoration.lineThrough
                             : null,
                       ),

@@ -26,7 +26,7 @@ WHERE name NOT LIKE 'sqlite_%' ORDER BY name''',
         .map((row) => row.read<String>('name'))
         .toSet();
 
-    expect(database.schemaVersion, 3);
+    expect(database.schemaVersion, 4);
     expect(
       tableNames,
       containsAll({

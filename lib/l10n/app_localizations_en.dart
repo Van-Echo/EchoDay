@@ -124,6 +124,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markComplete => 'Mark complete';
 
   @override
+  String get abandonTask => 'Abandon';
+
+  @override
   String get restoreTask => 'Restore task';
 
   @override

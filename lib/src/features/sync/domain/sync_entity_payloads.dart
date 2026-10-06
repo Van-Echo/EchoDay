@@ -22,6 +22,8 @@ abstract final class SyncEntityPayloads {
   static Map<String, dynamic> todoCompletion(TodoItem item) => {
     'isCompleted': item.isCompleted,
     'completedAtUtc': item.completedAt?.toIso8601String(),
+    'isAbandoned': item.isAbandoned,
+    'abandonedAtUtc': item.abandonedAt?.toIso8601String(),
   };
 
   static Map<String, dynamic> todoOrder(TodoItem item) => {

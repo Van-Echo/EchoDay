@@ -722,6 +722,8 @@ final class LocalSyncRepository implements SyncRepository {
           payload: {
             'isCompleted': row.isCompleted,
             'completedAtUtc': row.completedAt?.toUtc().toIso8601String(),
+            'isAbandoned': row.isAbandoned,
+            'abandonedAtUtc': row.abandonedAt?.toUtc().toIso8601String(),
           },
         ),
         PendingSyncChange(
@@ -922,6 +924,7 @@ final class LocalSyncRepository implements SyncRepository {
                 title: _string(content, 'title'),
                 localDate: _string(content, 'localDate'),
                 isCompleted: Value(_boolean(completion, 'isCompleted')),
+                isAbandoned: Value(_boolean(completion, 'isAbandoned')),
                 createdAt: _date(content['createdAtUtc'], 'createdAtUtc'),
                 updatedAt: now,
                 plannedAt: Value(_nullableDate(content['plannedAtUtc'])),
@@ -932,6 +935,9 @@ final class LocalSyncRepository implements SyncRepository {
                 timeZoneId: Value(_nullableString(content, 'timeZoneId')),
                 completedAt: Value(
                   _nullableDate(completion?['completedAtUtc']),
+                ),
+                abandonedAt: Value(
+                  _nullableDate(completion?['abandonedAtUtc']),
                 ),
                 deletedAt: Value(deletedAt),
                 manualOrder: Value(_number(order, 'manualOrder', fallback: 0)),
@@ -1352,7 +1358,9 @@ final class LocalSyncRepository implements SyncRepository {
 
   bool _boolean(Map<String, dynamic>? values, String key) {
     final value = values?[key];
-    if (value == null && key == 'isCompleted') return false;
+    if (value == null && (key == 'isCompleted' || key == 'isAbandoned')) {
+      return false;
+    }
     if (value is! bool) throw FormatException('$key must be a boolean.');
     return value;
   }

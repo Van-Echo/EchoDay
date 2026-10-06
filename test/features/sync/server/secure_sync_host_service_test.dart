@@ -359,6 +359,60 @@ void main() {
         },
       );
       expect(revoked.status, 401);
+
+      // Reinstalling the app may preserve the same device identity while the
+      // host still has a revoked row. A fresh invite must reactivate that
+      // exact key instead of failing with "already registered".
+      final reconnectInvite = await service.createPairingInvite();
+      final reconnectNonce = SyncCrypto.randomToken(bytes: 16);
+      final reconnectUnsigned = PairingPrepareRequest(
+        inviteId: reconnectInvite.id,
+        inviteToken: reconnectInvite.token,
+        device: device,
+        clientNonce: reconnectNonce,
+        signature: 'pending',
+      );
+      final reconnectSignature = await clientIdentityStore.sign(
+        clientIdentity,
+        pairingPrepareMessage(reconnectUnsigned),
+      );
+      final reconnectPrepared = await _request(
+        client,
+        binding,
+        'POST',
+        '/v1/pair/prepare',
+        body: {
+          'inviteId': reconnectInvite.id,
+          'inviteToken': reconnectInvite.token,
+          'clientNonce': reconnectNonce,
+          'signature': reconnectSignature,
+          'device': {
+            'deviceId': device.deviceId,
+            'displayName': device.displayName,
+            'platform': device.platform,
+            'appVersion': device.appVersion,
+            'publicKey': device.publicKey,
+          },
+        },
+      );
+      expect(reconnectPrepared.status, 202);
+      final reconnectRequestId = reconnectPrepared.json['requestId'] as String;
+      await service.approvePairing(reconnectRequestId);
+      final reconnectPoll = await _request(
+        client,
+        binding,
+        'POST',
+        '/v1/pair/status',
+        body: {'requestId': reconnectRequestId, 'clientNonce': reconnectNonce},
+      );
+      expect(reconnectPoll.status, 200);
+      expect(reconnectPoll.json['sessionToken'], isNotEmpty);
+      final reactivatedDevice =
+          await (database.select(database.syncDevices)
+                ..where((row) => row.deviceId.equals(clientIdentity.deviceId)))
+              .getSingle();
+      expect(reactivatedDevice.revokedAt, isNull);
+
       final safeAuditText = securityEvents.join('\n');
       expect(safeAuditText, contains('replayRejected'));
       expect(safeAuditText, contains('protocolRejected'));

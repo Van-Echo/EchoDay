@@ -16,7 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../../support/in_memory_settings_repository.dart';
 
 void main() {
-  testWidgets('searches text and opens the matching task on its day', (
+  testWidgets('opens a matching task editor without leaving search', (
     tester,
   ) async {
     final database = AppDatabase.forTesting(NativeDatabase.memory());
@@ -84,6 +84,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('todo-editor-title')), findsOneWidget);
     expect(find.text('准备发布说明'), findsWidgets);
+    expect(find.byKey(const ValueKey('global-search-field')), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

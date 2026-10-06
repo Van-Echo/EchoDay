@@ -12,7 +12,7 @@ enum TodoSortMode {
 List<TodoItem> sortTodos(Iterable<TodoItem> todos, TodoSortMode mode) {
   final result = todos.toList(growable: false);
   result.sort((left, right) {
-    final completed = _compareBool(left.isCompleted, right.isCompleted);
+    final completed = _compareBool(left.isTerminal, right.isTerminal);
     if (completed != 0) return completed;
 
     final comparison = switch (mode) {

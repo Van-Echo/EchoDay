@@ -11,7 +11,7 @@ final class PostponeIncompleteTodos {
     _validateDays(days);
     final targetDate = date.addDays(days);
     final incomplete = (await _todos.getByDate(date))
-        .where((todo) => !todo.isCompleted)
+        .where((todo) => !todo.isTerminal)
         .toList(growable: false);
 
     for (final todo in incomplete) {
@@ -28,7 +28,7 @@ final class PostponeIncompleteTodos {
 
   Future<void> moveOne(TodoItem todo, {int days = 1}) async {
     _validateDays(days);
-    if (todo.isCompleted) return;
+    if (todo.isTerminal) return;
     final targetDate = todo.localDate.addDays(days);
     await _todos.save(
       todo.copyWith(

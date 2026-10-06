@@ -113,29 +113,25 @@ void main() {
     final overdueTitle = tester.widget<Text>(
       find.descendant(of: overdueTile, matching: find.text('提交周报')),
     );
-    final overdueCheckbox = tester.widget<Checkbox>(
-      find.descendant(of: overdueTile, matching: find.byType(Checkbox)),
-    );
-    expect(overdueTitle.style?.color, errorColor);
-    expect(overdueCheckbox.side?.color, errorColor);
-
-    await tester.tap(
+    final overdueStatus = tester.widget<AnimatedContainer>(
       find.descendant(
-        of: find.byKey(ValueKey('todo-${todo.id}')),
-        matching: find.byType(Checkbox),
+        of: find.byKey(ValueKey('todo-status-${todo.id}')),
+        matching: find.byType(AnimatedContainer),
       ),
     );
+    expect(overdueTitle.style?.color, errorColor);
+    expect(
+      (overdueStatus.decoration! as BoxDecoration).border,
+      Border.all(color: errorColor, width: 1.5),
+    );
+
+    await tester.tap(find.byKey(ValueKey('todo-status-${todo.id}')));
     await settle(tester);
     // Completed sections start expanded in both the sidebar and day page.
     expect(find.text('提交周报'), findsOneWidget);
     expect((await todos.getById(todo.id))?.isCompleted, isTrue);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(ValueKey('todo-${todo.id}')),
-        matching: find.byType(Checkbox),
-      ),
-    );
+    await tester.tap(find.byKey(ValueKey('todo-status-${todo.id}')));
     await settle(tester);
     expect((await todos.getById(todo.id))?.isCompleted, isFalse);
 
@@ -186,6 +182,31 @@ void main() {
     );
     expect(title.style?.fontSize, 18);
     expect(find.byType(Draggable<TodoDragPayload>), findsOneWidget);
+  });
+
+  testWidgets('abandons a task from its right-click menu and shows an X', (
+    tester,
+  ) async {
+    final todo = await todos.create(TodoDraft(title: '放弃的任务', localDate: date));
+    await tester.pumpWidget(app(compact: true));
+    await settle(tester);
+
+    final tile = find.byKey(ValueKey('todo-${todo.id}'));
+    await tester.tap(tile, buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('放弃'));
+    await settle(tester);
+
+    final abandoned = await todos.getById(todo.id);
+    expect(abandoned?.isAbandoned, isTrue);
+    expect(
+      find.descendant(of: tile, matching: find.byIcon(Icons.close_rounded)),
+      findsOneWidget,
+    );
+    final title = tester.widget<Text>(
+      find.descendant(of: tile, matching: find.text('放弃的任务')),
+    );
+    expect(title.style?.decoration, TextDecoration.lineThrough);
   });
 
   testWidgets(
@@ -728,9 +749,29 @@ final class _MemoryTodoRepository implements TodoRepository {
   }
 
   @override
+  Future<void> abandon(String id, {DateTime? at}) async {
+    final item = _items[id]!;
+    await save(
+      item.copyWith(
+        isCompleted: false,
+        completedAt: null,
+        isAbandoned: true,
+        abandonedAt: at ?? _clock(),
+      ),
+    );
+  }
+
+  @override
   Future<void> restore(String id) async {
     final item = _items[id]!;
-    await save(item.copyWith(isCompleted: false, completedAt: null));
+    await save(
+      item.copyWith(
+        isCompleted: false,
+        completedAt: null,
+        isAbandoned: false,
+        abandonedAt: null,
+      ),
+    );
   }
 
   @override

@@ -123,6 +123,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get markComplete => '标记完成';
 
   @override
+  String get abandonTask => '放弃';
+
+  @override
   String get restoreTask => '恢复任务';
 
   @override

@@ -66,6 +66,7 @@ class Todos extends Table {
   TextColumn get title => text()();
   TextColumn get localDate => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  BoolColumn get isAbandoned => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get plannedAt => dateTime().nullable()();
@@ -79,6 +80,7 @@ class Todos extends Table {
   DateTimeColumn get deadlineAt => dateTime().nullable()();
   TextColumn get timeZoneId => text().nullable()();
   DateTimeColumn get completedAt => dateTime().nullable()();
+  DateTimeColumn get abandonedAt => dateTime().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
   RealColumn get manualOrder => real().withDefault(const Constant(0))();
   IntColumn get revision => integer().withDefault(const Constant(1))();
@@ -373,7 +375,7 @@ class AppDatabase extends _$AppDatabase {
   static const databaseName = 'echoday';
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -401,6 +403,10 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createIndex(syncChangesTransaction);
         await migrator.createIndex(syncRelationDotsMembership);
         await migrator.createIndex(syncConflictsUnresolved);
+      }
+      if (from < 4 && to >= 4) {
+        await migrator.addColumn(todos, todos.isAbandoned);
+        await migrator.addColumn(todos, todos.abandonedAt);
       }
     },
     beforeOpen: (details) async {

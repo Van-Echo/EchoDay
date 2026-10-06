@@ -38,6 +38,7 @@
   "editTask": "Edit task",
   "deleteTask": "Delete task",
   "markComplete": "Mark complete",
+  "abandonTask": "Abandon",
   "restoreTask": "Restore task",
   "undo": "Undo",
   "taskDeleted": "Task deleted",

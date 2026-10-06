@@ -7,6 +7,7 @@ These public Drift schema snapshots are immutable inputs for future migration te
 | v1 | `drift_schemas/app_database/drift_schema_v1.json` | `669db0514ec8898bbe690d3add460c27c513320ae0d7715ba55e7d4c97507926` |
 | v2 | `drift_schemas/app_database/drift_schema_v2.json` | `3e4c5d8e86039710be487187d6d9e1d46c9e60e8cda808e522af0a0ce701d1b2` |
 | v3 | `drift_schemas/app_database/drift_schema_v3.json` | `7354d87ff0f312732c900e4ffb62b5ee25aa031d50ec31ea0638b9845bd3f2d7` |
+| v4 | `drift_schemas/app_database/drift_schema_v4.json` | `cfe62a5db4122ee26ee2379715c9b8100514e0a2b770a05e780f907c3f4743b1` |
 
 Representative data seeds are immutable too:
 
@@ -15,6 +16,7 @@ Representative data seeds are immutable too:
 | v1 | `test/fixtures/migrations/schema_v1_seed.sql` | `06cc800522455f7cdf554f6c6eb14ec74b37424bafe0e4dd4affbbd982fb8bc3` |
 | v2 | `test/fixtures/migrations/schema_v2_seed.sql` | `23a090f7f48a9c3c16efd2535ce0cbcde2e2365978b01160c14dcd58e6dddd25` |
 | v3 | `test/fixtures/migrations/schema_v3_seed.sql` | `6b4787eadca3c0f205fdd593d4aefc8f099a866b0d14c3a5a9e4c3845050c7ca` |
+| v4 | `test/fixtures/migrations/schema_v4_seed.sql` | `a8e2c2c48118ea9aae4375a5fc96b4e71ee469a4a6db6c30ebf1bd22bad75143` |
 
 Never regenerate or edit a published snapshot or seed in place. Add a new snapshot, seed, checksum, and migration case for every future public schema.
 

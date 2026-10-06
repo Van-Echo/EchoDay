@@ -1469,9 +1469,13 @@ class _CalendarTaskPreviewRow extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Icon(
-            item.isCompleted ? Icons.check_rounded : Icons.circle_outlined,
+            item.isAbandoned
+                ? Icons.close_rounded
+                : item.isCompleted
+                ? Icons.check_rounded
+                : Icons.circle_outlined,
             size: 9,
-            color: item.isCompleted
+            color: item.isTerminal
                 ? colors.outline
                 : itemColor ?? colors.primary,
           ),
@@ -1484,10 +1488,8 @@ class _CalendarTaskPreviewRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontSize: fontSize,
-                decoration: item.isCompleted
-                    ? TextDecoration.lineThrough
-                    : null,
-                color: item.isCompleted ? colors.outline : itemColor,
+                decoration: item.isTerminal ? TextDecoration.lineThrough : null,
+                color: item.isTerminal ? colors.outline : itemColor,
               ),
             ),
           ),
@@ -1570,10 +1572,10 @@ class _TaskPreviewTime extends StatelessWidget {
     final baseStyle = Theme.of(context).textTheme.labelSmall
         ?.copyWith(fontSize: timeFontSize, height: 1);
     final plannedStyle = baseStyle?.copyWith(
-      color: item.isCompleted ? completedColor : activeColor ?? plannedColor,
+      color: item.isTerminal ? completedColor : activeColor ?? plannedColor,
     );
     final deadlineStyle = baseStyle?.copyWith(
-      color: item.isCompleted ? completedColor : activeColor ?? colors.error,
+      color: item.isTerminal ? completedColor : activeColor ?? colors.error,
     );
     if (hasBothTimes && stackTimes) {
       return Column(
@@ -1608,7 +1610,7 @@ class _TaskPreviewTime extends StatelessWidget {
             TextSpan(
               text: ' - ',
               style: baseStyle?.copyWith(
-                color: item.isCompleted
+                color: item.isTerminal
                     ? completedColor
                     : activeColor ?? completedColor,
               ),

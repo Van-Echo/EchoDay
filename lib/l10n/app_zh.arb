@@ -38,6 +38,7 @@
   "editTask": "编辑任务",
   "deleteTask": "删除任务",
   "markComplete": "标记完成",
+  "abandonTask": "放弃",
   "restoreTask": "恢复任务",
   "undo": "撤销",
   "taskDeleted": "任务已删除",

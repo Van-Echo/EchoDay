@@ -10,6 +10,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -224,4 +225,46 @@ void main() {
       );
     },
   );
+
+  test('migration from v3 to v4 preserves tasks as not abandoned', () async {
+    const oldTodos = <v3.TodosData>[
+      v3.TodosData(
+        id: 'v3-to-v4-todo',
+        title: 'Preserved v3 task',
+        localDate: '2026-10-06',
+        isCompleted: 0,
+        createdAt: 1791255600000,
+        updatedAt: 1791259200000,
+        priority: 3,
+        manualOrder: 2,
+        revision: 5,
+      ),
+    ];
+    const expectedTodos = <v4.TodosData>[
+      v4.TodosData(
+        id: 'v3-to-v4-todo',
+        title: 'Preserved v3 task',
+        localDate: '2026-10-06',
+        isCompleted: 0,
+        isAbandoned: 0,
+        createdAt: 1791255600000,
+        updatedAt: 1791259200000,
+        priority: 3,
+        manualOrder: 2,
+        revision: 5,
+      ),
+    ];
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 3,
+      newVersion: 4,
+      createOld: v3.DatabaseAtV3.new,
+      createNew: v4.DatabaseAtV4.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) => batch.insertAll(oldDb.todos, oldTodos),
+      validateItems: (newDb) async {
+        expect(await newDb.select(newDb.todos).get(), expectedTodos);
+      },
+    );
+  });
 }

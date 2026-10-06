@@ -1050,6 +1050,9 @@ final class _DragTodoRepository implements TodoRepository {
       throw UnimplementedError();
 
   @override
+  Future<void> abandon(String id, {DateTime? at}) => throw UnimplementedError();
+
+  @override
   Future<void> restore(String id) => throw UnimplementedError();
 
   @override

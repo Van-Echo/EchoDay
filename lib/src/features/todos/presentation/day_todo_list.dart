@@ -120,7 +120,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
           filters: _TodoFilters(_categoryFilter, _tagFilters),
           canPostpone:
               !_postponing &&
-              (todos.value?.any((todo) => !todo.isCompleted) ?? false),
+              (todos.value?.any((todo) => !todo.isTerminal) ?? false),
           postponeDays: postponeDays,
           onPostpone: () => _postponeIncomplete(postponeDays),
           onConfigurePostpone: () => _configurePostponeDays(postponeDays),
@@ -156,7 +156,7 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
   Future<void> _postponeIncomplete(int days) async {
     final strings = AppLocalizations.of(context);
     final count = (ref.read(todosByDateProvider(widget.date)).value ?? const [])
-        .where((todo) => !todo.isCompleted)
+        .where((todo) => !todo.isTerminal)
         .length;
     if (count == 0 || _postponing) return;
     final confirmed = await showDialog<bool>(
@@ -297,8 +297,8 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
       );
     }
 
-    final incomplete = items.where((todo) => !todo.isCompleted).toList();
-    final completed = items.where((todo) => todo.isCompleted).toList();
+    final incomplete = items.where((todo) => !todo.isTerminal).toList();
+    final completed = items.where((todo) => todo.isTerminal).toList();
     final manual = sortMode == TodoSortMode.manual;
     if (manual) {
       return CustomScrollView(
@@ -797,7 +797,7 @@ class _TodoSection extends StatelessWidget {
   }
 }
 
-enum _TodoAction { edit, toggle, move, postpone, delete }
+enum _TodoAction { edit, toggle, abandon, move, postpone, delete }
 
 class _TodoListTile extends ConsumerWidget {
   const _TodoListTile({
@@ -865,7 +865,7 @@ class _TodoListTile extends ConsumerWidget {
           : null,
       onLongPress: useTouchActions ? () => _showTouchMenu(context, ref) : null,
       child: Material(
-        color: todo.isCompleted
+        color: todo.isTerminal
             ? colors.surfaceContainerLow.withValues(alpha: 0.65)
             : colors.surfaceContainerLow,
         shape: RoundedRectangleBorder(
@@ -883,13 +883,10 @@ class _TodoListTile extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Checkbox(
-                  value: todo.isCompleted,
-                  visualDensity: VisualDensity.compact,
-                  side: overdue
-                      ? BorderSide(color: colors.error, width: 1.5)
-                      : null,
-                  onChanged: (_) => _toggle(context, ref),
+                _TodoStatusButton(
+                  todo: todo,
+                  overdue: overdue,
+                  onPressed: () => _toggle(context, ref),
                 ),
                 Expanded(
                   child: Column(
@@ -905,10 +902,10 @@ class _TodoListTile extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: todoFontSize,
-                                decoration: todo.isCompleted
+                                decoration: todo.isTerminal
                                     ? TextDecoration.lineThrough
                                     : null,
-                                color: todo.isCompleted
+                                color: todo.isTerminal
                                     ? colors.onSurfaceVariant.withValues(
                                         alpha: 0.62,
                                       )
@@ -930,7 +927,7 @@ class _TodoListTile extends ConsumerWidget {
                                 style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
                                       color: colors.outline.withValues(
-                                        alpha: todo.isCompleted ? 0.62 : 1,
+                                        alpha: todo.isTerminal ? 0.62 : 1,
                                       ),
                                     ),
                               ),
@@ -1072,17 +1069,26 @@ class _TodoListTile extends ConsumerWidget {
       value: _TodoAction.toggle,
       child: ListTile(
         leading: Icon(
-          todo.isCompleted
+          todo.isTerminal
               ? Icons.replay_rounded
               : Icons.check_circle_outline_rounded,
         ),
         title: Text(
-          todo.isCompleted ? strings.restoreTask : strings.markComplete,
+          todo.isTerminal ? strings.restoreTask : strings.markComplete,
         ),
         contentPadding: EdgeInsets.zero,
       ),
     ),
-    if (!todo.isCompleted)
+    if (!todo.isTerminal)
+      PopupMenuItem(
+        value: _TodoAction.abandon,
+        child: ListTile(
+          leading: const Icon(Icons.close_rounded),
+          title: Text(strings.abandonTask),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    if (!todo.isTerminal)
       PopupMenuItem(
         value: _TodoAction.postpone,
         child: ListTile(
@@ -1160,21 +1166,28 @@ class _TodoListTile extends ConsumerWidget {
               ),
               _TouchActionTile(
                 key: const ValueKey('mobile-action-toggle'),
-                icon: todo.isCompleted
+                icon: todo.isTerminal
                     ? Icons.replay_rounded
                     : Icons.check_circle_outline_rounded,
-                label: todo.isCompleted
+                label: todo.isTerminal
                     ? strings.restoreTask
                     : strings.markComplete,
                 action: _TodoAction.toggle,
               ),
+              if (!todo.isTerminal)
+                _TouchActionTile(
+                  key: const ValueKey('mobile-action-abandon'),
+                  icon: Icons.close_rounded,
+                  label: strings.abandonTask,
+                  action: _TodoAction.abandon,
+                ),
               _TouchActionTile(
                 key: const ValueKey('mobile-action-move'),
                 icon: Icons.event_repeat_outlined,
                 label: strings.moveToDate,
                 action: _TodoAction.move,
               ),
-              if (!todo.isCompleted)
+              if (!todo.isTerminal)
                 _TouchActionTile(
                   key: const ValueKey('mobile-action-postpone'),
                   icon: Icons.next_plan_outlined,
@@ -1210,6 +1223,8 @@ class _TodoListTile extends ConsumerWidget {
         await showTodoEditor(context, ref, date: todo.localDate, todo: todo);
       case _TodoAction.toggle:
         await _toggle(context, ref);
+      case _TodoAction.abandon:
+        await _abandon(context, ref);
       case _TodoAction.move:
         await _moveToDate(context, ref);
       case _TodoAction.postpone:
@@ -1272,9 +1287,20 @@ class _TodoListTile extends ConsumerWidget {
   Future<void> _toggle(BuildContext context, WidgetRef ref) async {
     try {
       final repository = ref.read(todoRepositoryProvider);
-      todo.isCompleted
+      todo.isTerminal
           ? await repository.restore(todo.id)
           : await repository.complete(todo.id);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
+      );
+    }
+  }
+
+  Future<void> _abandon(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(todoRepositoryProvider).abandon(todo.id);
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1337,6 +1363,53 @@ class _TodoListTile extends ConsumerWidget {
         SnackBar(content: Text(AppLocalizations.of(context).taskActionFailed)),
       );
     }
+  }
+}
+
+class _TodoStatusButton extends StatelessWidget {
+  const _TodoStatusButton({
+    required this.todo,
+    required this.overdue,
+    required this.onPressed,
+  });
+
+  final TodoItem todo;
+  final bool overdue;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final terminal = todo.isTerminal;
+    final borderColor = overdue ? colors.error : colors.outline;
+    return IconButton(
+      key: ValueKey('todo-status-${todo.id}'),
+      visualDensity: VisualDensity.compact,
+      tooltip: terminal
+          ? AppLocalizations.of(context).restoreTask
+          : AppLocalizations.of(context).markComplete,
+      onPressed: onPressed,
+      icon: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: terminal ? colors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: terminal ? colors.primary : borderColor,
+            width: 1.5,
+          ),
+        ),
+        child: terminal
+            ? Icon(
+                todo.isAbandoned ? Icons.close_rounded : Icons.check_rounded,
+                size: 16,
+                color: colors.onPrimary,
+              )
+            : null,
+      ),
+    );
   }
 }
 

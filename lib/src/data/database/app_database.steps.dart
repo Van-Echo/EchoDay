@@ -1699,9 +1699,504 @@ class Shape15 extends i0.VersionedTable {
       columnsByName['updated_at']! as i1.GeneratedColumn<int>;
 }
 
+final class Schema4 extends i0.VersionedSchema {
+  Schema4({required super.database}) : super(version: 4);
+  @override
+  late final List<i1.DatabaseSchemaEntity> entities = [
+    categories,
+    recurrenceSeries,
+    todos,
+    tags,
+    todoTags,
+    recurrenceExceptions,
+    holidayYears,
+    settings,
+    syncGroups,
+    syncDevices,
+    syncPairingInvites,
+    syncChanges,
+    syncEntityVersions,
+    syncRelationDots,
+    syncCursors,
+    syncConflicts,
+    syncRuntimeStates,
+    todosDateActive,
+    todosDeadline,
+    todosUpdated,
+    todosActiveDateCompletion,
+    categoriesActiveOrder,
+    tagsActiveOrder,
+    todoTagsTag,
+    recurrenceExceptionsSeriesDate,
+    syncDevicesGroupRevoked,
+    syncChangesSourceSequence,
+    syncChangesEntity,
+    syncChangesTransaction,
+    syncRelationDotsMembership,
+    syncConflictsUnresolved,
+  ];
+  late final Shape0 categories = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'categories',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape1 recurrenceSeries = Shape1(
+    source: i0.VersionedTable(
+      entityName: 'recurrence_series',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_8,
+        _column_9,
+        _column_10,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape16 todos = Shape16(
+    source: i0.VersionedTable(
+      entityName: 'todos',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_11,
+        _column_12,
+        _column_13,
+        _column_86,
+        _column_4,
+        _column_5,
+        _column_14,
+        _column_15,
+        _column_16,
+        _column_17,
+        _column_18,
+        _column_10,
+        _column_19,
+        _column_87,
+        _column_6,
+        _column_20,
+        _column_7,
+        _column_21,
+        _column_22,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape0 tags = Shape0(
+    source: i0.VersionedTable(
+      entityName: 'tags',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_1,
+        _column_2,
+        _column_3,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape3 todoTags = Shape3(
+    source: i0.VersionedTable(
+      entityName: 'todo_tags',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(todo_id, tag_id)'],
+      columns: [_column_23, _column_24],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape4 recurrenceExceptions = Shape4(
+    source: i0.VersionedTable(
+      entityName: 'recurrence_exceptions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_25,
+        _column_26,
+        _column_27,
+        _column_28,
+        _column_4,
+        _column_5,
+        _column_6,
+        _column_7,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape5 holidayYears = Shape5(
+    source: i0.VersionedTable(
+      entityName: 'holiday_years',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(year)'],
+      columns: [
+        _column_29,
+        _column_30,
+        _column_31,
+        _column_32,
+        _column_33,
+        _column_5,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape6 settings = Shape6(
+    source: i0.VersionedTable(
+      entityName: 'settings',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY("key")'],
+      columns: [_column_34, _column_35, _column_5, _column_7],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape7 syncGroups = Shape7(
+    source: i0.VersionedTable(
+      entityName: 'sync_groups',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_36,
+        _column_37,
+        _column_38,
+        _column_39,
+        _column_4,
+        _column_5,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape8 syncDevices = Shape8(
+    source: i0.VersionedTable(
+      entityName: 'sync_devices',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(device_id)'],
+      columns: [
+        _column_40,
+        _column_41,
+        _column_42,
+        _column_43,
+        _column_44,
+        _column_45,
+        _column_38,
+        _column_46,
+        _column_4,
+        _column_5,
+        _column_47,
+        _column_48,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape9 syncPairingInvites = Shape9(
+    source: i0.VersionedTable(
+      entityName: 'sync_pairing_invites',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_41,
+        _column_49,
+        _column_50,
+        _column_51,
+        _column_52,
+        _column_53,
+        _column_4,
+        _column_54,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape10 syncChanges = Shape10(
+    source: i0.VersionedTable(
+      entityName: 'sync_changes',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(operation_id)'],
+      columns: [
+        _column_55,
+        _column_41,
+        _column_56,
+        _column_57,
+        _column_58,
+        _column_59,
+        _column_60,
+        _column_61,
+        _column_62,
+        _column_63,
+        _column_33,
+        _column_64,
+        _column_65,
+        _column_66,
+        _column_67,
+        _column_4,
+        _column_68,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape11 syncEntityVersions = Shape11(
+    source: i0.VersionedTable(
+      entityName: 'sync_entity_versions',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(sync_group_id, entity_type, entity_id, field_group)',
+      ],
+      columns: [
+        _column_41,
+        _column_59,
+        _column_60,
+        _column_62,
+        _column_69,
+        _column_64,
+        _column_65,
+        _column_66,
+        _column_67,
+        _column_5,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape12 syncRelationDots = Shape12(
+    source: i0.VersionedTable(
+      entityName: 'sync_relation_dots',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(sync_group_id, add_operation_id)'],
+      columns: [
+        _column_41,
+        _column_70,
+        _column_71,
+        _column_72,
+        _column_73,
+        _column_74,
+        _column_75,
+        _column_4,
+        _column_76,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape13 syncCursors = Shape13(
+    source: i0.VersionedTable(
+      entityName: 'sync_cursors',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: [
+        'PRIMARY KEY(sync_group_id, peer_device_id, source_device_id)',
+      ],
+      columns: [_column_41, _column_77, _column_78, _column_79, _column_5],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape14 syncConflicts = Shape14(
+    source: i0.VersionedTable(
+      entityName: 'sync_conflicts',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY(id)'],
+      columns: [
+        _column_0,
+        _column_41,
+        _column_59,
+        _column_60,
+        _column_62,
+        _column_80,
+        _column_81,
+        _column_82,
+        _column_83,
+        _column_4,
+        _column_84,
+        _column_85,
+      ],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  late final Shape15 syncRuntimeStates = Shape15(
+    source: i0.VersionedTable(
+      entityName: 'sync_runtime_states',
+      withoutRowId: false,
+      isStrict: false,
+      tableConstraints: ['PRIMARY KEY("key")'],
+      columns: [_column_34, _column_35, _column_5],
+      attachedDatabase: database,
+    ),
+    alias: null,
+  );
+  final i1.Index todosDateActive = i1.Index(
+    'todos_date_active',
+    'CREATE INDEX todos_date_active ON todos (local_date, deleted_at)',
+  );
+  final i1.Index todosDeadline = i1.Index(
+    'todos_deadline',
+    'CREATE INDEX todos_deadline ON todos (deadline_at)',
+  );
+  final i1.Index todosUpdated = i1.Index(
+    'todos_updated',
+    'CREATE INDEX todos_updated ON todos (updated_at)',
+  );
+  final i1.Index todosActiveDateCompletion = i1.Index(
+    'todos_active_date_completion',
+    'CREATE INDEX todos_active_date_completion ON todos (deleted_at, local_date, is_completed)',
+  );
+  final i1.Index categoriesActiveOrder = i1.Index(
+    'categories_active_order',
+    'CREATE INDEX categories_active_order ON categories (deleted_at, sort_order)',
+  );
+  final i1.Index tagsActiveOrder = i1.Index(
+    'tags_active_order',
+    'CREATE INDEX tags_active_order ON tags (deleted_at, sort_order)',
+  );
+  final i1.Index todoTagsTag = i1.Index(
+    'todo_tags_tag',
+    'CREATE INDEX todo_tags_tag ON todo_tags (tag_id)',
+  );
+  final i1.Index recurrenceExceptionsSeriesDate = i1.Index(
+    'recurrence_exceptions_series_date',
+    'CREATE UNIQUE INDEX recurrence_exceptions_series_date ON recurrence_exceptions (series_id, occurrence_date)',
+  );
+  final i1.Index syncDevicesGroupRevoked = i1.Index(
+    'sync_devices_group_revoked',
+    'CREATE INDEX sync_devices_group_revoked ON sync_devices (sync_group_id, revoked_at)',
+  );
+  final i1.Index syncChangesSourceSequence = i1.Index(
+    'sync_changes_source_sequence',
+    'CREATE UNIQUE INDEX sync_changes_source_sequence ON sync_changes (sync_group_id, source_device_id, sequence)',
+  );
+  final i1.Index syncChangesEntity = i1.Index(
+    'sync_changes_entity',
+    'CREATE INDEX sync_changes_entity ON sync_changes (sync_group_id, entity_type, entity_id)',
+  );
+  final i1.Index syncChangesTransaction = i1.Index(
+    'sync_changes_transaction',
+    'CREATE INDEX sync_changes_transaction ON sync_changes (transaction_id)',
+  );
+  final i1.Index syncRelationDotsMembership = i1.Index(
+    'sync_relation_dots_membership',
+    'CREATE INDEX sync_relation_dots_membership ON sync_relation_dots (sync_group_id, todo_id, tag_id, removed_by_operation_id)',
+  );
+  final i1.Index syncConflictsUnresolved = i1.Index(
+    'sync_conflicts_unresolved',
+    'CREATE INDEX sync_conflicts_unresolved ON sync_conflicts (sync_group_id, resolved_at, created_at)',
+  );
+}
+
+class Shape16 extends i0.VersionedTable {
+  Shape16({required super.source, required super.alias}) : super.aliased();
+  i1.GeneratedColumn<String> get id =>
+      columnsByName['id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get title =>
+      columnsByName['title']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get localDate =>
+      columnsByName['local_date']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get isCompleted =>
+      columnsByName['is_completed']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get isAbandoned =>
+      columnsByName['is_abandoned']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get createdAt =>
+      columnsByName['created_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get updatedAt =>
+      columnsByName['updated_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get plannedAt =>
+      columnsByName['planned_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get priority =>
+      columnsByName['priority']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get categoryId =>
+      columnsByName['category_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get notes =>
+      columnsByName['notes']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get deadlineAt =>
+      columnsByName['deadline_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get timeZoneId =>
+      columnsByName['time_zone_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<int> get completedAt =>
+      columnsByName['completed_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get abandonedAt =>
+      columnsByName['abandoned_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<int> get deletedAt =>
+      columnsByName['deleted_at']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<double> get manualOrder =>
+      columnsByName['manual_order']! as i1.GeneratedColumn<double>;
+  i1.GeneratedColumn<int> get revision =>
+      columnsByName['revision']! as i1.GeneratedColumn<int>;
+  i1.GeneratedColumn<String> get recurrenceSeriesId =>
+      columnsByName['recurrence_series_id']! as i1.GeneratedColumn<String>;
+  i1.GeneratedColumn<String> get occurrenceDate =>
+      columnsByName['occurrence_date']! as i1.GeneratedColumn<String>;
+}
+
+i1.GeneratedColumn<int> _column_86(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'is_abandoned',
+      aliasedName,
+      false,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NOT NULL DEFAULT 0 CHECK (is_abandoned IN (0, 1))',
+      defaultValue: const i1.CustomExpression('0'),
+    );
+i1.GeneratedColumn<int> _column_87(String aliasedName) =>
+    i1.GeneratedColumn<int>(
+      'abandoned_at',
+      aliasedName,
+      true,
+      type: i1.DriftSqlType.int,
+      $customConstraints: 'NULL',
+    );
 i0.MigrationStepWithVersion migrationSteps({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) {
   return (currentVersion, database) async {
     switch (currentVersion) {
@@ -1715,6 +2210,11 @@ i0.MigrationStepWithVersion migrationSteps({
         final migrator = i1.Migrator(database, schema);
         await from2To3(migrator, schema);
         return 3;
+      case 3:
+        final schema = Schema4(database: database);
+        final migrator = i1.Migrator(database, schema);
+        await from3To4(migrator, schema);
+        return 4;
       default:
         throw ArgumentError.value('Unknown migration from $currentVersion');
     }
@@ -1724,6 +2224,11 @@ i0.MigrationStepWithVersion migrationSteps({
 i1.OnUpgrade stepByStep({
   required Future<void> Function(i1.Migrator m, Schema2 schema) from1To2,
   required Future<void> Function(i1.Migrator m, Schema3 schema) from2To3,
+  required Future<void> Function(i1.Migrator m, Schema4 schema) from3To4,
 }) => i0.VersionedSchema.stepByStepHelper(
-  step: migrationSteps(from1To2: from1To2, from2To3: from2To3),
+  step: migrationSteps(
+    from1To2: from1To2,
+    from2To3: from2To3,
+    from3To4: from3To4,
+  ),
 );
