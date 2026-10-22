@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'sync_payload_equivalence.dart';
 import 'sync_protocol.dart';
 
 enum SyncConflictKind { concurrentFieldEdit, deletionVersusEdit }
@@ -177,7 +178,9 @@ final class InMemorySyncReplica {
       final winner = maxima.reduce(_laterWinner);
       winners[entry.key] = winner;
       for (final loser in maxima.where(
-        (operation) => operation.operationId != winner.operationId,
+        (operation) =>
+            operation.operationId != winner.operationId &&
+            !SyncPayloadEquivalence.equivalent(winner, operation),
       )) {
         conflicts.add(
           _conflict(

@@ -193,8 +193,10 @@ final class SyncPairingService {
         await (_database.select(_database.syncDevices)
               ..where((row) => row.deviceId.equals(request.device.deviceId)))
             .getSingleOrNull();
+    final identity = await _syncRepository.activeIdentity();
     if (existingDevice != null &&
-        (existingDevice.revokedAt == null ||
+        (existingDevice.syncGroupId != invite.syncGroupId ||
+            existingDevice.deviceId == identity?.localDeviceId ||
             existingDevice.publicKey != request.device.publicKey)) {
       await _recordFailedAttempt(invite, now);
       throw const SyncProtocolException(
@@ -249,7 +251,9 @@ final class SyncPairingService {
       if (existingDevice == null) {
         await _syncRepository.registerDevice(registration);
       } else {
-        if (existingDevice.revokedAt == null ||
+        final identity = await _syncRepository.activeIdentity();
+        if (existingDevice.syncGroupId != invite.syncGroupId ||
+            existingDevice.deviceId == identity?.localDeviceId ||
             existingDevice.publicKey != registration.publicKey) {
           throw StateError('Device identity changed before approval.');
         }

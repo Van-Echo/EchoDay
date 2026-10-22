@@ -1095,6 +1095,21 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isFutureMeta = const VerificationMeta(
+    'isFuture',
+  );
+  @override
+  late final GeneratedColumn<bool> isFuture = GeneratedColumn<bool>(
+    'is_future',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_future" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1274,6 +1289,7 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
     localDate,
     isCompleted,
     isAbandoned,
+    isFuture,
     createdAt,
     updatedAt,
     plannedAt,
@@ -1339,6 +1355,12 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
           data['is_abandoned']!,
           _isAbandonedMeta,
         ),
+      );
+    }
+    if (data.containsKey('is_future')) {
+      context.handle(
+        _isFutureMeta,
+        isFuture.isAcceptableOrUnknown(data['is_future']!, _isFutureMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -1482,6 +1504,10 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, TodoRow> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_abandoned'],
       )!,
+      isFuture: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_future'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1557,6 +1583,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
   final String localDate;
   final bool isCompleted;
   final bool isAbandoned;
+  final bool isFuture;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? plannedAt;
@@ -1578,6 +1605,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     required this.localDate,
     required this.isCompleted,
     required this.isAbandoned,
+    required this.isFuture,
     required this.createdAt,
     required this.updatedAt,
     this.plannedAt,
@@ -1602,6 +1630,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     map['local_date'] = Variable<String>(localDate);
     map['is_completed'] = Variable<bool>(isCompleted);
     map['is_abandoned'] = Variable<bool>(isAbandoned);
+    map['is_future'] = Variable<bool>(isFuture);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || plannedAt != null) {
@@ -1647,6 +1676,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       localDate: Value(localDate),
       isCompleted: Value(isCompleted),
       isAbandoned: Value(isAbandoned),
+      isFuture: Value(isFuture),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       plannedAt: plannedAt == null && nullToAbsent
@@ -1696,6 +1726,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       localDate: serializer.fromJson<String>(json['localDate']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       isAbandoned: serializer.fromJson<bool>(json['isAbandoned']),
+      isFuture: serializer.fromJson<bool>(json['isFuture']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       plannedAt: serializer.fromJson<DateTime?>(json['plannedAt']),
@@ -1724,6 +1755,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       'localDate': serializer.toJson<String>(localDate),
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'isAbandoned': serializer.toJson<bool>(isAbandoned),
+      'isFuture': serializer.toJson<bool>(isFuture),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'plannedAt': serializer.toJson<DateTime?>(plannedAt),
@@ -1748,6 +1780,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     String? localDate,
     bool? isCompleted,
     bool? isAbandoned,
+    bool? isFuture,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> plannedAt = const Value.absent(),
@@ -1769,6 +1802,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     localDate: localDate ?? this.localDate,
     isCompleted: isCompleted ?? this.isCompleted,
     isAbandoned: isAbandoned ?? this.isAbandoned,
+    isFuture: isFuture ?? this.isFuture,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     plannedAt: plannedAt.present ? plannedAt.value : this.plannedAt,
@@ -1800,6 +1834,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
       isAbandoned: data.isAbandoned.present
           ? data.isAbandoned.value
           : this.isAbandoned,
+      isFuture: data.isFuture.present ? data.isFuture.value : this.isFuture,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       plannedAt: data.plannedAt.present ? data.plannedAt.value : this.plannedAt,
@@ -1842,6 +1877,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
           ..write('localDate: $localDate, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('isAbandoned: $isAbandoned, ')
+          ..write('isFuture: $isFuture, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('plannedAt: $plannedAt, ')
@@ -1862,12 +1898,13 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     title,
     localDate,
     isCompleted,
     isAbandoned,
+    isFuture,
     createdAt,
     updatedAt,
     plannedAt,
@@ -1883,7 +1920,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
     revision,
     recurrenceSeriesId,
     occurrenceDate,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1893,6 +1930,7 @@ class TodoRow extends DataClass implements Insertable<TodoRow> {
           other.localDate == this.localDate &&
           other.isCompleted == this.isCompleted &&
           other.isAbandoned == this.isAbandoned &&
+          other.isFuture == this.isFuture &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.plannedAt == this.plannedAt &&
@@ -1916,6 +1954,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
   final Value<String> localDate;
   final Value<bool> isCompleted;
   final Value<bool> isAbandoned;
+  final Value<bool> isFuture;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> plannedAt;
@@ -1938,6 +1977,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     this.localDate = const Value.absent(),
     this.isCompleted = const Value.absent(),
     this.isAbandoned = const Value.absent(),
+    this.isFuture = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.plannedAt = const Value.absent(),
@@ -1961,6 +2001,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     required String localDate,
     this.isCompleted = const Value.absent(),
     this.isAbandoned = const Value.absent(),
+    this.isFuture = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.plannedAt = const Value.absent(),
@@ -1988,6 +2029,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     Expression<String>? localDate,
     Expression<bool>? isCompleted,
     Expression<bool>? isAbandoned,
+    Expression<bool>? isFuture,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? plannedAt,
@@ -2011,6 +2053,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
       if (localDate != null) 'local_date': localDate,
       if (isCompleted != null) 'is_completed': isCompleted,
       if (isAbandoned != null) 'is_abandoned': isAbandoned,
+      if (isFuture != null) 'is_future': isFuture,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (plannedAt != null) 'planned_at': plannedAt,
@@ -2037,6 +2080,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     Value<String>? localDate,
     Value<bool>? isCompleted,
     Value<bool>? isAbandoned,
+    Value<bool>? isFuture,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? plannedAt,
@@ -2060,6 +2104,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
       localDate: localDate ?? this.localDate,
       isCompleted: isCompleted ?? this.isCompleted,
       isAbandoned: isAbandoned ?? this.isAbandoned,
+      isFuture: isFuture ?? this.isFuture,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       plannedAt: plannedAt ?? this.plannedAt,
@@ -2096,6 +2141,9 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
     }
     if (isAbandoned.present) {
       map['is_abandoned'] = Variable<bool>(isAbandoned.value);
+    }
+    if (isFuture.present) {
+      map['is_future'] = Variable<bool>(isFuture.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -2156,6 +2204,7 @@ class TodosCompanion extends UpdateCompanion<TodoRow> {
           ..write('localDate: $localDate, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('isAbandoned: $isAbandoned, ')
+          ..write('isFuture: $isFuture, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('plannedAt: $plannedAt, ')
@@ -10738,6 +10787,7 @@ typedef $$TodosTableCreateCompanionBuilder = TodosCompanion Function({
   required String localDate,
   Value<bool> isCompleted,
   Value<bool> isAbandoned,
+  Value<bool> isFuture,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<DateTime?> plannedAt,
@@ -10761,6 +10811,7 @@ typedef $$TodosTableUpdateCompanionBuilder = TodosCompanion Function({
   Value<String> localDate,
   Value<bool> isCompleted,
   Value<bool> isAbandoned,
+  Value<bool> isFuture,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<DateTime?> plannedAt,
@@ -10869,6 +10920,11 @@ class $$TodosTableFilterComposer extends Composer<_$AppDatabase, $TodosTable> {
 
   ColumnFilters<bool> get isAbandoned => $composableBuilder(
     column: $table.isAbandoned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFuture => $composableBuilder(
+    column: $table.isFuture,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11044,6 +11100,11 @@ class $$TodosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isFuture => $composableBuilder(
+    column: $table.isFuture,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -11184,6 +11245,9 @@ class $$TodosTableAnnotationComposer
     column: $table.isAbandoned,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isFuture =>
+      $composableBuilder(column: $table.isFuture, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -11346,6 +11410,7 @@ class $$TodosTableTableManager
                 Value<String> localDate = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
                 Value<bool> isAbandoned = const Value.absent(),
+                Value<bool> isFuture = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> plannedAt = const Value.absent(),
@@ -11368,6 +11433,7 @@ class $$TodosTableTableManager
                 localDate: localDate,
                 isCompleted: isCompleted,
                 isAbandoned: isAbandoned,
+                isFuture: isFuture,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 plannedAt: plannedAt,
@@ -11392,6 +11458,7 @@ class $$TodosTableTableManager
                 required String localDate,
                 Value<bool> isCompleted = const Value.absent(),
                 Value<bool> isAbandoned = const Value.absent(),
+                Value<bool> isFuture = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<DateTime?> plannedAt = const Value.absent(),
@@ -11414,6 +11481,7 @@ class $$TodosTableTableManager
                 localDate: localDate,
                 isCompleted: isCompleted,
                 isAbandoned: isAbandoned,
+                isFuture: isFuture,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 plannedAt: plannedAt,

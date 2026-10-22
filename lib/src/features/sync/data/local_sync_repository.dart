@@ -9,6 +9,7 @@ import '../domain/hybrid_logical_clock.dart';
 import '../domain/sync_change_recorder.dart';
 import '../domain/sync_entity_payloads.dart';
 import '../domain/sync_merge_engine.dart';
+import '../domain/sync_payload_equivalence.dart';
 import '../domain/sync_protocol.dart';
 import '../domain/sync_repository.dart';
 import 'database_sync_change_recorder.dart';
@@ -387,6 +388,7 @@ final class LocalSyncRepository implements SyncRepository {
   @override
   Future<List<SyncConflict>> unresolvedConflicts() async {
     final identity = await _requireIdentity();
+    await reconcileEquivalentConflicts();
     final group = await (_database.select(
       _database.syncGroups,
     )..where((row) => row.id.equals(identity.groupId))).getSingle();
@@ -447,6 +449,71 @@ final class LocalSyncRepository implements SyncRepository {
       );
     }
     return conflicts;
+  }
+
+  /// Repairs historical false positives without changing any entity, operation,
+  /// cursor, identity, or genuine conflict. Keep resolved rows as an audit trail.
+  /// Both upgraded peers independently apply the same deterministic predicate.
+  Future<int> reconcileEquivalentConflicts() {
+    return _database.transaction(() async {
+      final identity = await _requireIdentity();
+      final rows =
+          await (_database.select(_database.syncConflicts)..where(
+                (row) =>
+                    row.syncGroupId.equals(identity.groupId) &
+                    row.resolvedAt.isNull() &
+                    row.kind.equals(SyncConflictKind.concurrentFieldEdit.name),
+              ))
+              .get();
+      if (rows.isEmpty) return 0;
+      final ids = {
+        for (final row in rows) ...[
+          row.winnerOperationId,
+          row.loserOperationId,
+        ],
+      }.toList();
+      final operations = <String, SyncOperation>{};
+      for (var start = 0; start < ids.length; start += 400) {
+        final end = (start + 400).clamp(0, ids.length);
+        final changes =
+            await (_database.select(_database.syncChanges)..where(
+                  (row) =>
+                      row.syncGroupId.equals(identity.groupId) &
+                      row.operationId.isIn(ids.sublist(start, end)),
+                ))
+                .get();
+        for (final row in changes) {
+          operations[row.operationId] = SyncOperationRowCodec.fromRow(row);
+        }
+      }
+      final now = requireUtc(clock(), 'clock');
+      var repaired = 0;
+      for (final row in rows) {
+        final winner = operations[row.winnerOperationId];
+        final loser = operations[row.loserOperationId];
+        if (winner == null ||
+            loser == null ||
+            winner.entityType.wireName != row.entityType ||
+            winner.entityId != row.entityId ||
+            winner.fieldGroup.wireName != row.fieldGroup ||
+            !SyncPayloadEquivalence.equivalent(winner, loser)) {
+          continue;
+        }
+        repaired +=
+            await (_database.update(_database.syncConflicts)..where(
+                  (candidate) =>
+                      candidate.id.equals(row.id) &
+                      candidate.resolvedAt.isNull(),
+                ))
+                .write(
+                  SyncConflictsCompanion(
+                    resolvedAt: Value(now),
+                    resolutionOperationId: Value(winner.operationId),
+                  ),
+                );
+      }
+      return repaired;
+    });
   }
 
   @override
@@ -923,6 +990,7 @@ final class LocalSyncRepository implements SyncRepository {
                 id: entity.entityId,
                 title: _string(content, 'title'),
                 localDate: _string(content, 'localDate'),
+                isFuture: Value(_boolean(content, 'isFuture')),
                 isCompleted: Value(_boolean(completion, 'isCompleted')),
                 isAbandoned: Value(_boolean(completion, 'isAbandoned')),
                 createdAt: _date(content['createdAtUtc'], 'createdAtUtc'),
@@ -1274,6 +1342,7 @@ final class LocalSyncRepository implements SyncRepository {
   Map<String, dynamic> _todoContentFromRow(TodoRow row) => {
     'title': row.title,
     'localDate': row.localDate,
+    'isFuture': row.isFuture,
     'createdAtUtc': row.createdAt.toUtc().toIso8601String(),
     'plannedAtUtc': row.plannedAt?.toUtc().toIso8601String(),
     'priority': row.priority,
@@ -1358,7 +1427,8 @@ final class LocalSyncRepository implements SyncRepository {
 
   bool _boolean(Map<String, dynamic>? values, String key) {
     final value = values?[key];
-    if (value == null && (key == 'isCompleted' || key == 'isAbandoned')) {
+    if (value == null &&
+        (key == 'isCompleted' || key == 'isAbandoned' || key == 'isFuture')) {
       return false;
     }
     if (value is! bool) throw FormatException('$key must be a boolean.');

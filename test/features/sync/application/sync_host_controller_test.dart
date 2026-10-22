@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show Value;
@@ -11,15 +12,98 @@ import 'package:echoday/src/features/backup/data/backup_directory_resolver.dart'
 import 'package:echoday/src/features/backup/data/local_backup_repository.dart';
 import 'package:echoday/src/features/sync/application/sync_host_controller.dart';
 import 'package:echoday/src/features/sync/data/local_sync_repository.dart';
+import 'package:echoday/src/features/sync/domain/sync_endpoint_update.dart';
 import 'package:echoday/src/features/sync/domain/sync_repository.dart';
 import 'package:echoday/src/features/sync/security/device_secret_store.dart';
 import 'package:echoday/src/features/sync/server/secure_sync_host_service.dart';
+import 'package:echoday/src/features/sync/server/sync_network_discovery.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/in_memory_settings_repository.dart';
 
+final class _TestDiscovery extends SyncNetworkDiscovery {
+  List<SyncNetworkEndpoint> networks = [
+    endpoint('Tailscale', '100.64.0.10'),
+    endpoint('Wi-Fi', '100.80.2.10'),
+  ];
+
+  static SyncNetworkEndpoint endpoint(String name, String address) =>
+      SyncNetworkEndpoint(
+        interfaceName: name,
+        address: InternetAddress(address),
+        kind: name == 'Tailscale'
+            ? SyncNetworkKind.tailscale
+            : SyncNetworkKind.localAreaNetwork,
+      );
+
+  @override
+  Future<List<SyncNetworkEndpoint>> discover() async => List.of(networks);
+}
+
 void main() {
+  test(
+    'saved interfaces and startup default persist across DHCP changes',
+    () async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      final settings = InMemorySettingsRepository();
+      final discovery = _TestDiscovery();
+      ProviderContainer createContainer() => ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          settingsRepositoryProvider.overrideWithValue(settings),
+          syncNetworkDiscoveryProvider.overrideWithValue(discovery),
+          platformCapabilitiesProvider.overrideWithValue(
+            const PlatformCapabilities(isAndroid: false, isWindows: true),
+          ),
+        ],
+      );
+      var container = createContainer();
+      addTearDown(() async {
+        container.dispose();
+        await database.close();
+      });
+      var controller = container.read(syncHostControllerProvider.notifier);
+      await controller.initialize();
+      var state = container.read(syncHostControllerProvider);
+      expect(state.savedNetworks, hasLength(1));
+      expect(state.selectedAddress, '100.64.0.10');
+      await controller.addNetwork(discovery.networks[1]);
+      expect(
+        container.read(syncHostControllerProvider).selectedAddress,
+        '100.80.2.10',
+      );
+      await controller.selectAddress('100.64.0.10');
+      await controller.setDefaultNetwork('Wi-Fi|ipv4');
+      expect(
+        container.read(syncHostControllerProvider).selectedAddress,
+        '100.64.0.10',
+      );
+      expect(
+        jsonDecode(
+          (await settings.get(SyncHostPreferenceKeys.savedNetworks))!.value,
+        ),
+        hasLength(2),
+      );
+
+      container.dispose();
+      discovery.networks[1] = _TestDiscovery.endpoint('Wi-Fi', '100.80.2.20');
+      container = createContainer();
+      controller = container.read(syncHostControllerProvider.notifier);
+      await controller.initialize();
+      state = container.read(syncHostControllerProvider);
+      expect(state.selectedAddress, '100.80.2.20');
+      expect(state.defaultNetworkId, 'Wi-Fi|ipv4');
+      discovery.networks.removeAt(1);
+      await controller.refreshNetworks();
+      state = container.read(syncHostControllerProvider);
+      expect(state.selectedAddress, '100.64.0.10');
+      expect(state.savedNetworks, hasLength(2));
+      expect(state.availableSavedNetworks, hasLength(1));
+      expect(state.defaultNetworkId, 'Wi-Fi|ipv4');
+    },
+  );
+
   test(
     'controller starts and stops a usable host without command-line setup',
     () async {
@@ -85,6 +169,25 @@ void main() {
       );
 
       final repository = LocalSyncRepository(database);
+      final endpointUri = await controller.endpointUpdateUri();
+      final endpointUpdate = SyncEndpointUpdateCodec.parse(
+        endpointUri.toString(),
+      );
+      final identity = (await repository.activeIdentity())!;
+      expect(endpointUpdate.groupId, identity.groupId);
+      expect(endpointUpdate.hostDeviceId, identity.localDeviceId);
+      expect(endpointUpdate.endpoint.address, running.binding!.address.address);
+      expect(endpointUpdate.endpoint.port, running.binding!.port);
+      expect(
+        endpointUpdate.fingerprintSha256,
+        running.binding!.fingerprintSha256,
+      );
+      expect(endpointUri.queryParameters, isNot(contains('token')));
+      expect(container.read(syncHostControllerProvider).devices, hasLength(1));
+      expect(
+        container.read(syncHostControllerProvider).pendingPairings,
+        isEmpty,
+      );
       await repository.registerDevice(
         const SyncDeviceRegistration(
           deviceId: 'active-client',
@@ -118,6 +221,30 @@ void main() {
         visibleDevices.map((device) => device.id),
         isNot(contains('revoked-client')),
       );
+      await controller.updateDeviceNote('active-client', '  小米15Pro  ');
+      var aliased = container
+          .read(syncHostControllerProvider)
+          .devices
+          .singleWhere((device) => device.id == 'active-client');
+      expect(aliased.displayLabel, '小米15Pro');
+      expect(aliased.displayName, 'Active phone');
+      await (database.update(database.syncDevices)
+            ..where((row) => row.deviceId.equals('active-client')))
+          .write(const SyncDevicesCompanion(displayName: Value('localhost')));
+      await controller.refreshAdminData();
+      aliased = container
+          .read(syncHostControllerProvider)
+          .devices
+          .singleWhere((device) => device.id == 'active-client');
+      expect(aliased.displayLabel, '小米15Pro');
+      expect(aliased.displayName, 'localhost');
+      await controller.updateDeviceNote('active-client', ' ');
+      aliased = container
+          .read(syncHostControllerProvider)
+          .devices
+          .singleWhere((device) => device.id == 'active-client');
+      expect(aliased.displayLabel, 'localhost');
+      expect(aliased.note, isNull);
 
       final invite = await controller.createPairingInvite();
       expect(invite, isNotNull);

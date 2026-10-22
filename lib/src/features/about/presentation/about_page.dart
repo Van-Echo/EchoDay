@@ -14,7 +14,7 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
     return AppScaffold(
-      selectedIndex: 4,
+      selectedIndex: 5,
       title: localizations.aboutTitle,
       body: LayoutBuilder(
         builder: (context, constraints) => Stack(

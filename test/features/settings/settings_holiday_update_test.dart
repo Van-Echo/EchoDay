@@ -65,10 +65,13 @@ void main() {
     expect(find.text('检查更新'), findsNothing);
     await tester.tap(find.text('中国法定节假日数据'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(DropdownButtonFormField<int>));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(DropdownButtonFormField<int>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('${DateTime.now().year + 1}').last);
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('检查更新'));
     await tester.tap(find.text('检查更新'));
     await tester.pumpAndSettle();
 

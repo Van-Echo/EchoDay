@@ -20,6 +20,7 @@ import '../../todos/application/todo_providers.dart';
 import '../../todos/domain/todo_sort.dart';
 import '../application/app_preferences.dart';
 import '../application/hotkey_preferences.dart';
+import 'ticker_settings_section.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -104,7 +105,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }.toList()..sort();
 
     return AppScaffold(
-      selectedIndex: 3,
+      selectedIndex: 4,
       title: localizations.settingsTitle,
       body: Center(
         child: ConstrainedBox(
@@ -577,6 +578,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
               ),
               if (!isAndroid) ...[
+                const SizedBox(height: 16),
+                _ExpandableSettingsCard(
+                  key: const ValueKey('ticker-settings'),
+                  icon: Icons.view_carousel_outlined,
+                  title: localizations.tickerSettingsTitle,
+                  child: const TickerSettingsSection(),
+                ),
                 const SizedBox(height: 16),
                 _ExpandableSettingsCard(
                   key: const ValueKey('motto-settings'),

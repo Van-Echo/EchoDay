@@ -29,6 +29,9 @@ void main() {
         const PlatformCapabilities(isAndroid: false, isWindows: true),
       ),
       settingsRepositoryProvider.overrideWithValue(settings),
+      futureTodosProvider.overrideWith(
+        (ref) => Stream.value(const <TodoItem>[]),
+      ),
       todosByDateProvider.overrideWith(
         (ref, date) => Stream.value(const <TodoItem>[]),
       ),

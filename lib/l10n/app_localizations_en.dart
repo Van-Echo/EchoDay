@@ -22,6 +22,149 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navDayTodos => 'Day TODOs';
 
   @override
+  String get navFutureTodos => 'Future TODO';
+
+  @override
+  String get syncAddNetwork => 'Add…';
+
+  @override
+  String get syncAddNetworkTitle => 'Add a listening interface';
+
+  @override
+  String get syncAddNetworkHint =>
+      'Choose an interface detected on this PC. Campus networks may isolate devices; Tailscale is recommended.';
+
+  @override
+  String get syncNoNewNetworks =>
+      'No new interfaces. Connect an adapter and refresh.';
+
+  @override
+  String get syncSetDefaultNetwork => 'Set as the default listening interface';
+
+  @override
+  String get syncDefaultNetwork => 'Default';
+
+  @override
+  String get syncNetworkOffline => 'Disconnected';
+
+  @override
+  String get syncPairingWaiting =>
+      'Scan with a client. Its device code and confirmation buttons will appear here.';
+
+  @override
+  String get syncUpdateWlan => 'Update WLAN';
+
+  @override
+  String get syncRePair => 'Pair again';
+
+  @override
+  String get syncRePairHint =>
+      'Choose Pair again for the connected device on the main PC, then scan or paste its connection code and verify the device code. Your identity, tasks and sync history are kept. This cannot replace a different host identity.';
+
+  @override
+  String get syncRePairPaste => 'Paste re-pairing code';
+
+  @override
+  String get syncRePairHostHint =>
+      'Choose Pair again on the original device and scan this code. Verify the device code before approving. Tasks and sync history are kept. If reinstalling erased its identity, use Pair new device instead.';
+
+  @override
+  String get syncEndpointUpdateHint =>
+      'Paired devices can scan to save and switch to this active address without pairing again. Select the listening interface before generating a code for another network.';
+
+  @override
+  String get syncConnectionProfiles => 'Host connections';
+
+  @override
+  String get syncSetDefaultConnection => 'Set as default connection';
+
+  @override
+  String get syncScanEndpointUpdate => 'Scan WLAN update';
+
+  @override
+  String get syncPasteEndpointUpdate => 'Paste update code';
+
+  @override
+  String get syncEndpointCodeLabel => 'Connection update code';
+
+  @override
+  String get syncApplyEndpointUpdate => 'Add and sync';
+
+  @override
+  String get syncManualEndpoint => 'Add connection manually';
+
+  @override
+  String get syncEditEndpoint => 'Enter address and port manually';
+
+  @override
+  String get syncEndpointIdentityMismatch =>
+      'This update code belongs to a different PC. Your connection and data were not changed.';
+
+  @override
+  String get syncEndpointCodeInvalid =>
+      'The connection update code is invalid or expired. Generate a new one on your PC.';
+
+  @override
+  String get futureTodosTitle => 'Future TODO';
+
+  @override
+  String get noFutureTodos =>
+      'Keep ideas and tasks here until you are ready to schedule them';
+
+  @override
+  String get futureTodoUnscheduled => 'Not scheduled yet';
+
+  @override
+  String get moveToToday => 'Move to today\'s TODO';
+
+  @override
+  String get moveToFuture => 'Move to Future TODO';
+
+  @override
+  String get copyToTomorrow => 'Copy to next day';
+
+  @override
+  String get taskMovedToFuture => 'Task moved to Future TODO';
+
+  @override
+  String get taskCopiedToTomorrow =>
+      'Copied to the next day; the original task has been kept';
+
+  @override
+  String get futureTodosTickerHint =>
+      'Future TODO · Tap to view, hold or right-click to schedule for today';
+
+  @override
+  String get tickerSettingsTitle => 'Ticker';
+
+  @override
+  String get tickerIntervalLabel => 'Ticker interval';
+
+  @override
+  String get tickerIntervalHint =>
+      'Switch items every 1–3600 seconds; default: 4 seconds';
+
+  @override
+  String get tickerSecondsUnit => 'sec';
+
+  @override
+  String get tickerIntervalInvalid => 'Enter a whole number from 1 to 3600';
+
+  @override
+  String get tickerIntervalSaved => 'Ticker interval saved';
+
+  @override
+  String get tickerSettingsSaveFailed =>
+      'Could not save ticker settings. Please try again.';
+
+  @override
+  String get tickerNumberedLabel => 'Show item numbers';
+
+  @override
+  String get tickerNumberedHint =>
+      'Prefix items with “1. ”, “2. ”, etc., in playback order';
+
+  @override
   String get navSearch => 'Search';
 
   @override
@@ -885,7 +1028,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncEditNote => 'Edit note';
 
   @override
-  String get syncDeviceNote => 'Device note';
+  String get syncDeviceNote => 'Device display name';
+
+  @override
+  String get syncDeviceNameHint => 'Leave blank to restore the original name';
 
   @override
   String get syncNow => 'Sync now';

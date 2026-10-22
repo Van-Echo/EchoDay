@@ -26,6 +26,7 @@ Future<TodoItem?> showTodoEditor(
   WidgetRef ref, {
   required LocalDate date,
   TodoItem? todo,
+  bool future = false,
 }) {
   final isAndroid = ref.read(platformCapabilitiesProvider).isAndroid;
   return showGeneralDialog<TodoItem>(
@@ -42,7 +43,12 @@ Future<TodoItem?> showTodoEditor(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           padding: EdgeInsets.only(bottom: isAndroid ? viewInsets.bottom : 0),
-          child: _TodoEditor(date: date, todo: todo, mobile: isAndroid),
+          child: _TodoEditor(
+            date: date,
+            todo: todo,
+            mobile: isAndroid,
+            future: todo?.isFuture ?? future,
+          ),
         ),
       );
     },
@@ -57,11 +63,17 @@ Future<TodoItem?> showTodoEditor(
 }
 
 class _TodoEditor extends ConsumerStatefulWidget {
-  const _TodoEditor({required this.date, required this.mobile, this.todo});
+  const _TodoEditor({
+    required this.date,
+    required this.mobile,
+    required this.future,
+    this.todo,
+  });
 
   final LocalDate date;
   final bool mobile;
   final TodoItem? todo;
+  final bool future;
 
   @override
   ConsumerState<_TodoEditor> createState() => _TodoEditorState();
@@ -102,7 +114,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     _categoryId = todo?.categoryId;
     _tagIds = {...?todo?.tagIds};
     _monthDay = _date.day;
-    if (todo?.recurrenceSeriesId == null) {
+    if (widget.future || todo?.recurrenceSeriesId == null) {
       _recurrenceLoaded = true;
     } else {
       Future<void>.microtask(_loadRecurrence);
@@ -204,12 +216,20 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                             : null,
                       ),
                       const SizedBox(height: 16),
-                      _DateField(
-                        icon: Icons.calendar_today_rounded,
-                        label: strings.dateLabel,
-                        value: _formatDate(_date),
-                        onTap: _pickLocalDate,
-                      ),
+                      if (widget.future)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.upcoming_outlined),
+                          title: Text(strings.navFutureTodos),
+                          subtitle: Text(strings.futureTodoUnscheduled),
+                        )
+                      else
+                        _DateField(
+                          icon: Icons.calendar_today_rounded,
+                          label: strings.dateLabel,
+                          value: _formatDate(_date),
+                          onTap: _pickLocalDate,
+                        ),
                       const SizedBox(height: 12),
                       _DateField(
                         key: const ValueKey('todo-editor-planned-at'),
@@ -315,7 +335,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildRecurrenceEditor(strings),
+                      if (!widget.future) _buildRecurrenceEditor(strings),
                     ],
                   ),
                 ),
@@ -949,7 +969,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
     setState(() => _saving = true);
     final title = _titleController.text.trim();
     final notes = _notesController.text.trim();
-    final recurrenceRule = _buildRecurrenceRule();
+    final recurrenceRule = widget.future ? null : _buildRecurrenceRule();
     try {
       final repository = ref.read(todoRepositoryProvider);
       final TodoItem saved;
@@ -964,7 +984,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
           tagIds: _tagIds,
           notes: notes.isEmpty ? null : notes,
         );
-        if (todo.recurrenceSeriesId != null) {
+        if (!widget.future && todo.recurrenceSeriesId != null) {
           final scope = await _askRecurrenceScope();
           if (scope == null) {
             if (mounted) setState(() => _saving = false);
@@ -1000,6 +1020,7 @@ class _TodoEditorState extends ConsumerState<_TodoEditor> {
           TodoDraft(
             title: title,
             localDate: _date,
+            isFuture: widget.future,
             plannedAt: _plannedAt,
             deadlineAt: _deadlineAt,
             priority: _priority,

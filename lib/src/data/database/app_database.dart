@@ -67,6 +67,7 @@ class Todos extends Table {
   TextColumn get localDate => text()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   BoolColumn get isAbandoned => boolean().withDefault(const Constant(false))();
+  BoolColumn get isFuture => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get plannedAt => dateTime().nullable()();
@@ -375,42 +376,95 @@ class AppDatabase extends _$AppDatabase {
   static const databaseName = 'echoday';
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => migrator.createAll(),
     onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
-        await customStatement(
-          'CREATE INDEX todos_active_date_completion '
-          'ON todos (deleted_at, local_date, is_completed)',
+      // Drift calls onUpgrade for both upgrades and downgrades. Never silently
+      // stamp an unknown newer schema with our older version number.
+      if (from > to) {
+        throw StateError(
+          'Database schema $from requires a newer EchoDay version.',
         );
       }
-      if (from < 3) {
-        await migrator.createTable(syncGroups);
-        await migrator.createTable(syncDevices);
-        await migrator.createTable(syncPairingInvites);
-        await migrator.createTable(syncChanges);
-        await migrator.createTable(syncEntityVersions);
-        await migrator.createTable(syncRelationDots);
-        await migrator.createTable(syncCursors);
-        await migrator.createTable(syncConflicts);
-        await migrator.createTable(syncRuntimeStates);
-        await migrator.createIndex(syncDevicesGroupRevoked);
-        await migrator.createIndex(syncChangesSourceSequence);
-        await migrator.createIndex(syncChangesEntity);
-        await migrator.createIndex(syncChangesTransaction);
-        await migrator.createIndex(syncRelationDotsMembership);
-        await migrator.createIndex(syncConflictsUnresolved);
-      }
-      if (from < 4 && to >= 4) {
-        await migrator.addColumn(todos, todos.isAbandoned);
-        await migrator.addColumn(todos, todos.abandonedAt);
-      }
+      await transaction(() async {
+        if (from < 2) {
+          await customStatement(
+            'CREATE INDEX todos_active_date_completion '
+            'ON todos (deleted_at, local_date, is_completed)',
+          );
+        }
+        if (from < 3) {
+          await migrator.createTable(syncGroups);
+          await migrator.createTable(syncDevices);
+          await migrator.createTable(syncPairingInvites);
+          await migrator.createTable(syncChanges);
+          await migrator.createTable(syncEntityVersions);
+          await migrator.createTable(syncRelationDots);
+          await migrator.createTable(syncCursors);
+          await migrator.createTable(syncConflicts);
+          await migrator.createTable(syncRuntimeStates);
+          await migrator.createIndex(syncDevicesGroupRevoked);
+          await migrator.createIndex(syncChangesSourceSequence);
+          await migrator.createIndex(syncChangesEntity);
+          await migrator.createIndex(syncChangesTransaction);
+          await migrator.createIndex(syncRelationDotsMembership);
+          await migrator.createIndex(syncConflictsUnresolved);
+        }
+        if (from < 4 && to >= 4) {
+          await _addTodoColumnIfMissing(migrator, todos.isAbandoned);
+          await _addTodoColumnIfMissing(migrator, todos.abandonedAt);
+        }
+        if (from < 5 && to >= 5) {
+          await _addTodoColumnIfMissing(migrator, todos.isFuture);
+        }
+      });
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  /// Additive migrations can have run already if an older application reset
+  /// user_version or a previous opening stopped before stamping the header.
+  /// Preserve compatible existing columns and all their values, but do not
+  /// silently accept an incompatible schema as successfully migrated.
+  Future<void> _addTodoColumnIfMissing(
+    Migrator migrator,
+    GeneratedColumn<Object> column,
+  ) async {
+    final columns = await customSelect('PRAGMA table_info(todos)').get();
+    final existing = columns
+        .where((row) => row.read<String>('name') == column.name)
+        .firstOrNull;
+    if (existing == null) {
+      await migrator.addColumn(todos, column);
+      return;
+    }
+
+    // The v4/v5 additions are SQLite INTEGERs: two booleans and a nullable
+    // epoch timestamp. A malformed column must not be repaired destructively.
+    final integerType =
+        existing.read<String>('type').trim().toUpperCase() == 'INTEGER';
+    final nullable = existing.read<int>('notnull') == 0;
+    final defaultValue = existing.data['dflt_value']?.toString().replaceAll(
+      RegExp(r'[()\s]'),
+      '',
+    );
+    if (!integerType ||
+        nullable != column.$nullable ||
+        (!column.$nullable && defaultValue != '0')) {
+      throw StateError('Incompatible existing todos.${column.name} column.');
+    }
+    if (!column.$nullable) {
+      final invalid = await customSelect(
+        'SELECT 1 FROM todos WHERE "${column.name}" NOT IN (0, 1) LIMIT 1',
+      ).get();
+      if (invalid.isNotEmpty) {
+        throw StateError('Incompatible values in todos.${column.name}.');
+      }
+    }
+  }
 }

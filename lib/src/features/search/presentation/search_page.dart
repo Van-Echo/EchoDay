@@ -59,7 +59,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ? (MediaQuery.sizeOf(context).width - 24).clamp(0.0, 600.0)
         : _categoryFilterWidth(context, strings, categories);
     return AppScaffold(
-      selectedIndex: 2,
+      selectedIndex: 3,
       title: strings.searchTitle,
       body: Column(
         children: [
@@ -376,9 +376,16 @@ class _SearchResultTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final metadata = <String>[
-      DateFormat.yMMMd(locale).format(
-        DateTime(todo.localDate.year, todo.localDate.month, todo.localDate.day),
-      ),
+      if (todo.isFuture)
+        strings.navFutureTodos
+      else
+        DateFormat.yMMMd(locale).format(
+          DateTime(
+            todo.localDate.year,
+            todo.localDate.month,
+            todo.localDate.day,
+          ),
+        ),
       _priorityName(strings, todo.priority),
       if (todo.plannedAt case final value?)
         '${strings.plannedAtLabel} ${DateFormat.Hm(locale).format(value.toLocal())}',

@@ -11,6 +11,7 @@ import '../../../app/platform/platform_capabilities.dart';
 import '../../../app/providers/data_providers.dart';
 import '../application/sync_client_controller.dart';
 import '../domain/sync_client_models.dart';
+import '../domain/sync_endpoint_update.dart';
 import '../domain/sync_merge_engine.dart';
 import '../domain/sync_pairing_document.dart';
 import '../server/sync_lan_pairing_discovery.dart';
@@ -231,10 +232,94 @@ class _SyncClientSettingsSectionState
             ),
           ),
         const SizedBox(height: 12),
-        if (ref.read(platformCapabilitiesProvider).isWindows) ...[
-          _buildEndpointEditor(strings, state, connected: true),
-          const SizedBox(height: 12),
-        ],
+        Row(
+          children: [
+            Expanded(
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: strings.syncConnectionProfiles,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    key: const ValueKey('sync-client-endpoints'),
+                    value: profile.baseUri.toString(),
+                    isExpanded: true,
+                    isDense: true,
+                    items: [
+                      for (final endpoint in profile.savedEndpoints)
+                        DropdownMenuItem(
+                          value: endpoint.id,
+                          child: Text(
+                            '${endpoint.displayName}${endpoint.id == profile.defaultEndpointId ? " · ${strings.syncDefaultNetwork}" : ""}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      DropdownMenuItem(
+                        value: '__add_endpoint__',
+                        child: Text(strings.syncAddNetwork),
+                      ),
+                    ],
+                    onChanged: state.busy
+                        ? null
+                        : (value) {
+                            if (value == '__add_endpoint__') {
+                              _addConnection();
+                            } else if (value != null) {
+                              unawaited(
+                                controller.selectEndpointAndSynchronize(value),
+                              );
+                            }
+                          },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            IconButton.outlined(
+              key: const ValueKey('sync-client-default-endpoint'),
+              tooltip: strings.syncSetDefaultConnection,
+              onPressed: state.busy
+                  ? null
+                  : () => unawaited(
+                      controller.setDefaultEndpoint(profile.baseUri.toString()),
+                    ),
+              icon: Icon(
+                profile.defaultEndpointId == profile.baseUri.toString()
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            if (ref.read(platformCapabilitiesProvider).isAndroid)
+              OutlinedButton.icon(
+                key: const ValueKey('sync-scan-endpoint-update'),
+                onPressed: state.busy
+                    ? null
+                    : () => _scan(updateEndpoint: true),
+                icon: const Icon(Icons.qr_code_scanner_rounded),
+                label: Text(strings.syncScanEndpointUpdate),
+              ),
+            OutlinedButton.icon(
+              key: const ValueKey('sync-paste-endpoint-update'),
+              onPressed: state.busy ? null : _pasteEndpointUpdate,
+              icon: const Icon(Icons.content_paste_rounded),
+              label: Text(strings.syncPasteEndpointUpdate),
+            ),
+          ],
+        ),
+        ExpansionTile(
+          key: const ValueKey('sync-manual-endpoint-editor'),
+          tilePadding: EdgeInsets.zero,
+          title: Text(strings.syncEditEndpoint),
+          children: [_buildEndpointEditor(strings, state, connected: true)],
+        ),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -263,6 +348,12 @@ class _SyncClientSettingsSectionState
                 issueCount: state.conflicts.length,
               ),
               label: Text(strings.syncConflicts(state.conflicts.length)),
+            ),
+            OutlinedButton.icon(
+              key: const ValueKey('sync-repair-client'),
+              onPressed: state.busy ? null : _showRePair,
+              icon: const Icon(Icons.link_rounded),
+              label: Text(strings.syncRePair),
             ),
             TextButton.icon(
               key: const ValueKey('sync-client-disconnect'),
@@ -346,13 +437,93 @@ class _SyncClientSettingsSectionState
     );
   }
 
-  Future<void> _scan() async {
+  Future<void> _scan({bool updateEndpoint = false, bool rePair = false}) async {
     final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const _SyncQrScannerPage()),
+      MaterialPageRoute(
+        builder: (_) => _SyncQrScannerPage(endpointUpdate: updateEndpoint),
+      ),
     );
     if (result == null || !mounted) return;
-    _codeController.text = result;
-    unawaited(ref.read(syncClientControllerProvider.notifier).pair(result));
+    if (updateEndpoint) {
+      unawaited(
+        ref
+            .read(syncClientControllerProvider.notifier)
+            .applyEndpointUpdate(result),
+      );
+    } else {
+      _codeController.text = result;
+      final controller = ref.read(syncClientControllerProvider.notifier);
+      unawaited(rePair ? controller.rePair(result) : controller.pair(result));
+    }
+  }
+
+  Future<void> _addConnection() async {
+    final endpoint = await showDialog<SyncSavedEndpoint>(
+      context: context,
+      builder: (_) => _EndpointInputDialog(
+        initialPort:
+            ref.read(syncClientControllerProvider).profile?.port ?? 12688,
+      ),
+    );
+    if (endpoint != null && mounted) {
+      await ref
+          .read(syncClientControllerProvider.notifier)
+          .updateEndpointAndSynchronize(endpoint.address, endpoint.port);
+    }
+  }
+
+  Future<void> _showRePair() async {
+    final strings = AppLocalizations.of(context);
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.syncRePair),
+        content: Text(strings.syncRePairHint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(strings.cancel),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context, 'paste'),
+            child: Text(strings.syncRePairPaste),
+          ),
+          if (ref.read(platformCapabilitiesProvider).isAndroid)
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, 'scan'),
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              label: Text(strings.syncScanQr),
+            ),
+        ],
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'scan') {
+      await _scan(rePair: true);
+    } else {
+      final source = await showDialog<String>(
+        context: context,
+        builder: (_) => _EndpointInputDialog(
+          updateCode: true,
+          title: strings.syncRePairPaste,
+        ),
+      );
+      if (source != null && mounted) {
+        await ref.read(syncClientControllerProvider.notifier).rePair(source);
+      }
+    }
+  }
+
+  Future<void> _pasteEndpointUpdate() async {
+    final source = await showDialog<String>(
+      context: context,
+      builder: (_) => const _EndpointInputDialog(updateCode: true),
+    );
+    if (source != null && mounted) {
+      await ref
+          .read(syncClientControllerProvider.notifier)
+          .applyEndpointUpdate(source);
+    }
   }
 
   Future<void> _importPairingFile() async {
@@ -508,6 +679,113 @@ class _SyncClientSettingsSectionState
   }
 }
 
+final class _EndpointInputDialog extends StatefulWidget {
+  const _EndpointInputDialog({
+    this.updateCode = false,
+    this.initialPort = 12688,
+    this.title,
+  });
+  final bool updateCode;
+  final int initialPort;
+  final String? title;
+
+  @override
+  State<_EndpointInputDialog> createState() => _EndpointInputDialogState();
+}
+
+final class _EndpointInputDialogState extends State<_EndpointInputDialog> {
+  final _input = TextEditingController();
+  late final TextEditingController _port;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _port = TextEditingController(text: '${widget.initialPort}');
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    _port.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(
+        widget.title ??
+            (widget.updateCode
+                ? strings.syncPasteEndpointUpdate
+                : strings.syncManualEndpoint),
+      ),
+      content: SizedBox(
+        width: 440,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                key: ValueKey(
+                  widget.updateCode
+                      ? 'sync-endpoint-code-input'
+                      : 'sync-new-endpoint-host',
+                ),
+                controller: _input,
+                maxLines: widget.updateCode ? 3 : 1,
+                decoration: InputDecoration(
+                  labelText: widget.updateCode
+                      ? strings.syncEndpointCodeLabel
+                      : strings.syncHostAddress,
+                  errorText: _error,
+                ),
+              ),
+              if (!widget.updateCode) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  key: const ValueKey('sync-new-endpoint-port'),
+                  controller: _port,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: strings.syncPort),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(strings.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey('sync-apply-endpoint-code'),
+          onPressed: () {
+            if (widget.updateCode) {
+              Navigator.pop(context, _input.text);
+              return;
+            }
+            try {
+              Navigator.pop(
+                context,
+                SyncSavedEndpoint(
+                  address: _input.text,
+                  port: int.tryParse(_port.text) ?? 0,
+                ),
+              );
+            } on FormatException {
+              setState(() => _error = strings.syncInvalidHostAddress);
+            }
+          },
+          child: Text(strings.syncApplyEndpointUpdate),
+        ),
+      ],
+    );
+  }
+}
+
 final class _ApprovalPanel extends ConsumerWidget {
   const _ApprovalPanel({required this.state});
 
@@ -547,7 +825,8 @@ final class _ApprovalPanel extends ConsumerWidget {
 }
 
 final class _SyncQrScannerPage extends StatefulWidget {
-  const _SyncQrScannerPage();
+  const _SyncQrScannerPage({this.endpointUpdate = false});
+  final bool endpointUpdate;
 
   @override
   State<_SyncQrScannerPage> createState() => _SyncQrScannerPageState();
@@ -591,7 +870,11 @@ final class _SyncQrScannerPageState extends State<_SyncQrScannerPage> {
                 final value = barcode.rawValue;
                 if (value == null || value.isEmpty) continue;
                 try {
-                  SyncPairingUriCodec.parse(value);
+                  if (widget.endpointUpdate) {
+                    SyncEndpointUpdateCodec.parse(value);
+                  } else {
+                    SyncPairingUriCodec.parse(value);
+                  }
                 } on FormatException {
                   continue;
                 }
@@ -676,6 +959,8 @@ String _messageText(AppLocalizations strings, String code) => switch (code) {
   'device_revoked' => strings.syncClientDeviceRevoked,
   'unauthorized' || 'replay_detected' => strings.syncClientAuthenticationFailed,
   'invalid_host_address' => strings.syncInvalidHostAddress,
+  'endpoint_identity_mismatch' => strings.syncEndpointIdentityMismatch,
+  'invalid_endpoint_code' => strings.syncEndpointCodeInvalid,
   'disconnect_failed' => strings.syncClientDisconnectFailed,
   _ => strings.syncClientSyncFailed,
 };

@@ -10,6 +10,7 @@ import '../../../core/ids/id_generator.dart';
 import '../data/direct_sync_client.dart';
 import '../data/sync_connection_store.dart';
 import '../domain/sync_client_models.dart';
+import '../domain/sync_endpoint_update.dart';
 import '../domain/sync_merge_engine.dart';
 import '../domain/sync_protocol.dart';
 import '../domain/sync_repository.dart';
@@ -105,6 +106,8 @@ final class SyncClientViewState {
 class SyncClientController extends Notifier<SyncClientViewState> {
   Future<SyncRunResult?>? _runningSync;
   bool _initializing = false;
+  bool _changingEndpoint = false;
+  bool _pairingActive = false;
   int _pairingGeneration = 0;
 
   @override
@@ -130,7 +133,14 @@ class SyncClientController extends Notifier<SyncClientViewState> {
         );
         await _refreshConflicts();
         if (synchronizeOnLoad) {
-          unawaited(synchronize());
+          final preferred = profile.savedEndpoints
+              .where((item) => item.id == profile.defaultEndpointId)
+              .firstOrNull;
+          if (preferred != null && preferred.id != profile.baseUri.toString()) {
+            unawaited(selectEndpointAndSynchronize(preferred.id));
+          } else {
+            unawaited(synchronize());
+          }
         }
       } else {
         state = state.copyWith(loaded: true);
@@ -150,8 +160,16 @@ class SyncClientController extends Notifier<SyncClientViewState> {
     String source, {
     String? addressOverride,
     int? portOverride,
+    bool preserveConnection = false,
   }) async {
-    if (state.busy || state.connected) return;
+    if (state.busy ||
+        _pairingActive ||
+        (state.connected && !preserveConnection)) {
+      return;
+    }
+    final previousProfile = preserveConnection ? state.profile : null;
+    if (preserveConnection && previousProfile == null) return;
+    _pairingActive = true;
     final generation = ++_pairingGeneration;
     SyncClientTransport? client;
     state = state.copyWith(
@@ -174,7 +192,18 @@ class SyncClientController extends Notifier<SyncClientViewState> {
           port: portOverride,
         );
       }
-      if (await ref.read(syncRepositoryProvider).activeIdentity() != null) {
+      final activeIdentity = await ref
+          .read(syncRepositoryProvider)
+          .activeIdentity();
+      if (previousProfile != null &&
+          (endpoint.groupId != previousProfile.groupId ||
+              endpoint.fingerprintSha256 !=
+                  previousProfile.fingerprintSha256.toLowerCase() ||
+              activeIdentity?.groupId != previousProfile.groupId ||
+              activeIdentity?.role != SyncGroupRole.client)) {
+        throw const SyncRemoteException('endpoint_identity_mismatch', 403);
+      }
+      if (previousProfile == null && activeIdentity != null) {
         throw const SyncRemoteException('already_in_sync_group', 409);
       }
       final identityStore = ref.read(deviceIdentityStoreProvider);
@@ -230,22 +259,38 @@ class SyncClientController extends Notifier<SyncClientViewState> {
           sessionToken == null) {
         throw const SyncRemoteException('pairing_response_invalid', 400);
       }
+      if (previousProfile != null &&
+          (hostDevice.deviceId != previousProfile.hostDevice.deviceId ||
+              hostDevice.publicKey != previousProfile.hostDevice.publicKey)) {
+        throw const SyncRemoteException('endpoint_identity_mismatch', 403);
+      }
       await _createSafetyBackupOnce();
-      await ref
-          .read(syncRepositoryProvider)
-          .initializeClient(
+      if (previousProfile == null) {
+        await ref
+            .read(syncRepositoryProvider)
+            .initializeClient(
+              groupId: endpoint.groupId,
+              hostDeviceId: hostDevice.deviceId,
+              hostDevice: hostDevice,
+              localDevice: registration,
+            );
+      }
+      var profile =
+          previousProfile?.copyWith(
+            address: endpoint.address,
+            port: endpoint.port,
+            savedEndpoints: [
+              ...previousProfile.savedEndpoints,
+              SyncSavedEndpoint(address: endpoint.address, port: endpoint.port),
+            ],
+          ) ??
+          SyncClientProfile(
+            address: endpoint.address,
+            port: endpoint.port,
+            fingerprintSha256: endpoint.fingerprintSha256,
             groupId: endpoint.groupId,
-            hostDeviceId: hostDevice.deviceId,
             hostDevice: hostDevice,
-            localDevice: registration,
           );
-      var profile = SyncClientProfile(
-        address: endpoint.address,
-        port: endpoint.port,
-        fingerprintSha256: endpoint.fingerprintSha256,
-        groupId: endpoint.groupId,
-        hostDevice: hostDevice,
-      );
       await ref.read(syncConnectionStoreProvider).save(profile);
       state = state.copyWith(
         phase: SyncClientPhase.syncing,
@@ -257,7 +302,7 @@ class SyncClientController extends Notifier<SyncClientViewState> {
         profile,
         client,
         sessionToken: sessionToken,
-        firstSync: true,
+        firstSync: previousProfile == null,
       );
       profile = (await ref.read(syncConnectionStoreProvider).load())!;
       state = state.copyWith(
@@ -284,19 +329,31 @@ class SyncClientController extends Notifier<SyncClientViewState> {
       );
     } finally {
       client?.close();
+      _pairingActive = false;
     }
+  }
+
+  Future<void> rePair(String source) async {
+    // Returning from the scanner/permission prompt may resume foreground sync.
+    // Queue the explicit re-pair instead of silently requiring a second scan.
+    final running = _runningSync;
+    if (running != null) await running;
+    if (ref.mounted) await pair(source, preserveConnection: true);
   }
 
   void cancelPairing() {
     _pairingGeneration++;
     state = state.copyWith(
-      phase: SyncClientPhase.disconnected,
+      phase: state.profile == null
+          ? SyncClientPhase.disconnected
+          : SyncClientPhase.offline,
       clearVerificationCode: true,
       clearPairingExpiresAt: true,
     );
   }
 
   Future<SyncRunResult?> synchronize() {
+    if (_changingEndpoint || _pairingActive) return Future.value(null);
     final running = _runningSync;
     if (running != null) return running;
     final future = _synchronizeWithRetry();
@@ -330,7 +387,10 @@ class SyncClientController extends Notifier<SyncClientViewState> {
     }
   }
 
-  Future<SyncRunResult> _synchronizeOnce(SyncClientProfile profile) async {
+  Future<SyncRunResult> _synchronizeOnce(
+    SyncClientProfile profile, {
+    bool persistEndpoint = false,
+  }) async {
     await _createSafetyBackupOnce();
     final identityStore = ref.read(deviceIdentityStoreProvider);
     final identity = await identityStore.loadOrCreate(
@@ -345,6 +405,10 @@ class SyncClientController extends Notifier<SyncClientViewState> {
     try {
       await client.verifyHost();
       final token = await client.openSession();
+      if (persistEndpoint) {
+        await ref.read(syncConnectionStoreProvider).save(profile);
+        state = state.copyWith(profile: profile);
+      }
       final result = await _runSync(profile, client, sessionToken: token);
       final updated = (await ref.read(syncConnectionStoreProvider).load())!;
       state = state.copyWith(
@@ -466,22 +530,87 @@ class SyncClientController extends Notifier<SyncClientViewState> {
   }
 
   Future<void> updateEndpointAndSynchronize(String address, int port) async {
-    final profile =
-        state.profile ?? await ref.read(syncConnectionStoreProvider).load();
-    if (profile == null || state.busy || port < 1 || port > 65535) return;
+    if (state.busy || _changingEndpoint) return;
     try {
-      final updated = profile.copyWith(
-        address: SyncPairingUriCodec.normalizeHost(address),
-        port: port,
-      );
-      await ref.read(syncConnectionStoreProvider).save(updated);
-      state = state.copyWith(profile: updated, clearMessage: true);
-      await synchronize();
+      await _activateEndpoint(SyncSavedEndpoint(address: address, port: port));
     } on FormatException {
       state = state.copyWith(
         phase: SyncClientPhase.error,
         messageCode: 'invalid_host_address',
       );
+    }
+  }
+
+  Future<void> selectEndpointAndSynchronize(String id) async {
+    final endpoint = state.profile?.savedEndpoints
+        .where((item) => item.id == id)
+        .firstOrNull;
+    if (endpoint != null) await _activateEndpoint(endpoint);
+  }
+
+  Future<void> setDefaultEndpoint(String id) async {
+    final profile = state.profile;
+    if (profile == null ||
+        state.busy ||
+        _changingEndpoint ||
+        _runningSync != null ||
+        !profile.savedEndpoints.any((item) => item.id == id)) {
+      return;
+    }
+    _changingEndpoint = true;
+    try {
+      final updated = profile.copyWith(defaultEndpointId: id);
+      await ref.read(syncConnectionStoreProvider).save(updated);
+      if (ref.mounted) state = state.copyWith(profile: updated);
+    } on Object catch (error) {
+      if (ref.mounted) _recordSyncFailure(error);
+    } finally {
+      _changingEndpoint = false;
+    }
+  }
+
+  Future<void> applyEndpointUpdate(String source) async {
+    if (state.busy || _changingEndpoint || !state.connected) return;
+    try {
+      final update = SyncEndpointUpdateCodec.parse(source);
+      final profile = state.profile!;
+      if (update.groupId != profile.groupId ||
+          update.hostDeviceId != profile.hostDevice.deviceId ||
+          update.fingerprintSha256 != profile.fingerprintSha256.toLowerCase()) {
+        throw const SyncRemoteException('endpoint_identity_mismatch', 403);
+      }
+      await _activateEndpoint(update.endpoint);
+    } on FormatException {
+      state = state.copyWith(
+        phase: SyncClientPhase.error,
+        messageCode: 'invalid_endpoint_code',
+      );
+    } on Object catch (error) {
+      _recordSyncFailure(error);
+    }
+  }
+
+  Future<void> _activateEndpoint(SyncSavedEndpoint endpoint) async {
+    if (state.busy || _changingEndpoint || _runningSync != null) return;
+    final profile =
+        state.profile ?? await ref.read(syncConnectionStoreProvider).load();
+    if (profile == null) return;
+    _changingEndpoint = true;
+    state = state.copyWith(phase: SyncClientPhase.syncing, clearMessage: true);
+    try {
+      final updated = profile.copyWith(
+        address: endpoint.address,
+        port: endpoint.port,
+        savedEndpoints: [
+          ...profile.savedEndpoints.where((item) => item.id != endpoint.id),
+          endpoint,
+        ],
+      );
+      await _synchronizeOnce(updated, persistEndpoint: true);
+    } on Object catch (error) {
+      _recordSyncFailure(error);
+    } finally {
+      _changingEndpoint = false;
     }
   }
 

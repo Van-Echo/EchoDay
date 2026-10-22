@@ -19,6 +19,9 @@ abstract final class AppPreferenceKeys {
   static const dayTodoFontSize = 'todo.dayFontSize';
   static const postponeDays = 'todo.postponeDays';
   static const catalogPalette = 'catalog.colorPalette';
+  static const futureTodoTickerIntervalSeconds =
+      'calendar.futureTodoTickerIntervalSeconds';
+  static const futureTodoTickerNumbered = 'calendar.futureTodoTickerNumbered';
 }
 
 enum AppLanguage {
@@ -61,6 +64,31 @@ const defaultCalendarTodoFontSize = 11.0;
 const defaultSidebarTodoFontSize = 14.0;
 const defaultDayTodoFontSize = 14.0;
 const defaultCalendarMottoColorValue = 0xFF000000;
+const defaultFutureTodoTickerIntervalSeconds = 4;
+const minimumFutureTodoTickerIntervalSeconds = 1;
+const maximumFutureTodoTickerIntervalSeconds = 3600;
+
+final futureTodoTickerIntervalSecondsProvider = StreamProvider<int>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watch(AppPreferenceKeys.futureTodoTickerIntervalSeconds)
+      .map((setting) {
+        final value = int.tryParse(setting?.value ?? '');
+        if (value == null ||
+            value < minimumFutureTodoTickerIntervalSeconds ||
+            value > maximumFutureTodoTickerIntervalSeconds) {
+          return defaultFutureTodoTickerIntervalSeconds;
+        }
+        return value;
+      });
+});
+
+final futureTodoTickerNumberedProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watch(AppPreferenceKeys.futureTodoTickerNumbered)
+      .map((setting) => setting?.value == 'true');
+});
 
 final class CalendarMottoStyle {
   const CalendarMottoStyle({

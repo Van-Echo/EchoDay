@@ -22,6 +22,138 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navDayTodos => '当日 TODO';
 
   @override
+  String get navFutureTodos => '未来TODO';
+
+  @override
+  String get syncAddNetwork => '新增…';
+
+  @override
+  String get syncAddNetworkTitle => '添加监听网络接口';
+
+  @override
+  String get syncAddNetworkHint => '从本机当前网卡中选择。校园网可能限制设备互访，建议优先使用 Tailscale。';
+
+  @override
+  String get syncNoNewNetworks => '没有可添加的接口，请确认网卡已连接后刷新';
+
+  @override
+  String get syncSetDefaultNetwork => '设为默认监听接口';
+
+  @override
+  String get syncDefaultNetwork => '默认';
+
+  @override
+  String get syncNetworkOffline => '未连接';
+
+  @override
+  String get syncPairingWaiting => '请用客户端扫码；设备码和确认匹配按钮会显示在此弹窗中。';
+
+  @override
+  String get syncUpdateWlan => '更新 WLAN';
+
+  @override
+  String get syncRePair => '重新配对';
+
+  @override
+  String get syncRePairHint =>
+      '在主 PC 的已连接设备中选择“重新配对”，再扫码或粘贴连接码并核对设备码。保留当前身份、任务和同步历史，不会把旧任务重新登记为修改。不同主机身份不能在此替换。';
+
+  @override
+  String get syncRePairPaste => '粘贴重新配对码';
+
+  @override
+  String get syncRePairHostHint =>
+      '请在原设备选择“重新配对”并扫码，核对设备码后确认。已有任务和同步历史会保留；若设备已卸载并丢失身份，请改用“配对新设备”。';
+
+  @override
+  String get syncEndpointUpdateHint =>
+      '已配对设备扫码后可保存并切换到当前监听地址，无需重新配对。换网络时，请先选择对应监听接口，再生成二维码。';
+
+  @override
+  String get syncConnectionProfiles => '主机连接配置';
+
+  @override
+  String get syncSetDefaultConnection => '设为默认连接配置';
+
+  @override
+  String get syncScanEndpointUpdate => '扫码更新 WLAN';
+
+  @override
+  String get syncPasteEndpointUpdate => '粘贴更新码';
+
+  @override
+  String get syncEndpointCodeLabel => '连接更新码';
+
+  @override
+  String get syncApplyEndpointUpdate => '添加并同步';
+
+  @override
+  String get syncManualEndpoint => '手动添加连接配置';
+
+  @override
+  String get syncEditEndpoint => '手动输入地址和端口';
+
+  @override
+  String get syncEndpointIdentityMismatch => '更新码不属于当前已配对的主 PC，原连接配置和数据未改动。';
+
+  @override
+  String get syncEndpointCodeInvalid => '连接更新码无效或已过期，请在主 PC 重新生成。';
+
+  @override
+  String get futureTodosTitle => '未来TODO';
+
+  @override
+  String get noFutureTodos => '把还没安排日期的想法和任务放在这里';
+
+  @override
+  String get futureTodoUnscheduled => '暂未安排日期';
+
+  @override
+  String get moveToToday => '转移到当日TODO';
+
+  @override
+  String get moveToFuture => '移动到未来TODO';
+
+  @override
+  String get copyToTomorrow => '复制到下一天';
+
+  @override
+  String get taskMovedToFuture => '任务已移至未来TODO';
+
+  @override
+  String get taskCopiedToTomorrow => '已复制到任务所属日期的下一天，原任务已保留';
+
+  @override
+  String get futureTodosTickerHint => '未来TODO · 点击查看，长按或右键安排到今天';
+
+  @override
+  String get tickerSettingsTitle => '滚动栏';
+
+  @override
+  String get tickerIntervalLabel => '滚动栏间隔时间';
+
+  @override
+  String get tickerIntervalHint => '每隔 1～3600 秒切换一条，默认 4 秒';
+
+  @override
+  String get tickerSecondsUnit => '秒';
+
+  @override
+  String get tickerIntervalInvalid => '请输入 1～3600 之间的整数';
+
+  @override
+  String get tickerIntervalSaved => '滚动栏间隔时间已保存';
+
+  @override
+  String get tickerSettingsSaveFailed => '未能保存滚动栏设置，请重试';
+
+  @override
+  String get tickerNumberedLabel => '显示条目编号';
+
+  @override
+  String get tickerNumberedHint => '播放时显示“1. ”“2. ”等前缀，按当前播放顺序编号';
+
+  @override
   String get navSearch => '搜索';
 
   @override
@@ -872,7 +1004,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncEditNote => '修改备注';
 
   @override
-  String get syncDeviceNote => '设备备注';
+  String get syncDeviceNote => '设备显示名称';
+
+  @override
+  String get syncDeviceNameHint => '留空可恢复原设备名';
 
   @override
   String get syncNow => '立即同步';

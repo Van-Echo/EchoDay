@@ -14,6 +14,7 @@ import 'package:echoday/src/features/sync/data/database_sync_change_recorder.dar
 import 'package:echoday/src/features/sync/data/direct_sync_client.dart';
 import 'package:echoday/src/features/sync/data/local_sync_repository.dart';
 import 'package:echoday/src/features/sync/domain/sync_client_models.dart';
+import 'package:echoday/src/features/sync/domain/sync_endpoint_update.dart';
 import 'package:echoday/src/features/sync/domain/sync_repository.dart';
 import 'package:echoday/src/features/sync/security/device_identity.dart';
 import 'package:echoday/src/features/sync/security/device_secret_store.dart';
@@ -190,7 +191,7 @@ Future<void> _exerciseClient(
       'token': invite.token,
     },
   );
-  final controller = container.read(syncClientControllerProvider.notifier);
+  var controller = container.read(syncClientControllerProvider.notifier);
   final pairing = controller.pair(
     uri.toString(),
     addressOverride: capabilities.isWindows ? 'localhost' : null,
@@ -211,6 +212,10 @@ Future<void> _exerciseClient(
   final pairedState = container.read(syncClientControllerProvider);
   expect(pairedState.phase, SyncClientPhase.synced);
   expect(pairedState.profile?.hostDevice.displayName, 'Main PC');
+  expect(
+    pairedState.profile!.savedEndpoints.single.id,
+    pairedState.profile!.baseUri.toString(),
+  );
   if (capabilities.isWindows) {
     expect(pairedState.profile?.address, 'localhost');
   }
@@ -231,6 +236,127 @@ Future<void> _exerciseClient(
       isNotNull,
     );
   }
+
+  // Re-pair the same trusted host without disconnecting or emitting a new
+  // baseline. Check both active and explicitly revoked registrations.
+  final previousIdentity = (await container
+      .read(syncRepositoryProvider)
+      .activeIdentity())!;
+  final originalOperationIds =
+      (await clientDatabase.select(clientDatabase.syncChanges).get())
+          .map((row) => row.operationId)
+          .toSet();
+  final originalProfile = container.read(syncClientControllerProvider).profile!;
+  await controller.rePair(
+    uri
+        .replace(
+          queryParameters: {...uri.queryParameters, 'group': 'unrelated-group'},
+        )
+        .toString(),
+  );
+  expect(
+    container.read(syncClientControllerProvider).messageCode,
+    'endpoint_identity_mismatch',
+  );
+  expect(
+    container.read(syncClientControllerProvider).profile!.encode(),
+    originalProfile.encode(),
+  );
+  for (final revoked in [false, true]) {
+    if (revoked) {
+      await (hostDatabase.update(hostDatabase.syncDevices)..where(
+            (row) => row.deviceId.equals(previousIdentity.localDeviceId),
+          ))
+          .write(
+            SyncDevicesCompanion(revokedAt: Value(DateTime.now().toUtc())),
+          );
+    }
+    final reconnectInvite = await hostService.createPairingInvite();
+    final reconnectUri = uri.replace(
+      queryParameters: {
+        ...uri.queryParameters,
+        'invite': reconnectInvite.id,
+        'token': reconnectInvite.token,
+      },
+    );
+    final reconnect = controller.rePair(reconnectUri.toString());
+    await _waitUntil(
+      () =>
+          hostService.pendingPairingRequests.isNotEmpty &&
+          container.read(syncClientControllerProvider).verificationCode != null,
+    );
+    final pendingReconnect = hostService.pendingPairingRequests.single;
+    expect(pendingReconnect.device.deviceId, previousIdentity.localDeviceId);
+    expect(await controller.synchronize(), isNull);
+    expect(
+      container.read(syncClientControllerProvider).phase,
+      SyncClientPhase.waitingForApproval,
+    );
+    await hostService.approvePairing(pendingReconnect.id);
+    await reconnect;
+    expect(
+      container.read(syncClientControllerProvider).phase,
+      SyncClientPhase.synced,
+    );
+    expect(
+      (await container.read(syncRepositoryProvider).activeIdentity())!
+          .localDeviceId,
+      previousIdentity.localDeviceId,
+    );
+    expect(
+      (await clientDatabase.select(clientDatabase.syncChanges).get())
+          .map((row) => row.operationId)
+          .toSet(),
+      originalOperationIds,
+    );
+    expect(
+      container.read(syncClientControllerProvider).profile!.defaultEndpointId,
+      originalProfile.defaultEndpointId,
+    );
+    expect(
+      await container.read(syncRepositoryProvider).unresolvedConflicts(),
+      isEmpty,
+    );
+    final device =
+        await (hostDatabase.select(hostDatabase.syncDevices)..where(
+              (row) => row.deviceId.equals(previousIdentity.localDeviceId),
+            ))
+            .getSingle();
+    expect(device.revokedAt, isNull);
+  }
+  final cancelInvite = await hostService.createPairingInvite();
+  final canceled = controller.rePair(
+    uri
+        .replace(
+          queryParameters: {
+            ...uri.queryParameters,
+            'invite': cancelInvite.id,
+            'token': cancelInvite.token,
+          },
+        )
+        .toString(),
+  );
+  await _waitUntil(
+    () =>
+        hostService.pendingPairingRequests.isNotEmpty &&
+        container.read(syncClientControllerProvider).verificationCode != null,
+  );
+  final cancelRequest = hostService.pendingPairingRequests.single;
+  controller.cancelPairing();
+  await canceled;
+  await hostService.rejectPairing(cancelRequest.id);
+  expect(container.read(syncClientControllerProvider).connected, isTrue);
+  expect(
+    (await container.read(syncRepositoryProvider).activeIdentity())!
+        .localDeviceId,
+    previousIdentity.localDeviceId,
+  );
+  expect(
+    (await clientDatabase.select(clientDatabase.syncChanges).get())
+        .map((row) => row.operationId)
+        .toSet(),
+    originalOperationIds,
+  );
 
   final connectedClientTodos = container.read(todoRepositoryProvider);
   await connectedClientTodos.create(
@@ -330,6 +456,134 @@ Future<void> _exerciseClient(
       SyncClientPhase.synced,
     );
   }
+
+  // A network/port change is not a new pairing. An untrusted QR must not
+  // overwrite the last working address, cursor, or host identity.
+  final previous = container.read(syncClientControllerProvider).profile!;
+  await hostService.stop();
+  final reservation = await ServerSocket.bind(
+    InternetAddress.loopbackIPv4,
+    binding.port,
+  );
+  final nextBinding = await hostService.start(
+    address: InternetAddress.loopbackIPv4,
+  );
+  await reservation.close();
+  Uri updateCode({
+    String? group,
+    String? fingerprint,
+    DateTime? expires,
+    int? port,
+  }) => SyncEndpointUpdateCodec.encode(
+    SyncEndpointUpdate(
+      endpoint: SyncSavedEndpoint(
+        address: nextBinding.address.address,
+        port: port ?? nextBinding.port,
+        label: 'WLAN',
+      ),
+      groupId: group ?? previous.groupId,
+      hostDeviceId: previous.hostDevice.deviceId,
+      fingerprintSha256: fingerprint ?? previous.fingerprintSha256,
+      expiresAt:
+          expires ?? DateTime.now().toUtc().add(const Duration(minutes: 10)),
+    ),
+  );
+  await controller.applyEndpointUpdate(
+    updateCode(group: 'another-group').toString(),
+  );
+  expect(
+    container.read(syncClientControllerProvider).messageCode,
+    'endpoint_identity_mismatch',
+  );
+  expect(
+    container.read(syncClientControllerProvider).profile!.encode(),
+    previous.encode(),
+  );
+  await controller.applyEndpointUpdate(
+    updateCode(expires: DateTime.utc(2020)).toString(),
+  );
+  expect(
+    container.read(syncClientControllerProvider).messageCode,
+    'invalid_endpoint_code',
+  );
+  expect(
+    container.read(syncClientControllerProvider).profile!.encode(),
+    previous.encode(),
+  );
+
+  // Even a forged QR claiming the correct pin cannot replace it with another
+  // TLS identity. Verification must happen before the endpoint is persisted.
+  final rogue = SecureSyncHostService(
+    database: hostDatabase,
+    syncRepository: hostSync,
+    tlsIdentityStore: HostTlsIdentityStore(MemoryDeviceSecretStore()),
+    sessions: SyncSessionManager(
+      publicKeyForDevice: (id) => activeDevicePublicKey(hostDatabase, id),
+    ),
+  );
+  final rogueBinding = await rogue.start(address: InternetAddress.loopbackIPv4);
+  try {
+    await controller.applyEndpointUpdate(
+      updateCode(port: rogueBinding.port).toString(),
+    );
+    expect(
+      container.read(syncClientControllerProvider).messageCode,
+      'fingerprint_mismatch',
+    );
+    expect(
+      container.read(syncClientControllerProvider).profile!.encode(),
+      previous.encode(),
+    );
+  } finally {
+    await rogue.stop();
+  }
+
+  await controller.applyEndpointUpdate(updateCode().toString());
+  var updated = container.read(syncClientControllerProvider).profile!;
+  expect(
+    container.read(syncClientControllerProvider).phase,
+    SyncClientPhase.synced,
+  );
+  expect(updated.port, nextBinding.port);
+  expect(
+    updated.savedEndpoints.map((item) => item.id),
+    contains(previous.baseUri.toString()),
+  );
+  final historyLength = updated.savedEndpoints.length;
+  await controller.applyEndpointUpdate(updateCode().toString());
+  expect(
+    container.read(syncClientControllerProvider).profile!.savedEndpoints,
+    hasLength(historyLength),
+  );
+
+  final preferredId = nextBinding.endpoint.toString();
+  await controller.updateEndpointAndSynchronize('localhost', nextBinding.port);
+  await controller.setDefaultEndpoint(preferredId);
+  updated = container.read(syncClientControllerProvider).profile!;
+  expect(updated.address, 'localhost');
+  expect(updated.defaultEndpointId, preferredId);
+  container.invalidate(syncClientControllerProvider);
+  controller = container.read(syncClientControllerProvider.notifier);
+  await controller.initialize();
+  await _waitUntil(
+    () =>
+        container.read(syncClientControllerProvider).phase ==
+            SyncClientPhase.synced &&
+        container
+                .read(syncClientControllerProvider)
+                .profile
+                ?.baseUri
+                .toString() ==
+            preferredId,
+  );
+  expect(
+    container.read(syncClientControllerProvider).profile!.hostDevice.deviceId,
+    previous.hostDevice.deviceId,
+  );
+  expect(
+    await clientDatabase.select(clientDatabase.todos).get(),
+    hasLength(5 + seededTaskCount),
+  );
 
   await controller.disconnect();
   expect(

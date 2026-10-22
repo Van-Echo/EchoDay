@@ -10,6 +10,7 @@ import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
 import 'generated/schema_v4.dart' as v4;
+import 'generated/schema_v5.dart' as v5;
 
 void main() {
   const expected = {
@@ -21,6 +22,8 @@ void main() {
         '7354d87ff0f312732c900e4ffb62b5ee25aa031d50ec31ea0638b9845bd3f2d7',
     'drift_schemas/app_database/drift_schema_v4.json':
         'cfe62a5db4122ee26ee2379715c9b8100514e0a2b770a05e780f907c3f4743b1',
+    'drift_schemas/app_database/drift_schema_v5.json':
+        '982f4d6839f2ed8064a6a896703b8d6e613c206ee11044b55e74ec1e9b3a445c',
     'test/fixtures/migrations/schema_v1_seed.sql':
         '06cc800522455f7cdf554f6c6eb14ec74b37424bafe0e4dd4affbbd982fb8bc3',
     'test/fixtures/migrations/schema_v2_seed.sql':
@@ -29,6 +32,8 @@ void main() {
         '6b4787eadca3c0f205fdd593d4aefc8f099a866b0d14c3a5a9e4c3845050c7ca',
     'test/fixtures/migrations/schema_v4_seed.sql':
         'a8e2c2c48118ea9aae4375a5fc96b4e71ee469a4a6db6c30ebf1bd22bad75143',
+    'test/fixtures/migrations/schema_v5_seed.sql':
+        '6144b4d641d1600431cf9ad9ed451c5a61eccb19ec756a00ab1515ed2ad12d04',
   };
 
   test('published Drift schema snapshots remain immutable', () async {
@@ -79,6 +84,16 @@ void main() {
     expect(await database.select(database.syncDevices).get(), hasLength(1));
     expect(await database.select(database.syncChanges).get(), hasLength(1));
     expect(await database.select(database.syncConflicts).get(), hasLength(1));
+  });
+
+  test('v5 representative seed loads into the published schema', () async {
+    final database = v5.DatabaseAtV5(NativeDatabase.memory());
+    addTearDown(database.close);
+    await _runSeed(database, 'test/fixtures/migrations/schema_v5_seed.sql');
+    final todos = await database.select(database.todos).get();
+    expect(todos, hasLength(1));
+    expect(todos.single.isFuture, 1);
+    expect(todos.single.isCompleted, 0);
   });
 
   test('v4 representative seed loads into the published schema', () async {

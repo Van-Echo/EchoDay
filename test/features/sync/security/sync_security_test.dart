@@ -228,6 +228,102 @@ void main() {
           .select(database.syncPairingInvites)
           .getSingle();
       expect(storedInvite.consumedAt, isNotNull);
+      final originalDevice =
+          await (database.select(database.syncDevices)
+                ..where((row) => row.deviceId.equals(clientIdentity.deviceId)))
+              .getSingle();
+      await (database.update(database.syncDevices)
+            ..where((row) => row.deviceId.equals(clientIdentity.deviceId)))
+          .write(const SyncDevicesCompanion(note: Value('Keep this note')));
+      Future<PairingPrepareRequest> makeRePairRequest(
+        SyncPairingInvite invitation,
+        DeviceIdentityStore store,
+        DeviceIdentity identity,
+      ) async {
+        final unsigned = PairingPrepareRequest(
+          inviteId: invitation.id,
+          inviteToken: invitation.token,
+          device: SyncDeviceRegistration(
+            deviceId: identity.deviceId,
+            displayName: 'Phone reconnected',
+            platform: 'android',
+            appVersion: '1.0.8',
+            publicKey: identity.publicKeyBase64Url,
+          ),
+          clientNonce: SyncCrypto.randomToken(bytes: 16),
+          signature: '',
+        );
+        return PairingPrepareRequest(
+          inviteId: unsigned.inviteId,
+          inviteToken: unsigned.inviteToken,
+          device: unsigned.device,
+          clientNonce: unsigned.clientNonce,
+          signature: await store.sign(
+            identity,
+            pairingPrepareMessage(unsigned),
+          ),
+        );
+      }
+
+      final rePairInvite = await pairing.createInvite();
+      final rePairRequest = await makeRePairRequest(
+        rePairInvite,
+        clientStore,
+        clientIdentity,
+      );
+      final rePairPending = await pairing.prepare(rePairRequest);
+      expect(
+        pairing
+            .poll(
+              requestId: rePairPending.id,
+              clientNonce: rePairRequest.clientNonce,
+            )
+            .state,
+        PairingPollState.pending,
+      );
+      await pairing.approve(rePairPending.id);
+      expect(
+        pairing
+            .poll(
+              requestId: rePairPending.id,
+              clientNonce: rePairRequest.clientNonce,
+            )
+            .state,
+        PairingPollState.approved,
+      );
+      final retainedDevice =
+          await (database.select(database.syncDevices)
+                ..where((row) => row.deviceId.equals(clientIdentity.deviceId)))
+              .getSingle();
+      expect(retainedDevice.createdAt, originalDevice.createdAt);
+      expect(retainedDevice.note, 'Keep this note');
+      expect(await database.select(database.syncDevices).get(), hasLength(2));
+      await expectLater(
+        pairing.prepare(rePairRequest),
+        throwsA(isA<SyncProtocolException>()),
+      );
+      final impostorStore = DeviceIdentityStore(MemoryDeviceSecretStore());
+      final impostor = await impostorStore.loadOrCreate(
+        () => clientIdentity.deviceId,
+      );
+      final impostorInvite = await pairing.createInvite();
+      final impostorRequest = await makeRePairRequest(
+        impostorInvite,
+        impostorStore,
+        impostor,
+      );
+      await expectLater(
+        pairing.prepare(impostorRequest),
+        throwsA(isA<SyncProtocolException>()),
+      );
+      expect(
+        (await (database.select(
+                  database.syncDevices,
+                )..where((row) => row.deviceId.equals(clientIdentity.deviceId)))
+                .getSingle())
+            .publicKey,
+        clientIdentity.publicKeyBase64Url,
+      );
     },
   );
 

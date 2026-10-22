@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:echoday/src/core/ids/id_generator.dart';
@@ -83,6 +85,124 @@ void main() {
   tearDown(() async {
     await hostDb.close();
     await clientDb.close();
+  });
+
+  test('re-pairing retained tasks avoids false conflicts and repairs only old equivalent pairs', () async {
+    final item = await hostTodos.create(
+      TodoDraft(title: 'Keep all work', localDate: LocalDate(2026, 10, 22)),
+    );
+    await hostSync.initializeHost(
+      groupId: 'echo-group',
+      localDevice: hostDevice,
+    );
+    await clientSync.initializeClient(
+      groupId: 'echo-group',
+      hostDeviceId: hostDevice.deviceId,
+      hostDevice: hostDevice,
+      localDevice: clientDevice,
+    );
+    await hostSync.registerDevice(clientDevice);
+    await clientSync.applyBatch(await hostSync.changesAfter(SyncCursor()));
+    await clientSync.leaveGroup();
+    const reinstalled = SyncDeviceRegistration(
+      deviceId: 'reinstalled-phone',
+      displayName: 'Same phone',
+      platform: 'android',
+      appVersion: '1.0.8',
+      publicKey: 'new-key',
+    );
+    await clientSync.initializeClient(
+      groupId: 'echo-group',
+      hostDeviceId: hostDevice.deviceId,
+      hostDevice: hostDevice,
+      localDevice: reinstalled,
+    );
+    await hostSync.registerDevice(reinstalled);
+    final baseline = await clientSync.changesAfter(SyncCursor());
+    final result = await hostSync.applyBatch(baseline);
+    expect(result.conflicts, isEmpty);
+    await clientSync.applyBatch(await hostSync.changesAfter(SyncCursor()));
+    expect(await clientSync.unresolvedConflicts(), isEmpty);
+    final beforeTasks = await hostDb.select(hostDb.todos).get();
+    final beforeChanges = await hostDb.select(hostDb.syncChanges).get();
+    for (final change in baseline.operations) {
+      final old = beforeChanges.firstWhere(
+        (row) =>
+            row.sourceDeviceId == hostDevice.deviceId &&
+            row.entityId == item.id &&
+            row.fieldGroup == change.fieldGroup.wireName,
+      );
+      await hostDb
+          .into(hostDb.syncConflicts)
+          .insert(
+            SyncConflictsCompanion.insert(
+              id: 'legacy-${change.fieldGroup.wireName}',
+              syncGroupId: 'echo-group',
+              entityType: 'todo',
+              entityId: item.id,
+              fieldGroup: change.fieldGroup.wireName,
+              kind: 'concurrentFieldEdit',
+              winnerOperationId: change.operationId,
+              loserOperationId: old.operationId,
+              losingPayloadJson: old.payloadJson,
+              createdAt: now,
+            ),
+          );
+    }
+    expect(await hostSync.reconcileEquivalentConflicts(), 3);
+    expect(await hostSync.reconcileEquivalentConflicts(), 0);
+    expect(await hostSync.unresolvedConflicts(), isEmpty);
+    expect(await hostDb.select(hostDb.todos).get(), beforeTasks);
+    expect(await hostDb.select(hostDb.syncChanges).get(), beforeChanges);
+    final audited = await hostDb.select(hostDb.syncConflicts).get();
+    expect(audited, hasLength(3));
+    expect(
+      audited.every(
+        (row) => row.resolvedAt != null && row.resolutionOperationId != null,
+      ),
+      isTrue,
+    );
+    expect(
+      jsonEncode(
+        (await hostDb.select(hostDb.todos).get())
+            .map((row) => row.toJson())
+            .toList(),
+      ),
+      isNotEmpty,
+    );
+  });
+
+  test('future inbox transfers converge between host and Android', () async {
+    final date = LocalDate(2026, 10, 22);
+    final item = await hostTodos.create(
+      TodoDraft(title: 'Inbox task', localDate: date),
+    );
+    await hostSync.initializeHost(
+      groupId: 'echo-group',
+      localDevice: hostDevice,
+    );
+    await clientSync.initializeClient(
+      groupId: 'echo-group',
+      hostDeviceId: hostDevice.deviceId,
+      hostDevice: hostDevice,
+      localDevice: clientDevice,
+    );
+    await hostSync.registerDevice(clientDevice);
+    final baseline = await hostSync.changesAfter(SyncCursor());
+    await clientSync.applyBatch(baseline);
+
+    await clientTodos.moveToFuture(item.id);
+    await hostSync.applyBatch(await clientSync.changesAfter(baseline.cursor));
+    expect((await hostTodos.getFuture()).single.id, item.id);
+    expect(await hostTodos.getByDate(date), isEmpty);
+
+    final future = (await hostTodos.getById(item.id))!;
+    await hostTodos.save(
+      future.copyWith(isFuture: false, localDate: date.addDays(1)),
+    );
+    await clientSync.applyBatch(await hostSync.changesAfter(baseline.cursor));
+    expect(await clientTodos.getFuture(), isEmpty);
+    expect((await clientTodos.getByDate(date.addDays(1))).single.id, item.id);
   });
 
   test('snapshot baseline and offline field edits converge', () async {

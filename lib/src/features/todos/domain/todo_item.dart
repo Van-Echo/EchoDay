@@ -13,6 +13,7 @@ final class TodoItem {
     required this.updatedAt,
     this.isCompleted = false,
     this.isAbandoned = false,
+    this.isFuture = false,
     this.plannedAt,
     this.priority = TodoPriority.none,
     this.categoryId,
@@ -66,6 +67,9 @@ final class TodoItem {
   final LocalDate localDate;
   final bool isCompleted;
   final bool isAbandoned;
+
+  /// An unscheduled task in the future inbox, excluded from dated lists.
+  final bool isFuture;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? plannedAt;
@@ -88,7 +92,8 @@ final class TodoItem {
 
   bool isOverdueAt(DateTime nowUtc) {
     requireUtc(nowUtc, 'nowUtc');
-    return !isTerminal &&
+    return !isFuture &&
+        !isTerminal &&
         !isDeleted &&
         deadlineAt != null &&
         nowUtc.isAfter(deadlineAt!);
@@ -99,6 +104,7 @@ final class TodoItem {
     LocalDate? localDate,
     bool? isCompleted,
     bool? isAbandoned,
+    bool? isFuture,
     DateTime? updatedAt,
     Object? plannedAt = _unset,
     TodoPriority? priority,
@@ -121,6 +127,7 @@ final class TodoItem {
       localDate: localDate ?? this.localDate,
       isCompleted: isCompleted ?? this.isCompleted,
       isAbandoned: isAbandoned ?? this.isAbandoned,
+      isFuture: isFuture ?? this.isFuture,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       plannedAt: identical(plannedAt, _unset)
@@ -163,6 +170,7 @@ final class TodoDraft {
   TodoDraft({
     required String title,
     required this.localDate,
+    this.isFuture = false,
     this.plannedAt,
     this.priority = TodoPriority.none,
     this.categoryId,
@@ -184,6 +192,7 @@ final class TodoDraft {
 
   final String title;
   final LocalDate localDate;
+  final bool isFuture;
   final DateTime? plannedAt;
   final TodoPriority priority;
   final String? categoryId;

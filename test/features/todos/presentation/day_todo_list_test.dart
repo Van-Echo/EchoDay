@@ -699,6 +699,23 @@ final class _MemoryTodoRepository implements TodoRepository {
   Future<List<TodoItem>> getByDate(LocalDate date) async => _forDate(date);
 
   @override
+  Stream<List<TodoItem>> watchFuture() => Stream.value(
+    _items.values.where((todo) => todo.isFuture && !todo.isDeleted).toList(),
+  );
+
+  @override
+  Future<List<TodoItem>> getFuture() async =>
+      _items.values.where((todo) => todo.isFuture && !todo.isDeleted).toList();
+
+  @override
+  Future<TodoItem> moveToFuture(String id) =>
+      save(_items[id]!.copyWith(isFuture: true));
+
+  @override
+  Future<void> reorderFuture(List<String> orderedIds) =>
+      throw UnimplementedError();
+
+  @override
   Future<TodoItem?> getById(String id, {bool includeDeleted = false}) async {
     final item = _items[id];
     return !includeDeleted && (item?.isDeleted ?? false) ? null : item;
@@ -711,6 +728,7 @@ final class _MemoryTodoRepository implements TodoRepository {
       id: 'todo-${++_nextId}',
       title: draft.title,
       localDate: draft.localDate,
+      isFuture: draft.isFuture,
       createdAt: now,
       updatedAt: now,
       plannedAt: draft.plannedAt,
@@ -799,7 +817,9 @@ final class _MemoryTodoRepository implements TodoRepository {
   }
 
   List<TodoItem> _forDate(LocalDate date) => _items.values
-      .where((item) => item.localDate == date && !item.isDeleted)
+      .where(
+        (item) => !item.isFuture && item.localDate == date && !item.isDeleted,
+      )
       .toList();
 
   void _emit(LocalDate date) => _controllers[date]?.add(_forDate(date));

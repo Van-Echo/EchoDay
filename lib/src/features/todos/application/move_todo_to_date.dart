@@ -8,10 +8,13 @@ final class MoveTodoToDate {
   final TodoRepository _todos;
 
   Future<TodoItem> call(TodoItem todo, LocalDate targetDate) {
-    if (todo.localDate == targetDate) return Future.value(todo);
+    if (!todo.isFuture && todo.localDate == targetDate) {
+      return Future.value(todo);
+    }
     return _todos.save(
       todo.copyWith(
         localDate: targetDate,
+        isFuture: false,
         plannedAt: _moveToDate(todo.plannedAt, targetDate),
         deadlineAt: _moveToDate(todo.deadlineAt, targetDate),
       ),

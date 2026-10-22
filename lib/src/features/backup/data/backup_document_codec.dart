@@ -117,6 +117,7 @@ final class BackupDocumentCodec {
     ...value,
     // Backups created before V1.0.7 do not contain abandonment state.
     'isAbandoned': value['isAbandoned'] ?? false,
+    'isFuture': value['isFuture'] ?? false,
     'abandonedAt': value['abandonedAt'],
   }, serializer: serializer);
 

@@ -12,6 +12,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../application/sync_client_controller.dart';
 import '../application/sync_host_controller.dart';
 import '../domain/sync_client_models.dart';
+import '../domain/sync_endpoint_update.dart';
 import '../domain/sync_merge_engine.dart';
 import '../domain/sync_pairing_document.dart';
 import '../security/sync_pairing_service.dart';
@@ -317,6 +318,13 @@ final class _HostConnectionPanel extends ConsumerWidget {
     final strings = AppLocalizations.of(context);
     final controller = ref.read(syncHostControllerProvider.notifier);
     final binding = state.binding;
+    final selectedSaved = state.savedNetworks
+        .where(
+          (saved) =>
+              saved.resolve(state.networks)?.address.address ==
+              state.selectedAddress,
+        )
+        .firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -324,40 +332,77 @@ final class _HostConnectionPanel extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: DropdownButtonFormField<String>(
-                key: const ValueKey('sync-address-field'),
-                initialValue:
-                    state.networks.any(
-                      (item) => item.address.address == state.selectedAddress,
-                    )
-                    ? state.selectedAddress
-                    : null,
-                isExpanded: true,
+              child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: strings.syncAddressLabel,
                 ),
-                items: [
-                  for (final endpoint in state.networks)
-                    DropdownMenuItem(
-                      value: endpoint.address.address,
-                      child: Text(
-                        '${endpoint.address.address} · '
-                        '${_networkName(endpoint.kind)} · '
-                        '${endpoint.interfaceName}',
-                        overflow: TextOverflow.ellipsis,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    key: const ValueKey('sync-address-field'),
+                    value:
+                        state.availableSavedNetworks.any(
+                          (item) =>
+                              item.address.address == state.selectedAddress,
+                        )
+                        ? state.selectedAddress
+                        : null,
+                    isExpanded: true,
+                    isDense: true,
+                    items: [
+                      for (final saved in state.savedNetworks)
+                        DropdownMenuItem(
+                          value:
+                              saved.resolve(state.networks)?.address.address ??
+                              'offline:${saved.id}',
+                          enabled: saved.resolve(state.networks) != null,
+                          child: Text(
+                            '${saved.resolve(state.networks)?.address.address ?? saved.address} · '
+                            '${saved.interfaceName}'
+                            '${saved.id == state.defaultNetworkId ? " · ${strings.syncDefaultNetwork}" : ""}'
+                            '${saved.resolve(state.networks) == null ? " · ${strings.syncNetworkOffline}" : ""}',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      DropdownMenuItem(
+                        value: '__add_network__',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.add_rounded, size: 18),
+                            const SizedBox(width: 8),
+                            Text(strings.syncAddNetwork),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
-                onChanged: state.busy
-                    ? null
-                    : (value) {
-                        if (value != null) {
-                          onRun(() => controller.selectAddress(value));
-                        }
-                      },
+                    ],
+                    onChanged: state.busy
+                        ? null
+                        : (value) {
+                            if (value == '__add_network__') {
+                              _showAddNetwork(context, ref);
+                            } else if (value != null) {
+                              onRun(() => controller.selectAddress(value));
+                            }
+                          },
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
+            IconButton.outlined(
+              key: const ValueKey('sync-default-network'),
+              tooltip: strings.syncSetDefaultNetwork,
+              onPressed: state.busy || selectedSaved == null
+                  ? null
+                  : () => onRun(
+                      () => controller.setDefaultNetwork(selectedSaved.id),
+                    ),
+              icon: Icon(
+                selectedSaved?.id == state.defaultNetworkId
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+              ),
+            ),
+            const SizedBox(width: 6),
             IconButton.outlined(
               tooltip: strings.syncRefreshNetworks,
               onPressed: state.busy
@@ -392,6 +437,15 @@ final class _HostConnectionPanel extends ConsumerWidget {
               label: Text(strings.syncCreatePairing),
             ),
             OutlinedButton.icon(
+              key: const ValueKey('sync-update-wlan'),
+              onPressed:
+                  state.busy || state.lifecycle != SyncHostLifecycle.running
+                  ? null
+                  : () => _showEndpointUpdate(context, ref),
+              icon: const Icon(Icons.wifi_rounded),
+              label: Text(strings.syncUpdateWlan),
+            ),
+            OutlinedButton.icon(
               key: const ValueKey('sync-restart-host'),
               onPressed: state.busy ? null : () => onRun(controller.restart),
               icon: const Icon(Icons.restart_alt_rounded),
@@ -400,6 +454,64 @@ final class _HostConnectionPanel extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  Future<void> _showAddNetwork(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(syncHostControllerProvider.notifier);
+    await onRun(controller.refreshNetworks);
+    if (!context.mounted) return;
+    final strings = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => Consumer(
+        builder: (context, ref, child) {
+          final current = ref.watch(syncHostControllerProvider);
+          final candidates = <String, SyncNetworkEndpoint>{
+            for (final endpoint in current.networks)
+              if (!current.savedNetworks.any(
+                (saved) =>
+                    saved.id == SavedSyncNetwork.fromEndpoint(endpoint).id,
+              ))
+                SavedSyncNetwork.fromEndpoint(endpoint).id: endpoint,
+          }.values.toList();
+          return AlertDialog(
+            title: Text(strings.syncAddNetworkTitle),
+            content: SizedBox(
+              width: 460,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(strings.syncAddNetworkHint),
+                    const SizedBox(height: 12),
+                    if (candidates.isEmpty) Text(strings.syncNoNewNetworks),
+                    for (final endpoint in candidates)
+                      ListTile(
+                        leading: const Icon(Icons.add_circle_outline_rounded),
+                        title: Text(endpoint.interfaceName),
+                        subtitle: Text(
+                          '${endpoint.address.address} · ${_networkName(endpoint.kind)}',
+                        ),
+                        onTap: () async {
+                          await controller.addNetwork(endpoint);
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(strings.close),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -414,20 +526,92 @@ final class _HostConnectionPanel extends ConsumerWidget {
       builder: (context) => _PairingDialog(invite: invite, uri: uri),
     );
   }
+
+  Future<void> _showEndpointUpdate(BuildContext context, WidgetRef ref) async {
+    await onRun(() async {
+      final uri = await ref
+          .read(syncHostControllerProvider.notifier)
+          .endpointUpdateUri();
+      if (!context.mounted) return;
+      final strings = AppLocalizations.of(context);
+      final update = SyncEndpointUpdateCodec.parse(uri.toString());
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(strings.syncUpdateWlan),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(strings.syncEndpointUpdateHint),
+                  const SizedBox(height: 16),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: QrImageView(
+                        key: const ValueKey('sync-endpoint-update-qr'),
+                        data: uri.toString(),
+                        size: 220,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(update.endpoint.displayName),
+                  Text(
+                    strings.syncExpiresAt(
+                      _formatTime(update.expiresAt.toLocal()),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: uri.toString()));
+              },
+              icon: const Icon(Icons.copy_rounded),
+              label: Text(strings.syncCopy),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(strings.close),
+            ),
+          ],
+        ),
+      );
+    });
+  }
 }
 
-final class _PairingDialog extends StatefulWidget {
-  const _PairingDialog({required this.invite, required this.uri});
+final class _PairingDialog extends ConsumerStatefulWidget {
+  const _PairingDialog({
+    required this.invite,
+    required this.uri,
+    this.repair = false,
+  });
 
   final SyncPairingInvite invite;
   final Uri uri;
+  final bool repair;
 
   @override
-  State<_PairingDialog> createState() => _PairingDialogState();
+  ConsumerState<_PairingDialog> createState() => _PairingDialogState();
 }
 
-final class _PairingDialogState extends State<_PairingDialog> {
+final class _PairingDialogState extends ConsumerState<_PairingDialog> {
   final _advertiser = SyncLanPairingAdvertiser();
+  Timer? _pollTimer;
+  bool _polling = false;
+  bool _busy = false;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -437,10 +621,22 @@ final class _PairingDialogState extends State<_PairingDialog> {
           .start(name: Platform.localHostname, pairingUri: widget.uri)
           .catchError((_) {}),
     );
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (_polling || !mounted) return;
+      _polling = true;
+      try {
+        await ref.read(syncHostControllerProvider.notifier).refreshAdminData();
+      } on Object {
+        // A transient refresh failure must not dismiss an unconfirmed invite.
+      } finally {
+        _polling = false;
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     unawaited(_advertiser.stop());
     super.dispose();
   }
@@ -449,15 +645,27 @@ final class _PairingDialogState extends State<_PairingDialog> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final code = _groupCode(widget.invite.token);
+    final pending = ref
+        .watch(syncHostControllerProvider)
+        .pendingPairings
+        .where((request) => request.inviteId == widget.invite.id)
+        .toList();
     return AlertDialog(
-      title: Text(strings.syncPairingTitle),
+      key: const ValueKey('sync-pairing-dialog'),
+      title: Text(
+        widget.repair ? strings.syncRePair : strings.syncPairingTitle,
+      ),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(strings.syncPairingHint),
+              Text(
+                widget.repair
+                    ? strings.syncRePairHostHint
+                    : strings.syncPairingHint,
+              ),
               const SizedBox(height: 16),
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -489,6 +697,22 @@ final class _PairingDialogState extends State<_PairingDialog> {
               ),
               const SizedBox(height: 8),
               Text(strings.syncExpiresAt(_formatTime(widget.invite.expiresAt))),
+              const Divider(height: 24),
+              if (pending.isEmpty) Text(strings.syncPairingWaiting),
+              for (final request in pending)
+                _PendingPairingTile(
+                  pending: request,
+                  busy: _busy,
+                  onRun: _runPairingAction,
+                  onApproved: () {
+                    if (mounted) Navigator.pop(context);
+                  },
+                ),
+              if (_failed)
+                Text(
+                  strings.syncOperationFailed,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
             ],
           ),
         ),
@@ -516,6 +740,21 @@ final class _PairingDialogState extends State<_PairingDialog> {
         ),
       ],
     );
+  }
+
+  Future<void> _runPairingAction(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _failed = false;
+    });
+    try {
+      await action();
+    } on Object {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _exportPairingFile(BuildContext context) async {
@@ -554,37 +793,63 @@ final class _PairingDialogState extends State<_PairingDialog> {
 }
 
 final class _PendingPairingTile extends ConsumerWidget {
-  const _PendingPairingTile({required this.pending, required this.onRun});
+  const _PendingPairingTile({
+    required this.pending,
+    required this.onRun,
+    this.onApproved,
+    this.busy = false,
+  });
 
   final PendingPairingRequest pending;
   final Future<void> Function(Future<void> Function()) onRun;
+  final VoidCallback? onApproved;
+  final bool busy;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppLocalizations.of(context);
     final controller = ref.read(syncHostControllerProvider.notifier);
     return Card.outlined(
-      child: ListTile(
-        leading: Icon(_platformIcon(pending.device.platform)),
-        title: Text(pending.device.displayName),
-        subtitle: Text(
-          '${pending.device.platform} · ${pending.device.appVersion}\n'
-          '${strings.syncVerificationCode(pending.verificationCode)} · '
-          '${strings.syncExpiresAt(_formatTime(pending.expiresAt))}',
-        ),
-        isThreeLine: true,
-        trailing: Wrap(
-          spacing: 8,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextButton(
-              onPressed: () =>
-                  onRun(() => controller.rejectPairing(pending.id)),
-              child: Text(strings.syncReject),
+            Row(
+              children: [
+                Icon(_platformIcon(pending.device.platform)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(pending.device.displayName)),
+              ],
             ),
-            FilledButton(
-              onPressed: () =>
-                  onRun(() => controller.approvePairing(pending.id)),
-              child: Text(strings.syncApprove),
+            const SizedBox(height: 8),
+            Text(
+              '${pending.device.platform} · ${pending.device.appVersion}\n'
+              '${strings.syncVerificationCode(pending.verificationCode)} · '
+              '${strings.syncExpiresAt(_formatTime(pending.expiresAt))}',
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              children: [
+                TextButton(
+                  onPressed: busy
+                      ? null
+                      : () => onRun(() => controller.rejectPairing(pending.id)),
+                  child: Text(strings.syncReject),
+                ),
+                FilledButton(
+                  key: ValueKey('sync-approve-${pending.id}'),
+                  onPressed: busy
+                      ? null
+                      : () => onRun(() async {
+                          await controller.approvePairing(pending.id);
+                          onApproved?.call();
+                        }),
+                  child: Text(strings.syncApprove),
+                ),
+              ],
             ),
           ],
         ),
@@ -616,66 +881,113 @@ final class _DeviceTile extends ConsumerWidget {
     final lastSync = device.lastSyncAt == null
         ? strings.syncNeverSynced
         : strings.syncLastSynced(_formatTime(device.lastSyncAt!));
-    return Card.outlined(
-      child: ListTile(
-        leading: SyncStatusBadge(
-          icon: _platformIcon(device.platform),
-          semanticLabel: strings.syncAttentionSemantics,
-          hasWarning:
+    final actionStyle = IconButton.styleFrom(
+      minimumSize: const Size.square(36),
+      maximumSize: const Size.square(36),
+      padding: const EdgeInsets.all(6),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+    final actions = Row(
+      key: ValueKey('sync-device-actions-${device.id}'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          key: ValueKey('sync-repair-device-${device.id}'),
+          tooltip: strings.syncRePair,
+          style: actionStyle,
+          onPressed:
               revoked ||
-              device.requiresUpgrade ||
-              (!device.isLocal && !device.isOnline),
+                  ref.watch(syncHostControllerProvider).lifecycle !=
+                      SyncHostLifecycle.running
+              ? null
+              : () => onRun(() async {
+                  final invite = await controller.createPairingInvite();
+                  if (invite == null) return;
+                  final uri = await controller.pairingUri(invite);
+                  if (!context.mounted) return;
+                  await showDialog<void>(
+                    context: context,
+                    builder: (_) =>
+                        _PairingDialog(invite: invite, uri: uri, repair: true),
+                  );
+                }),
+          icon: const Icon(Icons.link_rounded, size: 20),
         ),
-        title: Row(
+        IconButton(
+          key: ValueKey('sync-rename-device-${device.id}'),
+          tooltip: strings.syncEditNote,
+          style: actionStyle,
+          onPressed: revoked ? null : () => _editNote(context, controller),
+          icon: const Icon(Icons.edit_note_rounded, size: 20),
+        ),
+        IconButton(
+          key: ValueKey('sync-device-now-${device.id}'),
+          tooltip: strings.syncNow,
+          style: actionStyle,
+          onPressed: revoked
+              ? null
+              : () => onRun(() => controller.requestDeviceSync(device.id)),
+          icon: const Icon(Icons.sync_rounded, size: 20),
+        ),
+        IconButton(
+          key: ValueKey('sync-revoke-device-${device.id}'),
+          tooltip: strings.syncRevoke,
+          style: actionStyle,
+          onPressed: revoked ? null : () => _confirmRevoke(context, controller),
+          icon: const Icon(Icons.link_off_rounded, size: 20),
+        ),
+      ],
+    );
+    return Card.outlined(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Flexible(child: Text(device.displayName)),
-            if (device.isLocal) ...[
-              const SizedBox(width: 8),
-              Chip(
-                visualDensity: VisualDensity.compact,
-                label: Text(strings.syncLocalDevice),
+            Row(
+              children: [
+                SyncStatusBadge(
+                  icon: _platformIcon(device.platform),
+                  semanticLabel: strings.syncAttentionSemantics,
+                  hasWarning:
+                      revoked ||
+                      device.requiresUpgrade ||
+                      (!device.isLocal && !device.isOnline),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Tooltip(
+                    message: device.displayLabel,
+                    child: Text(
+                      device.displayLabel,
+                      key: ValueKey('sync-device-title-${device.id}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (device.isLocal)
+                  Chip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text(strings.syncLocalDevice),
+                  )
+                else
+                  actions,
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 36, top: 4),
+              child: Text(
+                '${device.platform} · ${device.appVersion} · $status\n$lastSync',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-            ],
+            ),
           ],
         ),
-        subtitle: Text(
-          [
-            '${device.platform} · ${device.appVersion} · $status',
-            ?device.note,
-            lastSync,
-          ].join('\n'),
-        ),
-        isThreeLine: true,
-        trailing: device.isLocal
-            ? null
-            : Wrap(
-                spacing: 4,
-                children: [
-                  IconButton(
-                    tooltip: strings.syncEditNote,
-                    onPressed: revoked
-                        ? null
-                        : () => _editNote(context, controller),
-                    icon: const Icon(Icons.edit_note_rounded),
-                  ),
-                  IconButton(
-                    tooltip: strings.syncNow,
-                    onPressed: revoked
-                        ? null
-                        : () => onRun(
-                            () => controller.requestDeviceSync(device.id),
-                          ),
-                    icon: const Icon(Icons.sync_rounded),
-                  ),
-                  IconButton(
-                    tooltip: strings.syncRevoke,
-                    onPressed: revoked
-                        ? null
-                        : () => _confirmRevoke(context, controller),
-                    icon: const Icon(Icons.link_off_rounded),
-                  ),
-                ],
-              ),
       ),
     );
   }
@@ -684,33 +996,13 @@ final class _DeviceTile extends ConsumerWidget {
     BuildContext context,
     SyncHostController controller,
   ) async {
-    final strings = AppLocalizations.of(context);
-    final textController = TextEditingController(text: device.note);
     final value = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(strings.syncEditNote),
-        content: TextField(
-          controller: textController,
-          autofocus: true,
-          maxLength: 120,
-          decoration: InputDecoration(labelText: strings.syncDeviceNote),
-          onSubmitted: (value) => Navigator.pop(context, value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, textController.text),
-            child: Text(MaterialLocalizations.of(context).saveButtonLabel),
-          ),
-        ],
-      ),
+      builder: (_) => _DeviceNameDialog(initialName: device.displayLabel),
     );
-    textController.dispose();
-    if (value != null) await controller.updateDeviceNote(device.id, value);
+    if (value != null) {
+      await onRun(() => controller.updateDeviceNote(device.id, value));
+    }
   }
 
   Future<void> _confirmRevoke(
@@ -736,6 +1028,61 @@ final class _DeviceTile extends ConsumerWidget {
       ),
     );
     if (confirmed == true) await controller.revokeDevice(device.id);
+  }
+}
+
+final class _DeviceNameDialog extends StatefulWidget {
+  const _DeviceNameDialog({required this.initialName});
+  final String initialName;
+
+  @override
+  State<_DeviceNameDialog> createState() => _DeviceNameDialogState();
+}
+
+final class _DeviceNameDialogState extends State<_DeviceNameDialog> {
+  late final TextEditingController _name;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(strings.syncEditNote),
+      content: TextField(
+        key: const ValueKey('sync-device-name-input'),
+        controller: _name,
+        autofocus: true,
+        maxLength: 120,
+        decoration: InputDecoration(
+          labelText: strings.syncDeviceNote,
+          helperText: strings.syncDeviceNameHint,
+          helperMaxLines: 2,
+        ),
+        onSubmitted: (value) => Navigator.pop(context, value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(strings.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey('sync-device-name-save'),
+          onPressed: () => Navigator.pop(context, _name.text),
+          child: Text(strings.save),
+        ),
+      ],
+    );
   }
 }
 

@@ -1,6 +1,7 @@
 abstract final class AppRoutes {
   static const String calendar = '/';
   static const String dayTodos = '/day/:date';
+  static const String futureTodos = '/future';
   static const String search = '/search';
   static const String settings = '/settings';
   static const String about = '/about';

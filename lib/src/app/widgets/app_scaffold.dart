@@ -74,6 +74,12 @@ class AppScaffold extends ConsumerWidget {
         location: AppRoutes.dayTodosFor(DateTime.now()),
       ),
       _Destination(
+        label: localizations.navFutureTodos,
+        icon: const Icon(Icons.upcoming_outlined),
+        selectedIcon: const Icon(Icons.upcoming_rounded),
+        location: AppRoutes.futureTodos,
+      ),
+      _Destination(
         label: localizations.navSearch,
         icon: const Icon(Icons.search_outlined),
         selectedIcon: const Icon(Icons.search_rounded),
@@ -241,6 +247,8 @@ class AppScaffold extends ConsumerWidget {
                     child: NavigationBar(
                       key: const ValueKey('compact-bottom-navigation'),
                       selectedIndex: selectedIndex,
+                      labelBehavior:
+                          NavigationDestinationLabelBehavior.onlyShowSelected,
                       onDestinationSelected: navigate,
                       destinations: [
                         for (final destination in destinations)

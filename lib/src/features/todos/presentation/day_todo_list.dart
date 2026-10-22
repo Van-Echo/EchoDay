@@ -19,6 +19,7 @@ import '../domain/todo_item.dart';
 import '../domain/todo_priority.dart';
 import '../domain/todo_sort.dart';
 import 'todo_editor.dart';
+import 'todo_transfer_menu.dart';
 
 final class TodoDragPayload {
   const TodoDragPayload(this.todo);
@@ -71,12 +72,14 @@ class DayTodoList extends ConsumerStatefulWidget {
   const DayTodoList({
     required this.date,
     this.compact = false,
+    this.future = false,
     this.onTaskDragStarted,
     super.key,
   });
 
   final LocalDate date;
   final bool compact;
+  final bool future;
   final VoidCallback? onTaskDragStarted;
 
   @override
@@ -92,7 +95,9 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final todos = ref.watch(todosByDateProvider(widget.date));
+    final todos = widget.future
+        ? ref.watch(futureTodosProvider)
+        : ref.watch(todosByDateProvider(widget.date));
     final sortMode =
         ref.watch(todoSortModeProvider).value ?? TodoSortMode.composite;
     final categories =
@@ -114,6 +119,15 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
       children: [
         _SortToolbar(
           compact: widget.compact,
+          showPostpone: !widget.future,
+          onAdd: widget.future
+              ? () => showTodoEditor(
+                  context,
+                  ref,
+                  date: widget.date,
+                  future: true,
+                )
+              : null,
           mode: sortMode,
           categories: categories,
           tags: tags,
@@ -276,7 +290,9 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    strings.noTasksForDate,
+                    widget.future
+                        ? strings.noFutureTodos
+                        : strings.noTasksForDate,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -284,8 +300,12 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () =>
-                        showTodoEditor(context, ref, date: widget.date),
+                    onPressed: () => showTodoEditor(
+                      context,
+                      ref,
+                      date: widget.date,
+                      future: widget.future,
+                    ),
                     icon: const Icon(Icons.add_rounded),
                     label: Text(strings.addTask),
                   ),
@@ -471,9 +491,13 @@ class _DayTodoListState extends ConsumerState<DayTodoList> {
         ? [...incomplete, ...target]
         : [...target, ...completed];
     try {
-      await ref
-          .read(todoRepositoryProvider)
-          .reorder(widget.date, ordered.map((todo) => todo.id).toList());
+      final repository = ref.read(todoRepositoryProvider);
+      final ids = ordered.map((todo) => todo.id).toList();
+      if (widget.future) {
+        await repository.reorderFuture(ids);
+      } else {
+        await repository.reorder(widget.date, ids);
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -495,9 +519,13 @@ class _SortToolbar extends ConsumerWidget {
     required this.onPostpone,
     required this.onConfigurePostpone,
     required this.onFiltersChanged,
+    this.showPostpone = true,
+    this.onAdd,
   });
 
   final bool compact;
+  final bool showPostpone;
+  final VoidCallback? onAdd;
   final TodoSortMode mode;
   final List<Category> categories;
   final List<Tag> tags;
@@ -542,23 +570,33 @@ class _SortToolbar extends ConsumerWidget {
               ),
             ] else
               const Spacer(),
-            GestureDetector(
-              onSecondaryTapDown:
-                  canPostpone && capabilities.supportsPointerContextMenu
-                  ? (_) => onConfigurePostpone()
-                  : null,
-              onLongPress: canPostpone && capabilities.isAndroid
-                  ? onConfigurePostpone
-                  : null,
-              child: IconButton(
-                key: const ValueKey('postpone-incomplete-todos'),
-                tooltip: strings.postponeIncompleteDays(postponeDays),
-                onPressed: canPostpone ? onPostpone : null,
-                style: compactIconStyle,
-                icon: const Icon(Icons.next_plan_outlined),
+            if (showPostpone)
+              GestureDetector(
+                onSecondaryTapDown:
+                    canPostpone && capabilities.supportsPointerContextMenu
+                    ? (_) => onConfigurePostpone()
+                    : null,
+                onLongPress: canPostpone && capabilities.isAndroid
+                    ? onConfigurePostpone
+                    : null,
+                child: IconButton(
+                  key: const ValueKey('postpone-incomplete-todos'),
+                  tooltip: strings.postponeIncompleteDays(postponeDays),
+                  onPressed: canPostpone ? onPostpone : null,
+                  style: compactIconStyle,
+                  icon: const Icon(Icons.next_plan_outlined),
+                ),
               ),
-            ),
+            if (onAdd != null)
+              IconButton(
+                key: const ValueKey('future-todo-header-add'),
+                tooltip: strings.addTask,
+                style: compactIconStyle,
+                onPressed: onAdd,
+                icon: const Icon(Icons.add_rounded),
+              ),
             IconButton(
+              key: const ValueKey('todo-filter-button'),
               tooltip: strings.filterTasks,
               style: compactIconStyle,
               onPressed: () async {
@@ -797,7 +835,17 @@ class _TodoSection extends StatelessWidget {
   }
 }
 
-enum _TodoAction { edit, toggle, abandon, move, postpone, delete }
+enum _TodoAction {
+  edit,
+  toggle,
+  abandon,
+  move,
+  postpone,
+  copyTomorrow,
+  moveFuture,
+  moveToday,
+  delete,
+}
 
 class _TodoListTile extends ConsumerWidget {
   const _TodoListTile({
@@ -986,7 +1034,7 @@ class _TodoListTile extends ConsumerWidget {
                       ),
                     ),
                   ),
-                if (todo.recurrenceSeriesId != null)
+                if (!todo.isFuture && todo.recurrenceSeriesId != null)
                   Tooltip(
                     message: strings.repeatRuleLabel,
                     child: const Padding(
@@ -1065,6 +1113,33 @@ class _TodoListTile extends ConsumerWidget {
         contentPadding: EdgeInsets.zero,
       ),
     ),
+    if (todo.isFuture)
+      PopupMenuItem(
+        value: _TodoAction.moveToday,
+        child: ListTile(
+          leading: const Icon(Icons.today_rounded),
+          title: Text(strings.moveToToday),
+          contentPadding: EdgeInsets.zero,
+        ),
+      )
+    else ...[
+      PopupMenuItem(
+        value: _TodoAction.copyTomorrow,
+        child: ListTile(
+          leading: const Icon(Icons.content_copy_rounded),
+          title: Text(strings.copyToTomorrow),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+      PopupMenuItem(
+        value: _TodoAction.moveFuture,
+        child: ListTile(
+          leading: const Icon(Icons.upcoming_outlined),
+          title: Text(strings.moveToFuture),
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    ],
     PopupMenuItem(
       value: _TodoAction.toggle,
       child: ListTile(
@@ -1088,7 +1163,7 @@ class _TodoListTile extends ConsumerWidget {
           contentPadding: EdgeInsets.zero,
         ),
       ),
-    if (!todo.isTerminal)
+    if (!todo.isFuture && !todo.isTerminal)
       PopupMenuItem(
         value: _TodoAction.postpone,
         child: ListTile(
@@ -1187,7 +1262,28 @@ class _TodoListTile extends ConsumerWidget {
                 label: strings.moveToDate,
                 action: _TodoAction.move,
               ),
-              if (!todo.isTerminal)
+              if (todo.isFuture)
+                _TouchActionTile(
+                  key: const ValueKey('mobile-action-move-today'),
+                  icon: Icons.today_rounded,
+                  label: strings.moveToToday,
+                  action: _TodoAction.moveToday,
+                )
+              else ...[
+                _TouchActionTile(
+                  key: const ValueKey('mobile-action-copy-tomorrow'),
+                  icon: Icons.content_copy_rounded,
+                  label: strings.copyToTomorrow,
+                  action: _TodoAction.copyTomorrow,
+                ),
+                _TouchActionTile(
+                  key: const ValueKey('mobile-action-move-future'),
+                  icon: Icons.upcoming_outlined,
+                  label: strings.moveToFuture,
+                  action: _TodoAction.moveFuture,
+                ),
+              ],
+              if (!todo.isFuture && !todo.isTerminal)
                 _TouchActionTile(
                   key: const ValueKey('mobile-action-postpone'),
                   icon: Icons.next_plan_outlined,
@@ -1229,6 +1325,27 @@ class _TodoListTile extends ConsumerWidget {
         await _moveToDate(context, ref);
       case _TodoAction.postpone:
         await _postpone(context, ref, postponeDays);
+      case _TodoAction.copyTomorrow:
+        await runTodoTransferAction(
+          context,
+          ref,
+          todo,
+          TodoTransferAction.copyToTomorrow,
+        );
+      case _TodoAction.moveFuture:
+        await runTodoTransferAction(
+          context,
+          ref,
+          todo,
+          TodoTransferAction.moveToFuture,
+        );
+      case _TodoAction.moveToday:
+        await runTodoTransferAction(
+          context,
+          ref,
+          todo,
+          TodoTransferAction.moveToToday,
+        );
       case _TodoAction.delete:
         await _delete(context, ref);
     }
@@ -1313,7 +1430,7 @@ class _TodoListTile extends ConsumerWidget {
     final repository = ref.read(todoRepositoryProvider);
     try {
       var scope = RecurrenceActionScope.occurrence;
-      if (todo.recurrenceSeriesId != null) {
+      if (!todo.isFuture && todo.recurrenceSeriesId != null) {
         final strings = AppLocalizations.of(context);
         final selected = await showDialog<RecurrenceActionScope>(
           context: context,

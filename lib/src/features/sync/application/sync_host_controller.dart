@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -10,6 +11,8 @@ import '../../../app/providers/data_providers.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/ids/id_generator.dart';
 import '../../../data/database/app_database.dart';
+import '../domain/sync_client_models.dart';
+import '../domain/sync_endpoint_update.dart';
 import '../domain/sync_merge_engine.dart';
 import '../domain/sync_protocol.dart';
 import '../domain/sync_repository.dart';
@@ -21,6 +24,8 @@ abstract final class SyncHostPreferenceKeys {
   static const mode = 'device.sync.mode';
   static const address = 'device.sync.host.address';
   static const port = 'device.sync.host.port';
+  static const savedNetworks = 'device.sync.host.savedNetworks';
+  static const defaultNetwork = 'device.sync.host.defaultNetwork';
   static const keepRunningInTray = 'device.sync.keepRunningInTray';
 }
 
@@ -54,6 +59,11 @@ final class ManagedSyncDevice {
   final int protocolVersion;
 
   bool get requiresUpgrade => protocolVersion != SyncProtocol.version;
+
+  /// The user's alias replaces the reported name in the UI without changing
+  /// the device identity or being overwritten by its next hostname report.
+  String get displayLabel =>
+      note?.trim().isNotEmpty == true ? note!.trim() : displayName;
 }
 
 final class SyncHostViewState {
@@ -63,6 +73,8 @@ final class SyncHostViewState {
     this.mode = SyncOperatingMode.off,
     this.lifecycle = SyncHostLifecycle.stopped,
     this.networks = const [],
+    this.savedNetworks = const [],
+    this.defaultNetworkId,
     this.devices = const [],
     this.pendingPairings = const [],
     this.conflicts = const [],
@@ -78,6 +90,11 @@ final class SyncHostViewState {
   final SyncOperatingMode mode;
   final SyncHostLifecycle lifecycle;
   final List<SyncNetworkEndpoint> networks;
+  final List<SavedSyncNetwork> savedNetworks;
+  final String? defaultNetworkId;
+  List<SyncNetworkEndpoint> get availableSavedNetworks => [
+    for (final saved in savedNetworks) ?saved.resolve(networks),
+  ];
   final List<ManagedSyncDevice> devices;
   final List<PendingPairingRequest> pendingPairings;
   final List<SyncConflict> conflicts;
@@ -93,6 +110,8 @@ final class SyncHostViewState {
     SyncOperatingMode? mode,
     SyncHostLifecycle? lifecycle,
     List<SyncNetworkEndpoint>? networks,
+    List<SavedSyncNetwork>? savedNetworks,
+    String? defaultNetworkId,
     List<ManagedSyncDevice>? devices,
     List<PendingPairingRequest>? pendingPairings,
     List<SyncConflict>? conflicts,
@@ -110,6 +129,8 @@ final class SyncHostViewState {
     mode: mode ?? this.mode,
     lifecycle: lifecycle ?? this.lifecycle,
     networks: networks ?? this.networks,
+    savedNetworks: savedNetworks ?? this.savedNetworks,
+    defaultNetworkId: defaultNetworkId ?? this.defaultNetworkId,
     devices: devices ?? this.devices,
     pendingPairings: pendingPairings ?? this.pendingPairings,
     conflicts: conflicts ?? this.conflicts,
@@ -133,6 +154,7 @@ class SyncHostController extends Notifier<SyncHostViewState> {
   bool _initializing = false;
   bool _maintaining = false;
   int _maintenanceTicks = 0;
+  bool _networkChoicesLoaded = false;
 
   @override
   SyncHostViewState build() {
@@ -163,13 +185,17 @@ class SyncHostController extends Notifier<SyncHostViewState> {
       final networks = usableSyncHostNetworks(await discovery.discover());
       if (!ref.mounted) return;
       final storedAddress = values[1]?.value;
-      final selectedAddress = selectSyncHostAddress(networks, storedAddress);
+      await _updateNetworks(
+        networks,
+        initialAddress: storedAddress,
+        useDefault: true,
+      );
+      final selectedAddress = state.selectedAddress;
       final launchEnabled = await _isLaunchAtStartupEnabled();
       if (!ref.mounted) return;
       state = state.copyWith(
         loaded: true,
         mode: mode,
-        networks: networks,
         selectedAddress: selectedAddress,
         clearSelectedAddress: selectedAddress == null,
         keepRunningInTray: values[2]?.value != 'false',
@@ -290,15 +316,7 @@ class SyncHostController extends Notifier<SyncHostViewState> {
             networks.any(
               (network) => network.address.address == binding.address.address,
             );
-        final selected = selectSyncHostAddress(
-          networks,
-          bindingAvailable ? binding.address.address : state.selectedAddress,
-        );
-        state = state.copyWith(
-          networks: networks,
-          selectedAddress: selected,
-          clearSelectedAddress: selected == null,
-        );
+        await _updateNetworks(networks);
       }
       if (service.lifecycle != SyncHostLifecycle.running || !bindingAvailable) {
         await service.stop();
@@ -328,16 +346,122 @@ class SyncHostController extends Notifier<SyncHostViewState> {
     final networks = usableSyncHostNetworks(
       await ref.read(syncNetworkDiscoveryProvider).discover(),
     );
-    final selected = selectSyncHostAddress(networks, state.selectedAddress);
+    await _updateNetworks(networks);
+  }
+
+  Future<void> _updateNetworks(
+    List<SyncNetworkEndpoint> networks, {
+    String? initialAddress,
+    bool useDefault = false,
+  }) async {
+    var saved = state.savedNetworks;
+    var defaultId = state.defaultNetworkId;
+    if (!_networkChoicesLoaded) {
+      final settings = ref.read(settingsRepositoryProvider);
+      final source = (await settings.get(SyncHostPreferenceKeys.savedNetworks))
+          ?.value;
+      defaultId = (await settings.get(SyncHostPreferenceKeys.defaultNetwork))
+          ?.value;
+      if (source != null) {
+        try {
+          final decoded = jsonDecode(source);
+          if (decoded is List) {
+            saved = decoded
+                .map(SavedSyncNetwork.fromJson)
+                .whereType<SavedSyncNetwork>()
+                .toList();
+          }
+        } on FormatException {
+          /* Recover by seeding one usable interface. */
+        }
+      }
+      if (saved.isEmpty) {
+        final preferred =
+            initialAddress ??
+            (await settings.get(SyncHostPreferenceKeys.address))?.value;
+        final address = selectSyncHostAddress(networks, preferred);
+        final endpoint = networks
+            .where((item) => item.address.address == address)
+            .firstOrNull;
+        if (endpoint != null) {
+          saved = [SavedSyncNetwork.fromEndpoint(endpoint)];
+          defaultId = saved.single.id;
+        }
+      }
+      _networkChoicesLoaded = true;
+      await settings.set(
+        SyncHostPreferenceKeys.savedNetworks,
+        jsonEncode(saved.map((item) => item.toJson()).toList()),
+      );
+      if (defaultId != null) {
+        await settings.set(SyncHostPreferenceKeys.defaultNetwork, defaultId);
+      }
+    }
+    if (!ref.mounted) return;
+    final previous = state.networks
+        .where((item) => item.address.address == state.selectedAddress)
+        .firstOrNull;
+    final previousId = previous == null
+        ? null
+        : SavedSyncNetwork.fromEndpoint(previous).id;
+    final available = [for (final item in saved) ?item.resolve(networks)];
+    final defaultAddress = saved
+        .where((item) => item.id == defaultId)
+        .firstOrNull
+        ?.resolve(networks)
+        ?.address
+        .address;
+    final previousAddress = saved
+        .where((item) => item.id == previousId)
+        .firstOrNull
+        ?.resolve(networks)
+        ?.address
+        .address;
+    final selected = selectSyncHostAddress(
+      available,
+      useDefault
+          ? defaultAddress ?? initialAddress
+          : previousAddress ?? state.selectedAddress ?? defaultAddress,
+    );
     state = state.copyWith(
       networks: networks,
+      savedNetworks: List.unmodifiable(saved),
+      defaultNetworkId: defaultId,
       selectedAddress: selected,
       clearSelectedAddress: selected == null,
     );
   }
 
+  Future<void> addNetwork(SyncNetworkEndpoint endpoint) async {
+    if (!state.networks.any(
+      (item) => item.address.address == endpoint.address.address,
+    )) {
+      return;
+    }
+    final saved = SavedSyncNetwork.fromEndpoint(endpoint);
+    if (state.savedNetworks.any((item) => item.id == saved.id)) return;
+    final choices = [...state.savedNetworks, saved];
+    await _setPreference(
+      SyncHostPreferenceKeys.savedNetworks,
+      jsonEncode(choices.map((item) => item.toJson()).toList()),
+    );
+    state = state.copyWith(savedNetworks: choices);
+    if (state.defaultNetworkId == null) await setDefaultNetwork(saved.id);
+    await selectAddress(endpoint.address.address);
+  }
+
+  Future<void> setDefaultNetwork(String id) async {
+    if (!state.savedNetworks.any((item) => item.id == id)) return;
+    await _setPreference(SyncHostPreferenceKeys.defaultNetwork, id);
+    state = state.copyWith(defaultNetworkId: id);
+  }
+
   Future<void> selectAddress(String address) async {
-    if (!state.networks.any((item) => item.address.address == address)) return;
+    if (!state.availableSavedNetworks.any(
+      (item) => item.address.address == address,
+    )) {
+      return;
+    }
     await _setPreference(SyncHostPreferenceKeys.address, address);
     state = state.copyWith(selectedAddress: address);
     if (state.lifecycle == SyncHostLifecycle.running) await restart();
@@ -375,6 +499,33 @@ class SyncHostController extends Notifier<SyncHostViewState> {
         'invite': invite.id,
         'token': invite.token,
       },
+    );
+  }
+
+  Future<Uri> endpointUpdateUri() async {
+    final identity = await ref.read(syncRepositoryProvider).activeIdentity();
+    final binding = state.binding;
+    if (identity == null ||
+        identity.role != SyncGroupRole.host ||
+        binding == null ||
+        state.lifecycle != SyncHostLifecycle.running) {
+      throw StateError('The sync host is not running.');
+    }
+    final network = state.networks
+        .where((item) => item.address.address == binding.address.address)
+        .firstOrNull;
+    return SyncEndpointUpdateCodec.encode(
+      SyncEndpointUpdate(
+        endpoint: SyncSavedEndpoint(
+          address: binding.address.address,
+          port: binding.port,
+          label: network?.interfaceName ?? '',
+        ),
+        groupId: identity.groupId,
+        hostDeviceId: identity.localDeviceId,
+        fingerprintSha256: binding.fingerprintSha256,
+        expiresAt: DateTime.now().toUtc().add(const Duration(minutes: 10)),
+      ),
     );
   }
 
@@ -494,7 +645,7 @@ class SyncHostController extends Notifier<SyncHostViewState> {
           );
         }).toList()..sort((left, right) {
           if (left.isLocal != right.isLocal) return left.isLocal ? -1 : 1;
-          return left.displayName.compareTo(right.displayName);
+          return left.displayLabel.compareTo(right.displayLabel);
         });
     final conflicts = await repository.unresolvedConflicts();
     if (!ref.mounted) return;
@@ -523,10 +674,10 @@ class SyncHostController extends Notifier<SyncHostViewState> {
     final service = ref.read(secureSyncHostServiceProvider);
     final candidateAddresses = <String>{
       addressText,
-      ...state.networks
+      ...state.availableSavedNetworks
           .where((item) => item.address.type == InternetAddressType.IPv4)
           .map((item) => item.address.address),
-      ...state.networks.map((item) => item.address.address),
+      ...state.availableSavedNetworks.map((item) => item.address.address),
     };
     SyncHostBinding? binding;
     String? boundAddress;

@@ -8,6 +8,7 @@ abstract final class SyncEntityPayloads {
   static Map<String, dynamic> todoContent(TodoItem item) => {
     'title': item.title,
     'localDate': item.localDate.toString(),
+    'isFuture': item.isFuture,
     'createdAtUtc': item.createdAt.toIso8601String(),
     'plannedAtUtc': item.plannedAt?.toIso8601String(),
     'priority': item.priority.index,

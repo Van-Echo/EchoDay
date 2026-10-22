@@ -33,6 +33,9 @@ void main() {
             PlatformCapabilities(isAndroid: isAndroid, isWindows: !isAndroid),
           ),
           settingsRepositoryProvider.overrideWithValue(settings),
+          futureTodosProvider.overrideWith(
+            (ref) => Stream.value(const <TodoItem>[]),
+          ),
           todosByDateProvider.overrideWith(
             (ref, date) => Stream.value(const <TodoItem>[]),
           ),
@@ -90,6 +93,9 @@ void main() {
               const PlatformCapabilities(isAndroid: false, isWindows: true),
             ),
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(const <TodoItem>[]),
             ),
@@ -217,6 +223,9 @@ void main() {
               const PlatformCapabilities(isAndroid: true, isWindows: false),
             ),
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(const <TodoItem>[]),
             ),
@@ -344,7 +353,13 @@ void main() {
     await tester.pumpAndSettle();
     expect((await repository.getById(todo.id))?.localDate, firstTarget);
 
-    await tester.tap(firstTargetCell);
+    // Tapping a task preview opens its touch actions; select the date header.
+    await tester.tap(
+      find.descendant(
+        of: firstTargetCell,
+        matching: find.text('${firstTarget.day}'),
+      ),
+    );
     await render(tester);
     final sidebarDrag = find.byKey(ValueKey('todo-long-press-drag-${todo.id}'));
     final secondTargetCell = find.byKey(ValueKey('day-cell-$secondTarget'));
@@ -549,6 +564,9 @@ void main() {
         ProviderScope(
           overrides: [
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(date == today ? [item] : const []),
             ),
@@ -619,6 +637,9 @@ void main() {
               const PlatformCapabilities(isAndroid: true, isWindows: false),
             ),
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(date == today ? [item] : const []),
             ),
@@ -684,6 +705,9 @@ void main() {
       ProviderScope(
         overrides: [
           settingsRepositoryProvider.overrideWithValue(settings),
+          futureTodosProvider.overrideWith(
+            (ref) => Stream.value(const <TodoItem>[]),
+          ),
           todosByDateProvider.overrideWith(
             (ref, date) => Stream.value(date == today ? [item] : const []),
           ),
@@ -810,6 +834,9 @@ void main() {
           container: container = ProviderContainer(
             overrides: [
               settingsRepositoryProvider.overrideWithValue(settings),
+              futureTodosProvider.overrideWith(
+                (ref) => Stream.value(const <TodoItem>[]),
+              ),
               todosByDateProvider.overrideWith(
                 (ref, date) => Stream.value(const <TodoItem>[]),
               ),
@@ -857,6 +884,9 @@ void main() {
         container: container = ProviderContainer(
           overrides: [
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(const <TodoItem>[]),
             ),
@@ -904,6 +934,9 @@ void main() {
           container: container = ProviderContainer(
             overrides: [
               settingsRepositoryProvider.overrideWithValue(settings),
+              futureTodosProvider.overrideWith(
+                (ref) => Stream.value(const <TodoItem>[]),
+              ),
               todosByDateProvider.overrideWith(
                 (ref, date) => Stream.value(const <TodoItem>[]),
               ),
@@ -979,6 +1012,9 @@ void main() {
         container: container = ProviderContainer(
           overrides: [
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(const <TodoItem>[]),
             ),
@@ -1030,6 +1066,19 @@ final class _DragTodoRepository implements TodoRepository {
 
   @override
   Future<List<TodoItem>> getByDate(LocalDate date) async => _itemsFor(date);
+
+  @override
+  Stream<List<TodoItem>> watchFuture() => Stream.value(const []);
+
+  @override
+  Future<List<TodoItem>> getFuture() async => const [];
+
+  @override
+  Future<TodoItem> moveToFuture(String id) => throw UnimplementedError();
+
+  @override
+  Future<void> reorderFuture(List<String> orderedIds) =>
+      throw UnimplementedError();
 
   @override
   Future<TodoItem?> getById(String id, {bool includeDeleted = false}) async =>

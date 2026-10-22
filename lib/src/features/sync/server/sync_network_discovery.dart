@@ -16,7 +16,7 @@ final class SyncNetworkEndpoint {
 
 /// Finds only interfaces that are safe for the local/Tailscale host service.
 /// Public addresses and wildcard binds are deliberately excluded.
-final class SyncNetworkDiscovery {
+class SyncNetworkDiscovery {
   const SyncNetworkDiscovery();
 
   Future<List<SyncNetworkEndpoint>> discover() async {
@@ -29,6 +29,11 @@ final class SyncNetworkDiscovery {
     for (final interface in interfaces) {
       for (final address in interface.addresses) {
         final kind = classify(address, interfaceName: interface.name);
+        // IPv6 link-local zone IDs belong to this PC and cannot be reused by
+        // a phone in a pairing URI.
+        if (address.type == InternetAddressType.IPv6 && address.isLinkLocal) {
+          continue;
+        }
         if (kind == null || !seen.add(address.address)) continue;
         endpoints.add(
           SyncNetworkEndpoint(
@@ -106,8 +111,8 @@ String? selectSyncHostAddress(
     return preferred;
   }
   for (final kind in const [
-    SyncNetworkKind.localAreaNetwork,
     SyncNetworkKind.tailscale,
+    SyncNetworkKind.localAreaNetwork,
     SyncNetworkKind.loopback,
   ]) {
     for (final endpoint in usable) {
@@ -118,6 +123,59 @@ String? selectSyncHostAddress(
     }
   }
   return usable.firstOrNull?.address.address;
+}
+
+/// A user-approved adapter/family, rather than a fragile DHCP address.
+final class SavedSyncNetwork {
+  const SavedSyncNetwork({
+    required this.interfaceName,
+    required this.address,
+    required this.ipv6,
+  });
+
+  factory SavedSyncNetwork.fromEndpoint(SyncNetworkEndpoint endpoint) =>
+      SavedSyncNetwork(
+        interfaceName: endpoint.interfaceName,
+        address: endpoint.address.address,
+        ipv6: endpoint.address.type == InternetAddressType.IPv6,
+      );
+
+  final String interfaceName;
+  final String address;
+  final bool ipv6;
+  String get id => '$interfaceName|${ipv6 ? "ipv6" : "ipv4"}';
+
+  SyncNetworkEndpoint? resolve(List<SyncNetworkEndpoint> discovered) {
+    final matches = discovered.where(
+      (endpoint) =>
+          endpoint.interfaceName == interfaceName &&
+          (endpoint.address.type == InternetAddressType.IPv6) == ipv6,
+    );
+    return matches
+            .where((endpoint) => endpoint.address.address == address)
+            .firstOrNull ??
+        matches.firstOrNull;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'interfaceName': interfaceName,
+    'address': address,
+    'ipv6': ipv6,
+  };
+
+  static SavedSyncNetwork? fromJson(Object? value) {
+    if (value is! Map<String, dynamic> ||
+        value['interfaceName'] is! String ||
+        value['address'] is! String ||
+        value['ipv6'] is! bool) {
+      return null;
+    }
+    return SavedSyncNetwork(
+      interfaceName: value['interfaceName'] as String,
+      address: value['address'] as String,
+      ipv6: value['ipv6'] as bool,
+    );
+  }
 }
 
 enum SyncHostStartFailureCode {

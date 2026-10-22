@@ -4,6 +4,25 @@ import 'package:echoday/src/features/sync/server/sync_network_discovery.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('saved network survives DHCP changes and round trips JSON', () {
+    final old = SyncNetworkEndpoint(
+      interfaceName: 'Wi-Fi',
+      address: InternetAddress('100.81.72.239'),
+      kind: SyncNetworkKind.localAreaNetwork,
+    );
+    final current = SyncNetworkEndpoint(
+      interfaceName: 'Wi-Fi',
+      address: InternetAddress('100.81.72.240'),
+      kind: SyncNetworkKind.localAreaNetwork,
+    );
+    final saved = SavedSyncNetwork.fromEndpoint(old);
+    final restored = SavedSyncNetwork.fromJson(saved.toJson())!;
+    expect(restored.id, saved.id);
+    expect(restored.resolve([current]), current);
+    expect(restored.resolve([]), isNull);
+    expect(SavedSyncNetwork.fromJson({'address': 'bad'}), isNull);
+  });
+
   test(
     'classifies only loopback, LAN, link-local, and Tailscale addresses',
     () {
@@ -66,6 +85,6 @@ void main() {
       usable.map((item) => item.address.address),
       isNot(contains('127.0.0.1')),
     );
-    expect(selectSyncHostAddress(networks, '127.0.0.1'), '100.81.72.239');
+    expect(selectSyncHostAddress(networks, '127.0.0.1'), '100.126.166.78');
   });
 }

@@ -8,6 +8,7 @@ import 'package:echoday/src/data/database/app_database.dart';
 import 'package:echoday/src/features/backup/data/local_backup_repository.dart';
 import 'package:echoday/src/features/backup/domain/backup_preferences.dart';
 import 'package:echoday/src/features/backup/domain/backup_repository.dart';
+import 'package:echoday/src/features/settings/application/app_preferences.dart';
 import 'package:echoday/src/features/todos/domain/local_date.dart';
 import 'package:echoday/src/features/todos/domain/recurrence_engine.dart';
 import 'package:echoday/src/features/todos/domain/recurrence_series.dart';
@@ -97,6 +98,54 @@ void main() {
       isNot(contains('device.sync.mode')),
     );
   });
+
+  test(
+    'ticker preferences round-trip through JSON backup and restore',
+    () async {
+      final expected = {
+        AppPreferenceKeys.futureTodoTickerIntervalSeconds: '12',
+        AppPreferenceKeys.futureTodoTickerNumbered: 'true',
+      };
+      for (final entry in expected.entries) {
+        await database
+            .into(database.settings)
+            .insertOnConflictUpdate(
+              SettingsCompanion.insert(
+                key: entry.key,
+                value: entry.value,
+                updatedAt: fixedNow,
+              ),
+            );
+      }
+      final path =
+          '${temporaryDirectory.path}${Platform.pathSeparator}ticker.json';
+      await repository.exportTo(path);
+      final json =
+          jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
+      final exported = {
+        for (final row
+            in (json['settings'] as List).cast<Map<String, dynamic>>())
+          row['key']: row['value'],
+      };
+      expect(
+        exported,
+        containsPair(AppPreferenceKeys.futureTodoTickerIntervalSeconds, '12'),
+      );
+      expect(
+        exported,
+        containsPair(AppPreferenceKeys.futureTodoTickerNumbered, 'true'),
+      );
+      await _clearUserData(database);
+      await repository.replace(path);
+      final restored = {
+        for (final row in await database.select(database.settings).get())
+          row.key: row.value,
+      };
+      for (final entry in expected.entries) {
+        expect(restored, containsPair(entry.key, entry.value));
+      }
+    },
+  );
 
   test('replace restores all user data and keeps holiday cache', () async {
     final path =

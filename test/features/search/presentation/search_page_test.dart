@@ -32,6 +32,9 @@ void main() {
           appDatabaseProvider.overrideWithValue(database),
           todoRepositoryProvider.overrideWithValue(repository),
           settingsRepositoryProvider.overrideWithValue(settings),
+          futureTodosProvider.overrideWith(
+            (ref) => Stream.value(const <TodoItem>[]),
+          ),
           categoriesProvider.overrideWith(
             (ref) => Stream.value(const <Category>[]),
           ),
@@ -122,6 +125,9 @@ void main() {
           appDatabaseProvider.overrideWithValue(database),
           todoRepositoryProvider.overrideWithValue(repository),
           settingsRepositoryProvider.overrideWithValue(settings),
+          futureTodosProvider.overrideWith(
+            (ref) => Stream.value(const <TodoItem>[]),
+          ),
           platformCapabilitiesProvider.overrideWithValue(
             const PlatformCapabilities(isAndroid: true, isWindows: false),
           ),

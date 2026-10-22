@@ -81,6 +81,45 @@ final class LocalTodoRepository implements TodoRepository {
   @override
   Future<List<TodoItem>> getByDate(LocalDate date) => _getByDateExpanded(date);
 
+  @override
+  Stream<List<TodoItem>> watchFuture() {
+    final query =
+        _database.select(_database.todos).join([
+          leftOuterJoin(
+            _database.todoTags,
+            _database.todoTags.todoId.equalsExp(_database.todos.id),
+          ),
+        ])..where(
+          _database.todos.isFuture.equals(true) &
+              _database.todos.deletedAt.isNull(),
+        );
+    return query.watch().map(_mapJoinedRows);
+  }
+
+  @override
+  Future<List<TodoItem>> getFuture() async {
+    final query =
+        _database.select(_database.todos).join([
+          leftOuterJoin(
+            _database.todoTags,
+            _database.todoTags.todoId.equalsExp(_database.todos.id),
+          ),
+        ])..where(
+          _database.todos.isFuture.equals(true) &
+              _database.todos.deletedAt.isNull(),
+        );
+    return _mapJoinedRows(await query.get());
+  }
+
+  @override
+  Future<TodoItem> moveToFuture(String id) => _database.transaction(() async {
+    final item = await _requireTodo(id);
+    if (item.isFuture) return item;
+    // Keep recurrence identity so only this occurrence leaves the calendar;
+    // its series can continue using the stored template as before.
+    return save(item.copyWith(isFuture: true));
+  });
+
   Future<List<TodoItem>> _getStoredByDate(LocalDate date) async {
     final query =
         _database.select(_database.todos).join([
@@ -91,6 +130,7 @@ final class LocalTodoRepository implements TodoRepository {
           ])
           ..where(
             _database.todos.localDate.equals(date.toString()) &
+                _database.todos.isFuture.equals(false) &
                 _database.todos.deletedAt.isNull(),
           )
           ..orderBy([
@@ -128,11 +168,15 @@ final class LocalTodoRepository implements TodoRepository {
       final now = requireUtc(_clock(), 'clock');
       final manualOrder =
           draft.manualOrder ??
-          await _nextManualOrderForDate(draft.localDate.toString());
+          await _nextManualOrderForDate(
+            draft.localDate.toString(),
+            isFuture: draft.isFuture,
+          );
       final item = TodoItem(
         id: _idGenerator.next(),
         title: draft.title,
         localDate: draft.localDate,
+        isFuture: draft.isFuture,
         createdAt: now,
         updatedAt: now,
         plannedAt: draft.plannedAt,
@@ -286,6 +330,13 @@ final class LocalTodoRepository implements TodoRepository {
 
   @override
   Future<void> reorder(LocalDate date, List<String> orderedIds) {
+    return _reorder(orderedIds, date: date);
+  }
+
+  @override
+  Future<void> reorderFuture(List<String> orderedIds) => _reorder(orderedIds);
+
+  Future<void> _reorder(List<String> orderedIds, {LocalDate? date}) {
     return _database.transaction(() async {
       if (orderedIds.toSet().length != orderedIds.length) {
         throw ArgumentError.value(orderedIds, 'orderedIds', 'has duplicates');
@@ -301,7 +352,7 @@ final class LocalTodoRepository implements TodoRepository {
         if (item == null) throw TodoNotFoundException(id);
         resolvedIds.add((await _materialize(item)).id);
       }
-      final current = await getByDate(date);
+      final current = date == null ? await getFuture() : await getByDate(date);
       final currentIds = current.map((todo) => todo.id).toSet();
       if (currentIds.length != resolvedIds.length ||
           !currentIds.containsAll(resolvedIds)) {
@@ -501,6 +552,7 @@ final class LocalTodoRepository implements TodoRepository {
         localDate: virtualTodo.localDate,
         isCompleted: virtualTodo.isCompleted,
         isAbandoned: virtualTodo.isAbandoned,
+        isFuture: virtualTodo.isFuture,
         createdAt: now,
         updatedAt: now,
         plannedAt: virtualTodo.plannedAt,
@@ -515,6 +567,7 @@ final class LocalTodoRepository implements TodoRepository {
         deletedAt: virtualTodo.deletedAt,
         manualOrder: await _nextManualOrderForDate(
           virtualTodo.localDate.toString(),
+          isFuture: virtualTodo.isFuture,
         ),
         recurrenceSeriesId: virtualTodo.recurrenceSeriesId,
         occurrenceDate: virtualTodo.occurrenceDate ?? virtualTodo.localDate,
@@ -651,6 +704,7 @@ final class LocalTodoRepository implements TodoRepository {
   bool _sameTodoContent(TodoItem left, TodoItem right) =>
       left.title == right.title &&
       left.localDate == right.localDate &&
+      left.isFuture == right.isFuture &&
       left.createdAt == right.createdAt &&
       left.plannedAt == right.plannedAt &&
       left.priority == right.priority &&
@@ -742,11 +796,18 @@ final class LocalTodoRepository implements TodoRepository {
     }
   }
 
-  Future<double> _nextManualOrderForDate(String localDate) async {
+  Future<double> _nextManualOrderForDate(
+    String localDate, {
+    bool isFuture = false,
+  }) async {
     final rows =
         await (_database.select(_database.todos)..where(
               (table) =>
-                  table.localDate.equals(localDate) & table.deletedAt.isNull(),
+                  (isFuture
+                      ? table.isFuture.equals(true)
+                      : table.localDate.equals(localDate) &
+                            table.isFuture.equals(false)) &
+                  table.deletedAt.isNull(),
             ))
             .get();
     if (rows.isEmpty) return 0;
@@ -778,6 +839,7 @@ final class LocalTodoRepository implements TodoRepository {
       localDate: LocalDate.parse(row.localDate),
       isCompleted: row.isCompleted,
       isAbandoned: row.isAbandoned,
+      isFuture: row.isFuture,
       createdAt: row.createdAt.toUtc(),
       updatedAt: row.updatedAt.toUtc(),
       plannedAt: row.plannedAt?.toUtc(),
@@ -806,6 +868,7 @@ final class LocalTodoRepository implements TodoRepository {
       localDate: Value(item.localDate.toString()),
       isCompleted: Value(item.isCompleted),
       isAbandoned: Value(item.isAbandoned),
+      isFuture: Value(item.isFuture),
       createdAt: Value(item.createdAt),
       updatedAt: Value(item.updatedAt),
       plannedAt: Value(item.plannedAt),
@@ -825,6 +888,9 @@ final class LocalTodoRepository implements TodoRepository {
   }
 
   bool _matchesFilters(TodoItem item, TodoSearchQuery query) {
+    if (item.isFuture && (query.fromDate != null || query.toDate != null)) {
+      return false;
+    }
     if (query.completion == CompletionFilter.completed && !item.isTerminal) {
       return false;
     }

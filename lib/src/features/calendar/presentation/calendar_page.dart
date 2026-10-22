@@ -13,6 +13,7 @@ import '../../../app/router/app_routes.dart';
 import '../../../app/widgets/app_lifecycle_refresh_host.dart';
 import '../../../app/widgets/app_scaffold.dart';
 import '../../../app/widgets/echoday_date_picker.dart';
+import '../../future_todos/presentation/future_todo_ticker.dart';
 import '../../settings/application/app_preferences.dart';
 import '../../settings/application/hotkey_preferences.dart';
 import '../../todos/application/todo_providers.dart';
@@ -20,6 +21,7 @@ import '../../todos/domain/local_date.dart';
 import '../../todos/domain/todo_item.dart';
 import '../../todos/presentation/day_todo_list.dart';
 import '../../todos/presentation/todo_editor.dart';
+import '../../todos/presentation/todo_transfer_menu.dart';
 import '../application/calendar_controller.dart';
 import '../domain/calendar_layout.dart';
 import '../domain/continuous_calendar.dart';
@@ -301,6 +303,7 @@ class _CalendarPane extends ConsumerWidget {
         child: Column(
           children: [
             _CalendarToolbar(state: state, dates: dates, showMotto: showMotto),
+            if (!isAndroid) const FutureTodoTicker(),
             Container(
               height: 34,
               decoration: BoxDecoration(
@@ -854,7 +857,8 @@ class _DayCell extends ConsumerWidget {
     final isAndroid = ref.watch(platformCapabilitiesProvider).isAndroid;
     return DragTarget<TodoDragPayload>(
       hitTestBehavior: HitTestBehavior.translucent,
-      onWillAcceptWithDetails: (details) => details.data.todo.localDate != date,
+      onWillAcceptWithDetails: (details) =>
+          details.data.todo.isFuture || details.data.todo.localDate != date,
       onAcceptWithDetails: (details) =>
           _moveTodoToDate(context, ref, details.data.todo, date),
       builder: (context, candidateData, rejectedData) {
@@ -1376,13 +1380,16 @@ class _CalendarTaskDraggable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget preview() => _CalendarTaskPreviewRow(
-      item: item,
-      locale: locale,
-      now: now,
-      fontSize: fontSize,
-      stackTimes: stackTimes,
-      keyPrefix: keyPrefix,
+    Widget preview() => TodoTransferMenu(
+      todo: item,
+      child: _CalendarTaskPreviewRow(
+        item: item,
+        locale: locale,
+        now: now,
+        fontSize: fontSize,
+        stackTimes: stackTimes,
+        keyPrefix: keyPrefix,
+      ),
     );
 
     final feedback = _CalendarTaskDragFeedback(

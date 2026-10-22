@@ -116,7 +116,11 @@ final class SyncConflictDescription {
       if (value != null) lines.add('$label$separator$value');
     }
 
-    add('localDate', strings.dateLabel);
+    if (payload['isFuture'] == true) {
+      lines.add(strings.futureTodoUnscheduled);
+    } else {
+      add('localDate', strings.dateLabel);
+    }
     add(
       'plannedAtUtc',
       strings.plannedAtLabel,

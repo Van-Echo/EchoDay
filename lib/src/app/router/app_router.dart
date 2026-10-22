@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/about/presentation/about_page.dart';
 import '../../features/calendar/presentation/calendar_page.dart';
 import '../../features/day_todos/presentation/day_todos_page.dart';
+import '../../features/future_todos/presentation/future_todos_page.dart';
 import '../../features/search/presentation/search_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../widgets/not_found_page.dart';
@@ -27,6 +28,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.search,
         builder: (context, state) => const SearchPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.futureTodos,
+        builder: (context, state) => const FutureTodosPage(),
       ),
       GoRoute(
         path: AppRoutes.settings,

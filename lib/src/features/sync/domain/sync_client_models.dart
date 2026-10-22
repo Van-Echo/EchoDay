@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import '../security/sync_crypto.dart';
 import 'sync_protocol.dart';
@@ -83,6 +84,10 @@ abstract final class SyncPairingUriCodec {
     if (value.isEmpty || value.length > 253) {
       throw const FormatException('Host name is invalid.');
     }
+    final literal = InternetAddress.tryParse(value);
+    if (literal != null && literal.type == InternetAddressType.IPv6) {
+      return literal.address.toLowerCase();
+    }
     final parsed = Uri.tryParse('https://$value');
     if (parsed == null ||
         parsed.host.isEmpty ||
@@ -97,6 +102,47 @@ abstract final class SyncPairingUriCodec {
   }
 }
 
+final class SyncSavedEndpoint {
+  SyncSavedEndpoint({
+    required String address,
+    required this.port,
+    String label = '',
+  }) : address = SyncPairingUriCodec.normalizeHost(address),
+       label = label.trim().replaceAll(RegExp(r'[\r\n\t]'), ' ') {
+    if (port < 1 || port > 65535 || this.label.length > 128) {
+      throw const FormatException('Connection endpoint is invalid.');
+    }
+  }
+
+  final String address;
+  final int port;
+  final String label;
+  Uri get baseUri => Uri(scheme: 'https', host: address, port: port);
+  String get id => baseUri.toString();
+  String get displayName =>
+      label.isEmpty ? '$address:$port' : '$label · $address:$port';
+
+  Map<String, dynamic> toJson() => {
+    'address': address,
+    'port': port,
+    'label': label,
+  };
+
+  static SyncSavedEndpoint fromJson(Object? value) {
+    if (value is! Map<String, dynamic> ||
+        value['address'] is! String ||
+        value['port'] is! int ||
+        (value['label'] != null && value['label'] is! String)) {
+      throw const FormatException('Saved connection endpoint is invalid.');
+    }
+    return SyncSavedEndpoint(
+      address: value['address'] as String,
+      port: value['port'] as int,
+      label: value['label'] as String? ?? '',
+    );
+  }
+}
+
 final class SyncClientProfile {
   SyncClientProfile({
     required this.address,
@@ -106,7 +152,19 @@ final class SyncClientProfile {
     required this.hostDevice,
     SyncCursor? remoteCursor,
     this.lastSyncAt,
-  }) : remoteCursor = remoteCursor ?? SyncCursor();
+    List<SyncSavedEndpoint> savedEndpoints = const [],
+    String? defaultEndpointId,
+  }) : remoteCursor = remoteCursor ?? SyncCursor(),
+       defaultEndpointId =
+           defaultEndpointId ??
+           SyncSavedEndpoint(address: address, port: port).id,
+       savedEndpoints = List.unmodifiable(
+         {
+           SyncSavedEndpoint(address: address, port: port).id:
+               SyncSavedEndpoint(address: address, port: port),
+           for (final endpoint in savedEndpoints) endpoint.id: endpoint,
+         }.values,
+       );
 
   final String address;
   final int port;
@@ -115,6 +173,8 @@ final class SyncClientProfile {
   final SyncDeviceRegistration hostDevice;
   final SyncCursor remoteCursor;
   final DateTime? lastSyncAt;
+  final List<SyncSavedEndpoint> savedEndpoints;
+  final String defaultEndpointId;
 
   Uri get baseUri => Uri(scheme: 'https', host: address, port: port);
 
@@ -123,6 +183,8 @@ final class SyncClientProfile {
     int? port,
     SyncCursor? remoteCursor,
     DateTime? lastSyncAt,
+    List<SyncSavedEndpoint>? savedEndpoints,
+    String? defaultEndpointId,
   }) => SyncClientProfile(
     address: address ?? this.address,
     port: port ?? this.port,
@@ -131,6 +193,8 @@ final class SyncClientProfile {
     hostDevice: hostDevice,
     remoteCursor: remoteCursor ?? this.remoteCursor,
     lastSyncAt: lastSyncAt ?? this.lastSyncAt,
+    savedEndpoints: savedEndpoints ?? this.savedEndpoints,
+    defaultEndpointId: defaultEndpointId ?? this.defaultEndpointId,
   );
 
   Map<String, dynamic> toJson() => {
@@ -148,6 +212,10 @@ final class SyncClientProfile {
     },
     'remoteCursor': remoteCursor.toJson(),
     'lastSyncAtUtc': ?lastSyncAt?.toUtc().toIso8601String(),
+    'defaultEndpointId': defaultEndpointId,
+    'savedEndpoints': savedEndpoints
+        .map((endpoint) => endpoint.toJson())
+        .toList(),
   };
 
   static SyncClientProfile fromJson(Map<String, dynamic> json) {
@@ -174,6 +242,13 @@ final class SyncClientProfile {
       ),
       remoteCursor: SyncCursor.fromJson(_object(json, 'remoteCursor')),
       lastSyncAt: lastSync,
+      savedEndpoints: switch (json['savedEndpoints']) {
+        null => const [],
+        final List<dynamic> list =>
+          list.map(SyncSavedEndpoint.fromJson).toList(),
+        _ => throw const FormatException('Saved endpoints must be a list.'),
+      },
+      defaultEndpointId: json['defaultEndpointId'] as String?,
     );
   }
 

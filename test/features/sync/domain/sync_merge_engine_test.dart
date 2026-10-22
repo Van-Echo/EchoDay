@@ -6,6 +6,209 @@ import 'package:echoday/src/features/sync/domain/sync_protocol.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    're-paired baseline values and second precision do not create conflicts',
+    () {
+      final original = _operation(
+        id: 'a-1',
+        device: 'a',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.content,
+        physicalMillis: 1000,
+        payload: const {
+          'title': 'Keep task',
+          'localDate': '2026-10-22',
+          'createdAtUtc': '2026-10-22T01:00:00.123456Z',
+        },
+      );
+      final baseline = _operation(
+        id: 'b-1',
+        device: 'b',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.content,
+        physicalMillis: 2000,
+        payload: const {
+          'createdAtUtc': '2026-10-22T01:00:00.000Z',
+          'isFuture': false,
+          'localDate': '2026-10-22',
+          'title': 'Keep task',
+        },
+      );
+      for (final order in [
+        [original, baseline],
+        [baseline, original],
+      ]) {
+        final replica = InMemorySyncReplica()..applyAll(order);
+        expect(
+          replica.materialize(SyncEntityType.todo, 'todo-1')!.conflicts,
+          isEmpty,
+        );
+        expect(replica.operations, hasLength(2));
+        expect(replica.cursor.sequenceFor('a'), 1);
+        expect(replica.cursor.sequenceFor('b'), 1);
+      }
+      final replay = InMemorySyncReplica()..apply(original);
+      expect(
+        () => replay.apply(
+          _operation(
+            id: 'a-1',
+            device: 'a',
+            sequence: 1,
+            fieldGroup: SyncFieldGroup.content,
+            physicalMillis: 1000,
+            payload: baseline.payload,
+          ),
+        ),
+        throwsA(isA<SyncProtocolException>()),
+      );
+    },
+  );
+
+  for (final field in [
+    'title',
+    'localDate',
+    'plannedAtUtc',
+    'deadlineAtUtc',
+    'notes',
+    'priority',
+    'isFuture',
+  ]) {
+    test(
+      'real $field differences remain conflicts after semantic comparison',
+      () {
+        final original = <String, dynamic>{
+          'title': 'Same',
+          'localDate': '2026-10-22',
+          'plannedAtUtc': '2026-10-22T01:00:00.100Z',
+          'deadlineAtUtc': '2026-10-22T02:00:00.100Z',
+          'notes': 'Notes',
+          'priority': 0,
+          'isFuture': false,
+        };
+        final modified = {
+          ...original,
+          field: switch (field) {
+            'priority' => 1,
+            'isFuture' => true,
+            'plannedAtUtc' => '2026-10-22T01:00:00.900Z',
+            'deadlineAtUtc' => '2026-10-22T02:00:00.900Z',
+            _ => '${original[field]} changed',
+          },
+        };
+        final replica = InMemorySyncReplica()
+          ..applyAll([
+            _operation(
+              id: 'a-1',
+              device: 'a',
+              sequence: 1,
+              fieldGroup: SyncFieldGroup.content,
+              physicalMillis: 1000,
+              payload: original,
+            ),
+            _operation(
+              id: 'b-1',
+              device: 'b',
+              sequence: 1,
+              fieldGroup: SyncFieldGroup.content,
+              physicalMillis: 2000,
+              payload: modified,
+            ),
+          ]);
+        expect(
+          replica.materialize(SyncEntityType.todo, 'todo-1')!.conflicts,
+          hasLength(1),
+        );
+      },
+    );
+  }
+
+  test(
+    'identical completion defaults do not conflict but status changes do',
+    () {
+      final original = _operation(
+        id: 'a-1',
+        device: 'a',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.completion,
+        physicalMillis: 1000,
+        payload: const {
+          'isCompleted': true,
+          'completedAtUtc': '2026-10-22T01:00:00.123Z',
+        },
+      );
+      SyncOperation baseline(bool abandoned) => _operation(
+        id: 'b-1',
+        device: 'b',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.completion,
+        physicalMillis: 2000,
+        payload: {
+          'isCompleted': true,
+          'completedAtUtc': '2026-10-22T01:00:00.000Z',
+          'isAbandoned': abandoned,
+          'abandonedAtUtc': null,
+        },
+      );
+      expect(
+        (InMemorySyncReplica()..applyAll([original, baseline(false)]))
+            .materialize(SyncEntityType.todo, 'todo-1')!
+            .conflicts,
+        isEmpty,
+      );
+      expect(
+        (InMemorySyncReplica()..applyAll([original, baseline(true)]))
+            .materialize(SyncEntityType.todo, 'todo-1')!
+            .conflicts,
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
+    'identical tombstones do not conflict while delete versus restore does',
+    () {
+      final original = _operation(
+        id: 'a-1',
+        device: 'a',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.deletion,
+        type: SyncOperationType.delete,
+        physicalMillis: 1000,
+        payload: const {'deletedAt': '2026-10-22T01:00:00.123Z'},
+      );
+      final baseline = _operation(
+        id: 'b-1',
+        device: 'b',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.deletion,
+        type: SyncOperationType.delete,
+        physicalMillis: 2000,
+        payload: const {'deletedAt': '2026-10-22T01:00:00.000Z'},
+      );
+      expect(
+        (InMemorySyncReplica()..applyAll([original, baseline]))
+            .materialize(SyncEntityType.todo, 'todo-1')!
+            .conflicts,
+        isEmpty,
+      );
+      final restore = _operation(
+        id: 'c-1',
+        device: 'c',
+        sequence: 1,
+        fieldGroup: SyncFieldGroup.deletion,
+        type: SyncOperationType.restore,
+        physicalMillis: 3000,
+        payload: const {'deletedAt': null},
+      );
+      expect(
+        (InMemorySyncReplica()..applyAll([original, restore]))
+            .materialize(SyncEntityType.todo, 'todo-1')!
+            .conflicts,
+        isNotEmpty,
+      );
+    },
+  );
+
   test('different TODO field groups merge independently', () {
     final content = _operation(
       id: 'a-1',

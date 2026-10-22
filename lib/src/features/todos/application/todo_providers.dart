@@ -9,6 +9,7 @@ import '../domain/todo_sort.dart';
 import 'move_todo_to_date.dart';
 import 'postpone_incomplete_todos.dart';
 import 'recurrence_actions.dart';
+import 'todo_transfers.dart';
 
 abstract final class TodoSettingKeys {
   static const sortMode = 'todo.sortMode';
@@ -30,6 +31,18 @@ final postponeIncompleteTodosProvider = Provider<PostponeIncompleteTodos>((
 
 final moveTodoToDateProvider = Provider<MoveTodoToDate>((ref) {
   return MoveTodoToDate(ref.watch(todoRepositoryProvider));
+});
+
+final todoTransfersProvider = Provider<TodoTransfers>((ref) {
+  return TodoTransfers(ref.watch(todoRepositoryProvider));
+});
+
+final futureTodosProvider = StreamProvider.autoDispose<List<TodoItem>>((ref) {
+  final mode = ref.watch(todoSortModeProvider).value ?? TodoSortMode.composite;
+  return ref
+      .watch(todoRepositoryProvider)
+      .watchFuture()
+      .map((items) => sortTodos(items, mode));
 });
 
 final todoSortModeProvider = StreamProvider<TodoSortMode>((ref) {

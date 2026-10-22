@@ -58,6 +58,9 @@ void main() {
             ),
             desktopRuntimeProvider.overrideWithValue(runtime),
             settingsRepositoryProvider.overrideWithValue(settings),
+            futureTodosProvider.overrideWith(
+              (ref) => Stream.value(const <TodoItem>[]),
+            ),
             todosByDateProvider.overrideWith(
               (ref, date) => Stream.value(const <TodoItem>[]),
             ),

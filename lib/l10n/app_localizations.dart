@@ -122,6 +122,264 @@ abstract class AppLocalizations {
   /// **'当日 TODO'**
   String get navDayTodos;
 
+  /// No description provided for @navFutureTodos.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来TODO'**
+  String get navFutureTodos;
+
+  /// No description provided for @syncAddNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增…'**
+  String get syncAddNetwork;
+
+  /// No description provided for @syncAddNetworkTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加监听网络接口'**
+  String get syncAddNetworkTitle;
+
+  /// No description provided for @syncAddNetworkHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'从本机当前网卡中选择。校园网可能限制设备互访，建议优先使用 Tailscale。'**
+  String get syncAddNetworkHint;
+
+  /// No description provided for @syncNoNewNetworks.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有可添加的接口，请确认网卡已连接后刷新'**
+  String get syncNoNewNetworks;
+
+  /// No description provided for @syncSetDefaultNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为默认监听接口'**
+  String get syncSetDefaultNetwork;
+
+  /// No description provided for @syncDefaultNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认'**
+  String get syncDefaultNetwork;
+
+  /// No description provided for @syncNetworkOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'未连接'**
+  String get syncNetworkOffline;
+
+  /// No description provided for @syncPairingWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'请用客户端扫码；设备码和确认匹配按钮会显示在此弹窗中。'**
+  String get syncPairingWaiting;
+
+  /// No description provided for @syncUpdateWlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新 WLAN'**
+  String get syncUpdateWlan;
+
+  /// No description provided for @syncRePair.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新配对'**
+  String get syncRePair;
+
+  /// No description provided for @syncRePairHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'在主 PC 的已连接设备中选择“重新配对”，再扫码或粘贴连接码并核对设备码。保留当前身份、任务和同步历史，不会把旧任务重新登记为修改。不同主机身份不能在此替换。'**
+  String get syncRePairHint;
+
+  /// No description provided for @syncRePairPaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴重新配对码'**
+  String get syncRePairPaste;
+
+  /// No description provided for @syncRePairHostHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在原设备选择“重新配对”并扫码，核对设备码后确认。已有任务和同步历史会保留；若设备已卸载并丢失身份，请改用“配对新设备”。'**
+  String get syncRePairHostHint;
+
+  /// No description provided for @syncEndpointUpdateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配对设备扫码后可保存并切换到当前监听地址，无需重新配对。换网络时，请先选择对应监听接口，再生成二维码。'**
+  String get syncEndpointUpdateHint;
+
+  /// No description provided for @syncConnectionProfiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'主机连接配置'**
+  String get syncConnectionProfiles;
+
+  /// No description provided for @syncSetDefaultConnection.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为默认连接配置'**
+  String get syncSetDefaultConnection;
+
+  /// No description provided for @syncScanEndpointUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫码更新 WLAN'**
+  String get syncScanEndpointUpdate;
+
+  /// No description provided for @syncPasteEndpointUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴更新码'**
+  String get syncPasteEndpointUpdate;
+
+  /// No description provided for @syncEndpointCodeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接更新码'**
+  String get syncEndpointCodeLabel;
+
+  /// No description provided for @syncApplyEndpointUpdate.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加并同步'**
+  String get syncApplyEndpointUpdate;
+
+  /// No description provided for @syncManualEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动添加连接配置'**
+  String get syncManualEndpoint;
+
+  /// No description provided for @syncEditEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动输入地址和端口'**
+  String get syncEditEndpoint;
+
+  /// No description provided for @syncEndpointIdentityMismatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新码不属于当前已配对的主 PC，原连接配置和数据未改动。'**
+  String get syncEndpointIdentityMismatch;
+
+  /// No description provided for @syncEndpointCodeInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接更新码无效或已过期，请在主 PC 重新生成。'**
+  String get syncEndpointCodeInvalid;
+
+  /// No description provided for @futureTodosTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来TODO'**
+  String get futureTodosTitle;
+
+  /// No description provided for @noFutureTodos.
+  ///
+  /// In zh, this message translates to:
+  /// **'把还没安排日期的想法和任务放在这里'**
+  String get noFutureTodos;
+
+  /// No description provided for @futureTodoUnscheduled.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未安排日期'**
+  String get futureTodoUnscheduled;
+
+  /// No description provided for @moveToToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'转移到当日TODO'**
+  String get moveToToday;
+
+  /// No description provided for @moveToFuture.
+  ///
+  /// In zh, this message translates to:
+  /// **'移动到未来TODO'**
+  String get moveToFuture;
+
+  /// No description provided for @copyToTomorrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制到下一天'**
+  String get copyToTomorrow;
+
+  /// No description provided for @taskMovedToFuture.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务已移至未来TODO'**
+  String get taskMovedToFuture;
+
+  /// No description provided for @taskCopiedToTomorrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'已复制到任务所属日期的下一天，原任务已保留'**
+  String get taskCopiedToTomorrow;
+
+  /// No description provided for @futureTodosTickerHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'未来TODO · 点击查看，长按或右键安排到今天'**
+  String get futureTodosTickerHint;
+
+  /// No description provided for @tickerSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'滚动栏'**
+  String get tickerSettingsTitle;
+
+  /// No description provided for @tickerIntervalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'滚动栏间隔时间'**
+  String get tickerIntervalLabel;
+
+  /// No description provided for @tickerIntervalHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'每隔 1～3600 秒切换一条，默认 4 秒'**
+  String get tickerIntervalHint;
+
+  /// No description provided for @tickerSecondsUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'秒'**
+  String get tickerSecondsUnit;
+
+  /// No description provided for @tickerIntervalInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入 1～3600 之间的整数'**
+  String get tickerIntervalInvalid;
+
+  /// No description provided for @tickerIntervalSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'滚动栏间隔时间已保存'**
+  String get tickerIntervalSaved;
+
+  /// No description provided for @tickerSettingsSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'未能保存滚动栏设置，请重试'**
+  String get tickerSettingsSaveFailed;
+
+  /// No description provided for @tickerNumberedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示条目编号'**
+  String get tickerNumberedLabel;
+
+  /// No description provided for @tickerNumberedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'播放时显示“1. ”“2. ”等前缀，按当前播放顺序编号'**
+  String get tickerNumberedHint;
+
   /// No description provided for @navSearch.
   ///
   /// In zh, this message translates to:
@@ -1715,8 +1973,14 @@ abstract class AppLocalizations {
   /// No description provided for @syncDeviceNote.
   ///
   /// In zh, this message translates to:
-  /// **'设备备注'**
+  /// **'设备显示名称'**
   String get syncDeviceNote;
+
+  /// No description provided for @syncDeviceNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'留空可恢复原设备名'**
+  String get syncDeviceNameHint;
 
   /// No description provided for @syncNow.
   ///
